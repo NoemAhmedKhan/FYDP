@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <!-- FONT AWESOME ICONS -->
+    <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="UserDashboard.css">
+</head>
+<body>
+
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <div class="sidebar-inner">
+
+            <!-- Logo -->
+            <div class="sidebar__logo">
+                <div class="sidebar__logo-icon">
+                    <img src="Images/Logo.png" alt="MediFinder Logo">
+                </div>
+                <div class="sidebar__logo-text">
+                    <span class="sidebar__brand">MediFinder</span>
+                    <span class="sidebar__portal">User Portal</span>
+                </div>
+            </div>
+
+            <!-- Single vertical nav stack -->
+            <nav class="sidebar__nav">
+                <a href="UserDashboard.html" class="nav-item nav-item--active">
+                    <i class="fa-solid fa-table-cells-large nav-item__icon"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="UserPharmacySearch.html" class="nav-item">
+                    <i class="fa-solid fa-magnifying-glass nav-item__icon"></i>
+                    <span>Pharmacy Search</span>
+                </a>
+                <a href="UserProfile.html" class="nav-item">
+                    <i class="fa-regular fa-user nav-item__icon"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="UserHistory.html" class="nav-item">
+                    <i class="fa-solid fa-clock-rotate-left nav-item__icon"></i>
+                    <span>My History</span>
+                </a>
+                <a href="UserReminders.html" class="nav-item">
+                    <i class="fa-regular fa-bell nav-item__icon"></i>
+                    <span>Set Reminders</span>
+                </a>
+            </nav>
+
+            <!-- User footer -->
+            <div class="sidebar__user">
+                <div class="user-avatar">
+                    <img src="Images/ProfileAvatar.jpg" alt="John Doe"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">John Doe</span>
+                    <span class="user-email"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e68c898e88c8828983a6839e878b968a83c885898b">[email&#160;protected]</a></span>
+                </div>
+                <a href="Login.html" class="user-logout" title="Log out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- ===================== MAIN CONTENT ===================== -->
+    <main class="main">
+
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="topbar__hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="topbar__welcome">
+                <h1>Welcome back, John!</h1>
+                <p>Keep track of your health and pharmacy needs.</p>
+            </div>
+        </header>
+
+        <!-- ── Stat Cards Row ── -->
+        <section class="stat-grid">
+
+            <!-- Total Reminders -->
+            <div class="stat-card">
+                <div class="stat-card__icon stat-card__icon--blue">
+                    <i class="fa-solid fa-bell"></i>
+                </div>
+                <div class="stat-card__body">
+                    <p class="stat-card__label">Total Reminders</p>
+                    <p class="stat-card__value">12</p>
+                </div>
+            </div>
+
+            <!-- Discounted Bundles -->
+            <div class="stat-card stat-card--promo">
+                <span class="stat-card__badge">NEW</span>
+                <div class="stat-card__icon stat-card__icon--purple">
+                    <i class="fa-solid fa-tag"></i>
+                </div>
+                <div class="stat-card__body">
+                    <p class="stat-card__label">Discounted Bundles</p>
+                    <p class="stat-card__sublabel">Save on regular meds</p>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ── Panels Row ── -->
+        <section class="panel-grid">
+
+            <!-- Upcoming Reminders Panel -->
+            <div class="panel">
+                <div class="panel__header">
+                    <h2 class="panel__title">Upcoming Reminders</h2>
+                    <a href="UserReminders.html" class="panel__link">See all</a>
+                </div>
+
+                <ul class="reminder-list">
+
+                    <li class="reminder-item">
+                        <div class="reminder-item__icon">
+                            <i class="fa-solid fa-kit-medical"></i>
+                        </div>
+                        <div class="reminder-item__info">
+                            <span class="reminder-item__name">Lisinopril 10mg</span>
+                            <span class="reminder-item__dose">1 pill &bull; After breakfast</span>
+                        </div>
+                        <div class="reminder-item__time">
+                            <span class="reminder-item__clock reminder-item__clock--upcoming">08:30 AM</span>
+                            <span class="reminder-item__tag reminder-item__tag--upcoming">UPCOMING</span>
+                        </div>
+                    </li>
+
+                    <li class="reminder-item">
+                        <div class="reminder-item__icon">
+                            <i class="fa-solid fa-pills"></i>
+                        </div>
+                        <div class="reminder-item__info">
+                            <span class="reminder-item__name">Metformin 500mg</span>
+                            <span class="reminder-item__dose">2 pills &bull; During lunch</span>
+                        </div>
+                        <div class="reminder-item__time">
+                            <span class="reminder-item__clock reminder-item__clock--later">01:00 PM</span>
+                            <span class="reminder-item__tag reminder-item__tag--later">LATER</span>
+                        </div>
+                    </li>
+
+                    <li class="reminder-item">
+                        <div class="reminder-item__icon">
+                            <i class="fa-solid fa-capsules"></i>
+                        </div>
+                        <div class="reminder-item__info">
+                            <span class="reminder-item__name">Atorvastatin 40mg</span>
+                            <span class="reminder-item__dose">1 pill &bull; Before bed</span>
+                        </div>
+                        <div class="reminder-item__time">
+                            <span class="reminder-item__clock reminder-item__clock--later">09:00 PM</span>
+                            <span class="reminder-item__tag reminder-item__tag--later">LATER</span>
+                        </div>
+                    </li>
+
+                </ul>
+            </div>
+
+            <!-- Recent Searches Panel -->
+            <div class="panel">
+                <div class="panel__header">
+                    <h2 class="panel__title">Recent Searches</h2>
+                    <a href="UserHistory.html" class="panel__link panel__link--green">View History</a>
+                </div>
+
+                <ul class="search-list">
+
+                    <li class="search-item">
+                        <div class="search-item__icon">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <div class="search-item__info">
+                            <span class="search-item__name">Paracetamol 500mg</span>
+                            <span class="search-item__meta">Downtown Area &bull; 2 hours ago</span>
+                        </div>
+                        <a href="UserPharmacySearch.html" class="search-item__arrow" aria-label="Search again">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    </li>
+
+                    <li class="search-item">
+                        <div class="search-item__icon">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <div class="search-item__info">
+                            <span class="search-item__name">Amoxicillin 250mg</span>
+                            <span class="search-item__meta">Midtown &bull; Yesterday</span>
+                        </div>
+                        <a href="UserPharmacySearch.html" class="search-item__arrow" aria-label="Search again">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    </li>
+
+                    <li class="search-item">
+                        <div class="search-item__icon">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <div class="search-item__info">
+                            <span class="search-item__name">Insulin Glargine</span>
+                            <span class="search-item__meta">West End &bull; 2 days ago</span>
+                        </div>
+                        <a href="UserPharmacySearch.html" class="search-item__arrow" aria-label="Search again">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                    </li>
+
+         
+                </ul>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script src="UserDashboard.js"></script>
+</body>
+</html>

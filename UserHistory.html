@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - My History</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="UserHistory.css">
+</head>
+<body>
+
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <div class="sidebar-inner">
+
+            <div class="sidebar__logo">
+                <div class="sidebar__logo-icon">
+                    <img src="Images/Logo.png" alt="MediFinder Logo">
+                </div>
+                <div class="sidebar__logo-text">
+                    <span class="sidebar__brand">MediFinder</span>
+                    <span class="sidebar__portal">User Portal</span>
+                </div>
+            </div>
+
+            <nav class="sidebar__nav">
+                <a href="UserDashboard.html" class="nav-item">
+                    <i class="fa-solid fa-table-cells-large nav-item__icon"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="UserPharmacySearch.html" class="nav-item">
+                    <i class="fa-solid fa-magnifying-glass nav-item__icon"></i>
+                    <span>Pharmacy Search</span>
+                </a>
+                <a href="UserProfile.html" class="nav-item">
+                    <i class="fa-regular fa-user nav-item__icon"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="UserHistory.html" class="nav-item nav-item--active">
+                    <i class="fa-solid fa-clock-rotate-left nav-item__icon"></i>
+                    <span>My History</span>
+                </a>
+                <a href="UserReminders.html" class="nav-item">
+                    <i class="fa-regular fa-bell nav-item__icon"></i>
+                    <span>Set Reminders</span>
+                </a>
+            </nav>
+
+            <div class="sidebar__user">
+                <div class="user-avatar">
+                    <img src="Images/ProfileAvatar.jpg" alt="Michael Chen"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">John Doe</span>
+                    <span class="user-email">john.doe@medtrac...</span>
+                </div>
+                <a href="Login.html" class="user-logout" title="Log out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- ===================== MAIN ===================== -->
+    <main class="main">
+
+        <!-- Topbar -->
+        <header class="topbar">
+            <button class="topbar__hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="topbar__title">
+                <h1>My History Dashboard</h1>
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <a href="UserDashboard.html" class="breadcrumb__link">Dashboard</a>
+                    <i class="fa-solid fa-chevron-right"></i>
+                    <span class="breadcrumb__active">History</span>
+                </nav>
+            </div>
+            <div class="topbar__actions">
+                <button class="date-filter" id="dateFilter">
+                    <i class="fa-regular fa-calendar"></i>
+                    <span>Last 30 Days</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- ── Most Frequent Card ── -->
+        <section class="most-frequent">
+            <div class="most-frequent__body">
+                <span class="most-frequent__label">Most Frequent</span>
+                <h2 class="most-frequent__name">Paracetamol 100mg</h2>
+            </div>
+            <div class="most-frequent__icon">
+                <i class="fa-solid fa-kit-medical"></i>
+            </div>
+        </section>
+
+        <!-- ── Content Grid ── -->
+        <div class="content-grid">
+
+            <!-- Left: Search History Panel -->
+            <section class="history-panel">
+                <div class="panel__header">
+                    <h2 class="panel__title">Search History</h2>
+                    <a href="#" class="panel__link panel__link--green">View All</a>
+                </div>
+
+                <div class="history-table__head">
+                    <span>Search Query</span>
+                    <span>Category</span>
+                    <span>Date</span>
+                </div>
+
+                <ul class="history-table__body">
+
+                    <li class="history-row">
+                        <div class="history-row__query">
+                            <div class="med-icon med-icon--indigo">
+                                <i class="fa-solid fa-kit-medical"></i>
+                            </div>
+                            <div class="med-info">
+                                <span class="med-info__name">Serc 8mg</span>
+                                <span class="med-info__sub">Vertigo</span>
+                            </div>
+                        </div>
+                        <span class="history-row__category">Search</span>
+                        <span class="history-row__date">Oct 24, 2023</span>
+                    </li>
+
+                    <li class="history-row">
+                        <div class="history-row__query">
+                            <div class="med-icon med-icon--red">
+                                <i class="fa-solid fa-pills"></i>
+                            </div>
+                            <div class="med-info">
+                                <span class="med-info__name">Zeegap 75mg</span>
+                                <span class="med-info__sub">Neuropathic Pain</span>
+                            </div>
+                        </div>
+                        <span class="history-row__category">Search</span>
+                        <span class="history-row__date">Oct 22, 2023</span>
+                    </li>
+
+                    <li class="history-row">
+                        <div class="history-row__query">
+                            <div class="med-icon med-icon--amber">
+                                <i class="fa-solid fa-eye"></i>
+                            </div>
+                            <div class="med-info">
+                                <span class="med-info__name">Polyfax eye ointment 6g</span>
+                                <span class="med-info__sub">Antibiotic</span>
+                            </div>
+                        </div>
+                        <span class="history-row__category">Prescription</span>
+                        <span class="history-row__date">Oct 19, 2023</span>
+                    </li>
+
+                    <li class="history-row">
+                        <div class="history-row__query">
+                            <div class="med-icon med-icon--cyan">
+                                <i class="fa-solid fa-droplet"></i>
+                            </div>
+                            <div class="med-info">
+                                <span class="med-info__name">Hylo eye drops</span>
+                                <span class="med-info__sub">Dry Eye Relief</span>
+                            </div>
+                        </div>
+                        <span class="history-row__category">Search</span>
+                        <span class="history-row__date">Oct 15, 2023</span>
+                    </li>
+
+                    <li class="history-row">
+                        <div class="history-row__query">
+                            <div class="med-icon med-icon--pink">
+                                <i class="fa-solid fa-pump-soap"></i>
+                            </div>
+                            <div class="med-info">
+                                <span class="med-info__name">Conaz lotion 60ml</span>
+                                <span class="med-info__sub">Antifungal</span>
+                            </div>
+                        </div>
+                        <span class="history-row__category">Search</span>
+                        <span class="history-row__date">Oct 10, 2023</span>
+                    </li>
+
+                </ul>
+            </section>
+
+            <!-- Right: Last Search + Prescription Vault -->
+            <aside class="right-col">
+
+                <!-- Last Search -->
+                <div class="info-card">
+                    <div class="info-card__icon">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="info-card__body">
+                        <span class="info-card__label">Last Search</span>
+                        <span class="info-card__value">Arinac Forte 60mg</span>
+                    </div>
+                </div>
+
+                <!-- Prescription Vault -->
+                <div class="vault-card">
+                    <h3 class="vault-card__title">Prescription Vault</h3>
+                    <div class="vault-grid">
+                        <div class="vault-item vault-item--gray">
+                            <i class="fa-solid fa-file-prescription"></i>
+                        </div>
+                        <div class="vault-item vault-item--cream">
+                            <i class="fa-regular fa-file-lines"></i>
+                        </div>
+                        <div class="vault-item vault-item--gray vault-item--sm">
+                            <i class="fa-regular fa-file"></i>
+                        </div>
+                    </div>
+                    <button class="vault-card__btn">View All Files</button>
+                </div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+    <script src="UserHistory.js"></script>
+</body>
+</html>

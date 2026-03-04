@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - Set Reminders</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="UserReminders.css">
+</head>
+<body>
+
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <div class="sidebar-inner">
+
+            <div class="sidebar__logo">
+                <div class="sidebar__logo-icon">
+                    <img src="Images/Logo.png" alt="MediFinder Logo">
+                </div>
+                <div class="sidebar__logo-text">
+                    <span class="sidebar__brand">MediFinder</span>
+                    <span class="sidebar__portal">User Portal</span>
+                </div>
+            </div>
+
+            <nav class="sidebar__nav">
+                <a href="UserDashboard.html" class="nav-item">
+                    <i class="fa-solid fa-table-cells-large nav-item__icon"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="UserPharmacySearch.html" class="nav-item">
+                    <i class="fa-solid fa-magnifying-glass nav-item__icon"></i>
+                    <span>Pharmacy Search</span>
+                </a>
+                <a href="UserProfile.html" class="nav-item">
+                    <i class="fa-regular fa-user nav-item__icon"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="UserHistory.html" class="nav-item">
+                    <i class="fa-solid fa-clock-rotate-left nav-item__icon"></i>
+                    <span>My History</span>
+                </a>
+                <a href="UserReminders.html" class="nav-item nav-item--active">
+                    <i class="fa-regular fa-bell nav-item__icon"></i>
+                    <span>Set Reminders</span>
+                </a>
+            </nav>
+
+            <div class="sidebar__user">
+                <div class="user-avatar">
+                    <img src="Images/ProfileAvatar.jpg" alt="John Doe"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <span class="user-avatar__fallback"><i class="fa-solid fa-user"></i></span>
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">John Doe</span>
+                    <span class="user-email">john.doe@medtrac...</span>
+                </div>
+                <a href="Login.html" class="user-logout" title="Log out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+
+        </div>
+    </aside>
+
+    <!-- ===================== MAIN ===================== -->
+    <main class="main">
+
+        <!-- Topbar -->
+        <header class="topbar">
+            <button class="topbar__hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="topbar__title">
+                <h1>My Reminders</h1>
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <a href="UserDashboard.html" class="breadcrumb__link">Dashboard</a>
+                    <i class="fa-solid fa-chevron-right"></i>
+                    <span class="breadcrumb__active">Reminders</span>
+                </nav>
+            </div>
+            <div class="topbar__actions">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-bar__icon"></i>
+                    <input
+                        type="search"
+                        class="search-bar__input"
+                        placeholder="Search Reminder"
+                        aria-label="Search medication">
+                </div>
+                <button class="btn-set-reminder" id="setReminderBtn">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Set Reminder</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- ── Today's Reminders Section ── -->
+        <section class="reminders-section">
+            <div class="reminders-section__header">
+                <div class="reminders-section__title-group">
+                    <h2 class="reminders-section__title">Today's Reminders</h2>
+                    <p class="reminders-section__subtitle">Manage your medication schedule</p>
+                </div>
+                <div class="tabs" role="tablist">
+                    <a href="UserReminders.html" class="tab tab--active" role="tab" aria-selected="true">Due</a>
+                    <a href="UserRemindersTaken.html" class="tab" role="tab" aria-selected="false">Taken</a>
+                    <a href="UserRemindersMissed.html" class="tab" role="tab" aria-selected="false">Missed</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Reminder Cards ── -->
+        <div class="reminder-list" id="reminderList">
+
+            <!-- Card 1: Amoxicillin -->
+            <article class="reminder-card" data-status="due">
+                <div class="reminder-card__visual reminder-card__visual--blue">
+                    <i class="fa-solid fa-capsules"></i>
+                </div>
+                <div class="reminder-card__content">
+                    <h3 class="reminder-card__name">Amoxicillin</h3>
+                    <div class="reminder-card__details">
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Dosage</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-solid fa-kit-medical"></i> 500mg
+                            </span>
+                        </div>
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Frequency</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-regular fa-clock"></i> 3 times daily
+                            </span>
+                        </div>
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Notification</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-solid fa-bell"></i> Push, Email
+                            </span>
+                        </div>
+                        <div class="detail-cell detail-cell--time">
+                            <span class="detail-cell__day">Thursday</span>
+                            <span class="detail-cell__time">2:00 PM</span>
+                            <span class="detail-cell__date">JAN 25, 2026</span>
+                        </div>
+                    </div>
+                    <div class="reminder-card__actions">
+                        <button class="btn-remove" aria-label="Remove reminder">Remove</button>
+                        <button class="btn-taken" aria-label="Mark as taken">
+                            <i class="fa-solid fa-circle-check"></i> Taken
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 2: Vitamin D3 -->
+            <article class="reminder-card" data-status="due">
+                <div class="reminder-card__visual reminder-card__visual--amber">
+                    <i class="fa-solid fa-syringe"></i>
+                </div>
+                <div class="reminder-card__content">
+                    <h3 class="reminder-card__name">Vitamin D3</h3>
+                    <div class="reminder-card__details">
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Dosage</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-solid fa-kit-medical"></i> 2000 IU
+                            </span>
+                        </div>
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Frequency</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-regular fa-calendar"></i> Daily
+                            </span>
+                        </div>
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Notification</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-solid fa-bell"></i> Push, Email
+                            </span>
+                        </div>
+                        <div class="detail-cell detail-cell--time">
+                            <span class="detail-cell__day">Friday</span>
+                            <span class="detail-cell__time">8:00 AM</span>
+                            <span class="detail-cell__date">JAN 25, 2026</span>
+                        </div>
+                    </div>
+                    <div class="reminder-card__actions">
+                        <button class="btn-remove" aria-label="Remove reminder">Remove</button>
+                        <button class="btn-taken" aria-label="Mark as taken">
+                            <i class="fa-solid fa-circle-check"></i> Taken
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+            <!-- Card 3: Lisinopril -->
+            <article class="reminder-card" data-status="due">
+                <div class="reminder-card__visual reminder-card__visual--purple">
+                    <i class="fa-solid fa-pills"></i>
+                </div>
+                <div class="reminder-card__content">
+                    <h3 class="reminder-card__name">Lisinopril</h3>
+                    <div class="reminder-card__details">
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Dosage</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-solid fa-kit-medical"></i> 10mg
+                            </span>
+                        </div>
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Frequency</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-regular fa-calendar"></i> Daily
+                            </span>
+                        </div>
+                        <div class="detail-cell">
+                            <span class="detail-cell__label">Notification</span>
+                            <span class="detail-cell__value">
+                                <i class="fa-solid fa-bell"></i> Push, Email
+                            </span>
+                        </div>
+                        <div class="detail-cell detail-cell--time">
+                            <span class="detail-cell__day">Friday</span>
+                            <span class="detail-cell__time">9:00 AM</span>
+                            <span class="detail-cell__date">JAN 25, 2026</span>
+                        </div>
+                    </div>
+                    <div class="reminder-card__actions">
+                        <button class="btn-remove" aria-label="Remove reminder">Remove</button>
+                        <button class="btn-taken" aria-label="Mark as taken">
+                            <i class="fa-solid fa-circle-check"></i> Taken
+                        </button>
+                    </div>
+                </div>
+            </article>
+
+        </div>
+
+    </main>
+
+    <script src="UserReminders.js"></script>
+</body>
+</html>

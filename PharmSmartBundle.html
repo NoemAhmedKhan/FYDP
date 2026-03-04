@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediFinder – Smart Bundle Creator</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="PharmSmartBundle.css" />
+</head>
+<body>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
+    <!-- Modal Header -->
+    <div class="m-head">
+      <div>
+        <h2 class="m-pharmacy">Medix Pharma</h2>
+        <h1 class="m-title" id="modalTitle">Smart Bundle Creator</h1>
+        <p class="m-sub">Combine items to clear stock before expiration.</p>
+      </div>
+      <div class="m-head-right">
+        <span class="live-badge">
+          <span class="live-dot"></span> Live Inventory Link Active
+        </span>
+        <a href="PharmDashboard.html" class="m-close" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- STEP 1: Item Selection -->
+    <section class="step-section">
+      <div class="step-head">
+        <span class="step-num">1</span>
+        <h2 class="step-title">Item Selection</h2>
+      </div>
+      <div class="scard">
+        <div class="item-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" placeholder="Search and add multiple items from list...">
+        </div>
+
+        <p class="sel-label">Selected Items</p>
+
+        <!-- Scrollable Items Container -->
+        <div class="sel-items-scroll">
+          <div class="sel-items-body" id="selItemsBody">
+
+            <!-- Item 1 -->
+            <div class="sel-item" data-price="450">
+              <div class="si-icon sii-green"><i class="fa-solid fa-kit-medical"></i></div>
+              <div class="si-info">
+                <span class="si-name">Augmentin 625mg Tablets</span>
+                <span class="si-meta">PKR 450.00 &bull; In Stock: 120</span>
+              </div>
+              <button class="si-remove" aria-label="Remove"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Item 2 – Expiry -->
+            <div class="sel-item expiry" data-price="850">
+              <div class="si-icon sii-amber"><i class="fa-solid fa-pills"></i></div>
+              <div class="si-info">
+                <span class="si-name">Surbex Z Multivitamins <span class="expiry-tag">Expiry Alert</span></span>
+                <span class="si-meta red-text">PKR 850.00 &bull; Expires: 15 Oct 2024</span>
+              </div>
+              <button class="si-remove" aria-label="Remove"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Item 3 -->
+            <div class="sel-item" data-price="320">
+              <div class="si-icon sii-green"><i class="fa-solid fa-capsules"></i></div>
+              <div class="si-info">
+                <span class="si-name">Panadol CF 500mg</span>
+                <span class="si-meta">PKR 320.00 &bull; In Stock: 85</span>
+              </div>
+              <button class="si-remove" aria-label="Remove"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Item 4 – Expiry -->
+            <div class="sel-item expiry" data-price="1200">
+              <div class="si-icon sii-amber"><i class="fa-solid fa-syringe"></i></div>
+              <div class="si-info">
+                <span class="si-name">Calpol Suspension 120ml <span class="expiry-tag">Expiry Alert</span></span>
+                <span class="si-meta red-text">PKR 1,200.00 &bull; Expires: 02 Dec 2024</span>
+              </div>
+              <button class="si-remove" aria-label="Remove"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 2: Pricing -->
+    <section class="step-section">
+      <div class="step-head">
+        <span class="step-num">2</span>
+        <h2 class="step-title">Pricing &amp; Package Logic</h2>
+      </div>
+      <div class="scard" style="padding:0;overflow:hidden;">
+        <div class="pricing-grid">
+          <div class="pc">
+            <span class="pc-lbl">Combined Individual Value</span>
+            <span class="pc-original" id="combinedVal">PKR 2,820</span>
+            <span class="pc-hint">Sum of selected items market price</span>
+          </div>
+          <div class="pc">
+            <span class="pc-lbl">Apply Bundle Discount (%)</span>
+            <div class="disc-wrap">
+              <input type="number" class="disc-in" id="discInput" value="15" min="0" max="100">
+              <span class="disc-pct">%</span>
+            </div>
+          </div>
+          <div class="pc">
+            <span class="pc-lbl green">Package Price</span>
+            <span class="pc-pkg" id="pkgPrice">PKR 2,397</span>
+            <span class="pc-hint green">Recommended for Quick Clearance</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 3: Bundle Details -->
+    <section class="step-section">
+      <div class="step-head">
+        <span class="step-num">3</span>
+        <h2 class="step-title">Bundle Details</h2>
+      </div>
+      <div class="scard">
+        <div class="bundle-grid">
+          <div class="bf">
+            <label>Bundle Name</label>
+            <input type="text" value="Recovery Essentials Pack" placeholder="Enter bundle name">
+            <span class="bf-hint">Visible to customers on MediFinder Home</span>
+          </div>
+          <div class="bf">
+            <label>Validity</label>
+            <div class="date-wrap">
+              <input type="date" placeholder="mm/dd/yyyy">
+            </div>
+            <span class="bf-hint">Bundle will be automatically hidden after this date</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <div class="action-bar">
+      <a href="PharmDashboard.html" class="btn-cancel">Cancel</a>
+      <button type="button" class="btn-publish">
+        <i class="fa-solid fa-rocket"></i> Publish to MediFinder
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="PharmSmartBundle.js"></script>
+</body>
+</html>

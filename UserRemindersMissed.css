@@ -1,0 +1,179 @@
+/* =============================================
+   MEDFINDER — UserRemindersMissed.css
+   Extends UserReminders.css for Missed state
+   cards. Import AFTER UserReminders.css.
+   ============================================= */
+
+/* ── Sidebar: Account section label ── */
+.nav-section-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--gray-mid);
+  padding: 14px 12px 4px;
+  user-select: none;
+}
+
+/* ── Tab: red active state (Missed tab) ── */
+.tab--red.tab--active {
+  background: var(--red);
+  color: white;
+}
+.tab--red.tab--active:hover { background: #dc2626; }
+
+/* ── Missed card wrapper ── */
+.reminder-card--missed {
+  border-color: #fecaca;
+  background: var(--white-pure);
+}
+
+/* ── Visual block: light red/pink background ── */
+.reminder-card__visual--missed {
+  width: 200px;
+  flex-shrink: 0;
+  background: #fff1f2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 16px;
+}
+
+.reminder-card__visual--missed .card-icon {
+  font-size: 48px;
+  color: #fca5a5;
+  opacity: 0.7;
+}
+
+/* ── I MISSED badge ── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-badge--missed {
+  background: var(--red);
+  color: white;
+}
+
+.status-badge--missed i { font-size: 12px; }
+
+/* ── Card content ── */
+.reminder-card--missed .reminder-card__content {
+  padding: 20px 28px;
+  gap: 12px;
+}
+
+/* ── Top row: name + missed-at label left, time right ── */
+.card-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.card-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reminder-card__name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1.2;
+}
+
+/* "Missed at X:XX XX" subtitle in red (template-accurate) */
+.missed-time-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--red);
+}
+
+/* ── Time block (top-right) ── */
+.card-time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.time-day {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+  letter-spacing: .5px;
+  color: var(--gray-mid);
+}
+
+.time-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1.1;
+}
+
+/* Missed tab: time shown in red (template-accurate) */
+.time-value--missed {
+  color: var(--red);
+}
+
+.time-date {
+  font-size: 11px;
+  color: var(--gray-mid);
+  letter-spacing: .3px;
+}
+
+/* ── Details row: 3 columns, no action buttons ── */
+.reminder-card__details--missed {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-items: start;
+  padding-top: 4px;
+  border-top: 1px solid #fee2e2;
+  margin-top: 4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .reminder-card__visual--missed { width: 160px; }
+  .reminder-card__visual--missed .card-icon { font-size: 38px; }
+  .reminder-card__details--missed { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .reminder-card--missed { flex-direction: column; }
+  .reminder-card__visual--missed {
+    width: 100%;
+    flex-direction: row;
+    height: auto;
+    padding: 18px 24px;
+    justify-content: flex-start;
+    gap: 14px;
+  }
+  .reminder-card__visual--missed .card-icon { font-size: 32px; }
+  .reminder-card--missed .reminder-card__content { padding: 20px; }
+  .card-top-row { flex-wrap: wrap; gap: 12px; }
+  .card-time-col { align-items: flex-start; }
+  .time-value { font-size: 20px; }
+  .reminder-card__details--missed { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .reminder-card--missed .reminder-card__content { padding: 16px; }
+  .reminder-card__name { font-size: 18px; }
+  .reminder-card__details--missed { grid-template-columns: 1fr; gap: 10px; }
+}

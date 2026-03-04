@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediFinder – Sales Insights</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="PharmSalesInsights.css" />
+</head>
+<body>
+
+<!-- SIDEBAR — matches PharmDashboard exactly -->
+<aside class="sidebar" id="sidebar" aria-label="Main navigation">
+  <div class="s-overlay" id="sOverlay" aria-hidden="true"></div>
+  <div class="s-inner">
+
+    <div class="s-logo">
+      <div class="s-logo-icon" aria-hidden="true">
+        <img src="Images/Logo.png" alt="MediFinder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <span class="mf-abbr">MF</span>
+      </div>
+      <div class="s-logo-text">
+        <span class="s-brand">MediFinder</span>
+        <span class="s-portal">Pharmacist Portal</span>
+      </div>
+    </div>
+
+    <nav class="s-nav" aria-label="Dashboard navigation">
+      <a href="PharmDashboard.html" class="nav-a">
+        <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span>Dashboard</span>
+      </a>
+      <a href="PharmInfoUpdate.html" class="nav-a">
+        <i class="fa-solid fa-gear" aria-hidden="true"></i><span>Information Update</span>
+      </a>
+      <a href="PharmStockManagement.html" class="nav-a">
+        <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Stock Management</span>
+      </a>
+      <a href="PharmBillingHistory.html" class="nav-a">
+        <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i><span>Billing &amp; Transaction History</span>
+      </a>
+      <a href="PharmExpiryAlerts.html" class="nav-a">
+        <i class="fa-solid fa-bell" aria-hidden="true"></i><span>Expiry Alerts</span>
+      </a>
+      <a href="PharmSalesInsights.html" class="nav-a active" aria-current="page">
+        <i class="fa-solid fa-chart-bar" aria-hidden="true"></i><span>Sales Insights</span>
+      </a>
+      <a href="PharmAdvancedForecast.html" class="nav-a">
+        <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i><span>Advanced Forecasting</span>
+      </a>
+    </nav>
+
+    <div class="s-user">
+      <div class="s-avatar">
+        <img src="Images/PharmAvatar.jpg" alt="Arsalan Ahmed" onerror="this.style.display='none'">
+      </div>
+      <div class="s-umeta">
+        <span class="s-uname">Arsalan Ahmed</span>
+        <span class="s-urole">Lead Pharmacist</span>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<main class="main">
+
+  <header class="topbar">
+    <button class="topbar-ham" id="hamBtn" aria-label="Toggle sidebar" aria-expanded="false" aria-controls="sidebar">
+      <i class="fa-solid fa-bars" aria-hidden="true"></i>
+    </button>
+    <div class="topbar-title">
+      <h1>Sales Insights</h1>
+      <p>Welcome back, Arsalan Ahmed.</p>
+    </div>
+  </header>
+
+  <!-- Stat Cards -->
+  <div class="stat-grid-4" role="list" aria-label="Sales metrics">
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-green" aria-hidden="true"><i class="fa-solid fa-money-bill-trend-up"></i></div>
+      <p class="stat-label">Gross Revenue</p>
+      <p class="stat-val stat-val--large">PKR 142,482</p>
+      <p class="stat-trend"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> 12%</p>
+    </article>
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-blue" aria-hidden="true"><i class="fa-solid fa-credit-card"></i></div>
+      <p class="stat-label">Net Profit</p>
+      <p class="stat-val stat-val--large">PKR 38,120</p>
+      <p class="stat-trend"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> 8.4%</p>
+    </article>
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-purple" aria-hidden="true"><i class="fa-solid fa-basket-shopping"></i></div>
+      <p class="stat-label">Avg Order Value</p>
+      <p class="stat-val stat-val--large">PKR 1,240</p>
+      <p class="stat-trend stat-trend--down"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i> 2.1%</p>
+    </article>
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-orange" aria-hidden="true"><i class="fa-solid fa-cash-register"></i></div>
+      <p class="stat-label">Total Sales</p>
+      <p class="stat-val">4,120</p>
+      <p class="stat-trend"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> 15%</p>
+    </article>
+  </div>
+
+  <!-- Revenue Chart -->
+  <section class="chart-card" aria-labelledby="revenueChartHeading">
+    <div class="chart-head">
+      <div>
+        <p class="card-title" id="revenueChartHeading">Revenue History</p>
+        <p class="card-subtitle">Revenue performance trends (PKR)</p>
+      </div>
+      <div class="chart-tabs" role="group" aria-label="Chart period">
+        <button class="ctab" data-period="6m" aria-pressed="false">6 Months</button>
+        <button class="ctab active" data-period="1y" aria-pressed="true">1 Year</button>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="revenueChart" aria-label="Revenue history chart" role="img"></canvas>
+    </div>
+  </section>
+
+  <!-- Top Selling Products -->
+  <section class="card" aria-labelledby="topProductsHeading">
+    <div class="card-header">
+      <h2 class="card-title" id="topProductsHeading">Top Selling Products</h2>
+      <button class="view-all" aria-label="View all products">View All</button>
+    </div>
+    <div class="tbl-wrap">
+      <table aria-label="Top selling products">
+        <thead>
+          <tr>
+            <th scope="col">Medicine Name</th>
+            <th scope="col">Category</th>
+            <th scope="col">Units Sold</th>
+            <th scope="col">Growth</th>
+          </tr>
+        </thead>
+        <tbody id="topProductsBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script src="PharmSalesInsights.js"></script>
+</body>
+</html>

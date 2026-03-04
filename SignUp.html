@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - Create Account</title>
+    <link rel="stylesheet" href="SignUp.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="Images/Logo.png" alt="MediFinder Logo" class="logo-img">
+            <span class="logo-text">MediFinder</span>
+        </div>
+        <nav class="nav-links">
+            <a href="index.html" class="btn-back-home">
+                <i class="fa-solid fa-arrow-left"></i> Back Home
+            </a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="left-panel">
+            <div class="left-content">
+                <h1>Find Nearest Pharmacy & Medicine Stock</h1>
+                <p>Locate pharmacies instantly and set your medication reminders.</p>
+                <div class="phone-mockup">
+                    <img src="Images/MockupImageForFrontPage.png" alt="MediFinder App Screenshot" class="mockup-img">
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="signup-wrapper">
+                <h2>Create Account</h2>
+                <p class="subtitle">Join us to access the pharmacy network.</p>
+
+                <form action="#" class="signup-form" id="signup-form">
+
+                    <!-- First Name + Last Name -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="first-name">First Name <span class="required">*</span></label>
+                            <input type="text" id="first-name" class="form-control" placeholder="Enter first name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="last-name">Last Name</label>
+                            <input type="text" id="last-name" class="form-control" placeholder="Enter last name">
+                        </div>
+                    </div>
+
+                    <!-- City + Phone No -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="city">City</label>
+                            <div class="select-wrapper">
+                                <select id="city" class="form-control form-select">
+                                    <option value="" disabled selected>Select your city</option>
+                                    <optgroup label="Punjab">
+                                        <option>Lahore</option>
+                                        <option>Faisalabad</option>
+                                        <option>Rawalpindi</option>
+                                        <option>Gujranwala</option>
+                                        <option>Multan</option>
+                                        <option>Sialkot</option>
+                                        <option>Bahawalpur</option>
+                                        <option>Sargodha</option>
+                                        <option>Sheikhupura</option>
+                                        <option>Jhang</option>
+                                        <option>Rahim Yar Khan</option>
+                                        <option>Gujrat</option>
+                                        <option>Kasur</option>
+                                        <option>Sahiwal</option>
+                                        <option>Okara</option>
+                                        <option>Wah Cantt</option>
+                                        <option>Dera Ghazi Khan</option>
+                                        <option>Chiniot</option>
+                                        <option>Kamoke</option>
+                                        <option>Hafizabad</option>
+                                        <option>Sadiqabad</option>
+                                        <option>Burewala</option>
+                                        <option>Khanewal</option>
+                                        <option>Pakpattan</option>
+                                        <option>Muzaffargarh</option>
+                                        <option>Lodhran</option>
+                                        <option>Vehari</option>
+                                        <option>Attock</option>
+                                        <option>Chakwal</option>
+                                        <option>Jhelum</option>
+                                        <option>Mandi Bahauddin</option>
+                                        <option>Narowal</option>
+                                        <option>Toba Tek Singh</option>
+                                        <option>Nankana Sahib</option>
+                                        <option>Khushab</option>
+                                        <option>Mianwali</option>
+                                        <option>Bhakkar</option>
+                                        <option>Layyah</option>
+                                        <option>Rajanpur</option>
+                                        <option>Bahawalnagar</option>
+                                    </optgroup>
+                                    <optgroup label="Sindh">
+                                        <option>Karachi</option>
+                                        <option>Hyderabad</option>
+                                        <option>Sukkur</option>
+                                        <option>Larkana</option>
+                                        <option>Mirpurkhas</option>
+                                        <option>Nawabshah</option>
+                                        <option>Jacobabad</option>
+                                        <option>Shikarpur</option>
+                                        <option>Khairpur</option>
+                                        <option>Dadu</option>
+                                        <option>Thatta</option>
+                                        <option>Badin</option>
+                                        <option>Tando Adam</option>
+                                        <option>Tando Allahyar</option>
+                                        <option>Sanghar</option>
+                                        <option>Umerkot</option>
+                                        <option>Ghotki</option>
+                                        <option>Qambar</option>
+                                        <option>Kashmore</option>
+                                        <option>Matiari</option>
+                                    </optgroup>
+                                    <optgroup label="Khyber Pakhtunkhwa">
+                                        <option>Peshawar</option>
+                                        <option>Mardan</option>
+                                        <option>Mingora (Swat)</option>
+                                        <option>Kohat</option>
+                                        <option>Abbottabad</option>
+                                        <option>Mansehra</option>
+                                        <option>Dera Ismail Khan</option>
+                                        <option>Nowshera</option>
+                                        <option>Charsadda</option>
+                                        <option>Swabi</option>
+                                        <option>Haripur</option>
+                                        <option>Bannu</option>
+                                        <option>Karak</option>
+                                        <option>Lakki Marwat</option>
+                                        <option>Tank</option>
+                                        <option>Chitral</option>
+                                        <option>Dir</option>
+                                        <option>Battagram</option>
+                                        <option>Shangla</option>
+                                        <option>Buner</option>
+                                    </optgroup>
+                                    <optgroup label="Balochistan">
+                                        <option>Quetta</option>
+                                        <option>Turbat</option>
+                                        <option>Khuzdar</option>
+                                        <option>Hub</option>
+                                        <option>Chaman</option>
+                                        <option>Gwadar</option>
+                                        <option>Dera Murad Jamali</option>
+                                        <option>Zhob</option>
+                                        <option>Loralai</option>
+                                        <option>Sibi</option>
+                                        <option>Kharan</option>
+                                        <option>Nushki</option>
+                                        <option>Kalat</option>
+                                        <option>Mastung</option>
+                                        <option>Pishin</option>
+                                        <option>Panjgur</option>
+                                        <option>Washuk</option>
+                                        <option>Awaran</option>
+                                        <option>Lasbela</option>
+                                        <option>Ziarat</option>
+                                    </optgroup>
+                                    <optgroup label="Islamabad Capital Territory">
+                                        <option>Islamabad</option>
+                                    </optgroup>
+                                    <optgroup label="Azad Kashmir">
+                                        <option>Muzaffarabad</option>
+                                        <option>Mirpur</option>
+                                        <option>Rawalakot</option>
+                                        <option>Kotli</option>
+                                        <option>Bhimber</option>
+                                        <option>Bagh</option>
+                                        <option>Sudhnoti</option>
+                                        <option>Hattian Bala</option>
+                                        <option>Haveli</option>
+                                        <option>Neelum</option>
+                                    </optgroup>
+                                    <optgroup label="Gilgit-Baltistan">
+                                        <option>Gilgit</option>
+                                        <option>Skardu</option>
+                                        <option>Chilas</option>
+                                        <option>Ghanche</option>
+                                        <option>Hunza</option>
+                                        <option>Nagar</option>
+                                        <option>Astore</option>
+                                        <option>Ghizer</option>
+                                    </optgroup>
+                                </select>
+                                <i class="fa-solid fa-chevron-down select-arrow"></i>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone No</label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-phone input-icon"></i>
+                                <input type="tel" id="phone" class="form-control has-icon" placeholder="+92 300 0000000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Address -->
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <input type="text" id="address" class="form-control" placeholder="Enter your street address">
+                    </div>
+
+                    <!-- Coordinates -->
+                    <div class="form-group">
+                        <label for="coordinates">
+                            Coordinates <span class="required">*</span>
+                            <button type="button" class="btn-locate" id="btn-locate" title="Auto-detect my location">
+                                <i class="fa-solid fa-location-crosshairs"></i> Detect
+                            </button>
+                        </label>
+                        <input type="text" id="coordinates" class="form-control" placeholder="Click 'Detect' or enter manually" required>
+                        <small class="helper-text" id="coord-helper">Helps us find the nearest pharmacies to you.</small>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="email">Email <span class="required">*</span></label>
+                        <div class="input-wrapper">
+                            <i class="fa-regular fa-envelope input-icon"></i>
+                            <input type="email" id="email" class="form-control has-icon" placeholder="Enter your email address" required>
+                        </div>
+                    </div>
+
+                    <!-- Password + Confirm Password -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="password">Password <span class="required">*</span></label>
+                            <div class="input-wrapper">
+                                <input type="password" id="password" class="form-control" placeholder="Create a password" required>
+                                <i class="fa-regular fa-eye-slash toggle-password"></i>
+                            </div>
+                            <small class="helper-text" id="pass-helper">Must be at least 8 characters.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm-password">Confirm Password <span class="required">*</span></label>
+                            <div class="input-wrapper">
+                                <input type="password" id="confirm-password" class="form-control" placeholder="Confirm your password" required>
+                                <i class="fa-regular fa-eye-slash toggle-password"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Terms -->
+                    <div class="terms-group">
+                        <input type="checkbox" id="terms" required>
+                        <label for="terms">
+                            By creating an account, I agree to the
+                            <a href="#" class="link">Terms of Service</a> and
+                            <a href="#" class="link">Privacy Policy</a>.
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Create Account</button>
+
+                    <div class="login-prompt">
+                        <span>Already have an account?</span>
+                        <a href="Login.html" class="login-link">Log In</a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="SignUp.js"></script>
+</body>
+</html>

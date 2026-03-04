@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - Pharmacy Search</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="UserPharmacySearch.css">
+</head>
+<body>
+
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <div class="sidebar-inner">
+            <!-- Logo -->
+            <div class="sidebar__logo">
+                <div class="sidebar__logo-icon">
+                    <img src="Images/Logo.png" alt="MediFinder Logo">
+                </div>
+                <div class="sidebar__logo-text">
+                    <span class="sidebar__brand">MediFinder</span>
+                    <span class="sidebar__portal">User Portal</span>
+                </div>
+            </div>
+
+            <!-- Single vertical nav stack — no section labels -->
+            <nav class="sidebar__nav">
+                <a href="UserDashboard.html" class="nav-item">
+                    <i class="fa-solid fa-table-cells-large nav-item__icon"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="UserPharmacySearch.html" class="nav-item nav-item--active">
+                    <i class="fa-solid fa-magnifying-glass nav-item__icon"></i>
+                    <span>Pharmacy Search</span>
+                </a>
+                <a href="UserProfile.html" class="nav-item">
+                    <i class="fa-regular fa-user nav-item__icon"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="UserHistory.html" class="nav-item">
+                    <i class="fa-solid fa-clock-rotate-left nav-item__icon"></i>
+                    <span>My History</span>
+                </a>
+                <a href="UserReminders.html" class="nav-item">
+                    <i class="fa-regular fa-bell nav-item__icon"></i>
+                    <span>Set Reminders</span>
+                </a>
+            </nav>
+
+            <!-- User Profile Footer -->
+            <div class="sidebar__user">
+                <div class="user-avatar">
+                    <img src="Images/ProfileAvatar.jpg" alt="John Doe" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">John Doe</span>
+                    <span class="user-email">jane.doe@medifinder.pk</span>
+                </div>
+                <a href="Login.html" class="user-logout" title="Log out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ===================== MAIN CONTENT ===================== -->
+    <main class="main">
+
+        <!-- Top Bar -->
+        <header class="topbar">
+            <button class="topbar__hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="topbar__title">
+                <h1>Pharmacy Results</h1>
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <span>Dashboard</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                    <span class="breadcrumb__active">Pharmacy Search</span>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Search Bar (no filter/bell buttons) -->
+        <section class="search-section">
+            <div class="search-bar">
+                <div class="search-bar__input-wrap">
+                    <i class="fa-solid fa-magnifying-glass search-bar__icon"></i>
+                    <input
+                        type="search"
+                        class="search-bar__input"
+                        value="Paracetamol 100mg"
+                        placeholder="Search medicines, brands..."
+                        aria-label="Search medicines"
+                    >
+                </div>
+                <button class="upload-btn">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>Upload Prescription</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Header -->
+        <section class="results-header">
+            <p class="results-count">Found <strong>3 pharmacies</strong> with stock</p>
+            <div class="sort-group">
+                <button class="sort-btn sort-btn--active">
+                    <i class="fa-solid fa-location-dot"></i> Nearest
+                </button>
+                <button class="sort-btn">
+                    <i class="fa-solid fa-dollar-sign"></i> Cheapest
+                </button>
+            </div>
+        </section>
+
+        <!-- ===================== PHARMACY CARDS ===================== -->
+        <section class="pharmacy-list">
+
+            <!-- Card 1: CVS Pharmacy -->
+            <article class="pharmacy-card">
+                <!-- card-top: image | info | price -->
+                <div class="card-top">
+                    <div class="card-image">
+                        <img src="Images/CVS.jpg" alt="CVS Pharmacy" onerror="this.parentElement.classList.add('card-image--fallback')">
+                        <span class="status-pill status-pill--open">
+                            <i class="fa-solid fa-circle"></i> Open Now
+                        </span>
+                    </div>
+
+                    <div class="card-info">
+                        <div class="card-info__name-row">
+                            <h2 class="card-info__name">CVS Pharmacy</h2>
+                            <span class="badge badge--verified">
+                                <i class="fa-solid fa-circle-check"></i> Verified
+                            </span>
+                        </div>
+                        <ul class="card-info__details">
+                            <li>
+                                <i class="fa-solid fa-location-dot"></i>
+                                <span>123 Main St, Downtown &bull; <strong>0.5km away</strong></span>
+                            </li>
+                            <li>
+                                <i class="fa-regular fa-clock"></i>
+                                <span>9:00 A.M &ndash; 11:00 P.M</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card-price">
+                        <span class="price">$12.00</span>
+                        <span class="price-label">per pack</span>
+                    </div>
+                </div>
+
+                <!-- card-footer: availability | contact | live -->
+                <div class="card-footer">
+                    <div class="info-cell">
+                        <span class="info-cell__label">Availability</span>
+                        <span class="info-cell__value info-cell__value--green">
+                            <i class="fa-solid fa-box-archive"></i> 20 Units
+                        </span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="info-cell__label">Contact</span>
+                        <span class="info-cell__value">
+                            <i class="fa-solid fa-phone"></i> +1 (555) 019-2834
+                        </span>
+                    </div>
+                    <div class="live-badge live-badge--live">
+                        <span class="live-dot"></span> Live
+                    </div>
+                </div>
+
+                <button class="alternatives-btn">
+                    See Alternatives <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </article>
+
+            <!-- Card 2: Walgreens -->
+            <article class="pharmacy-card">
+                <div class="card-top">
+                    <div class="card-image">
+                        <img src="Images/Walgreens.jpg" alt="Walgreens" onerror="this.parentElement.classList.add('card-image--fallback')">
+                        <span class="status-pill status-pill--low">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Low Stock
+                        </span>
+                    </div>
+
+                    <div class="card-info">
+                        <div class="card-info__name-row">
+                            <h2 class="card-info__name">Walgreens</h2>
+                            <span class="badge badge--verified">
+                                <i class="fa-solid fa-circle-check"></i> Verified
+                            </span>
+                        </div>
+                        <ul class="card-info__details">
+                            <li>
+                                <i class="fa-solid fa-location-dot"></i>
+                                <span>456 Oak Ave, Midtown &bull; <strong>1.2km away</strong></span>
+                            </li>
+                            <li>
+                                <i class="fa-regular fa-clock"></i>
+                                <span>9:00 A.M &ndash; 11:00 P.M</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card-price">
+                        <span class="price">$14.50</span>
+                        <span class="price-label">per pack</span>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="info-cell">
+                        <span class="info-cell__label">Availability</span>
+                        <span class="info-cell__value info-cell__value--amber">
+                            <i class="fa-solid fa-triangle-exclamation"></i> 2 Units
+                        </span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="info-cell__label">Contact</span>
+                        <span class="info-cell__value">
+                            <i class="fa-solid fa-phone"></i> +1 (555) 012-3456
+                        </span>
+                    </div>
+                    <div class="live-badge live-badge--live">
+                        <span class="live-dot"></span> Live
+                    </div>
+                </div>
+
+                <button class="alternatives-btn">
+                    See Alternatives <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </article>
+
+            <!-- Card 3: Downtown Meds -->
+            <article class="pharmacy-card pharmacy-card--muted">
+                <div class="card-top">
+                    <div class="card-image">
+                        <img src="Images/DowntownMeds.jpg" alt="Downtown Meds" onerror="this.parentElement.classList.add('card-image--fallback')">
+                        <span class="status-pill status-pill--closed">
+                            <i class="fa-solid fa-circle"></i> Closed
+                        </span>
+                    </div>
+
+                    <div class="card-info">
+                        <div class="card-info__name-row">
+                            <h2 class="card-info__name">Downtown Meds</h2>
+                            <span class="badge badge--unverified">
+                                <i class="fa-solid fa-circle-xmark"></i> Not Verified
+                            </span>
+                        </div>
+                        <ul class="card-info__details">
+                            <li>
+                                <i class="fa-solid fa-location-dot"></i>
+                                <span>789 Center St &bull; <strong>2.5km away</strong></span>
+                            </li>
+                            <li>
+                                <i class="fa-solid fa-ban"></i>
+                                <span>Closed</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="card-price">
+                        <span class="price price--muted">$11.50</span>
+                        <span class="price-label">per pack</span>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="info-cell">
+                        <span class="info-cell__label">Availability</span>
+                        <span class="info-cell__value info-cell__value--red">
+                            <i class="fa-solid fa-ban"></i> Out of Stock
+                        </span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="info-cell__label">Contact</span>
+                        <span class="info-cell__value">
+                            <i class="fa-solid fa-phone"></i> +1 (555) 987-6543
+                        </span>
+                    </div>
+                    <div class="live-badge live-badge--offline">
+                        <span class="live-dot live-dot--offline"></span> Offline
+                    </div>
+                </div>
+
+                <button class="alternatives-btn">
+                    See Alternatives <i class="fa-solid fa-chevron-down"></i>
+                </button>
+            </article>
+
+        </section>
+    </main>
+
+    <script src="UserPharmacySearch.js"></script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MedFinder - Instantly connect with local pharmacies to find your medicine">
+    <title>MedFinder - Find Your Medicine</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="HomePage.css">
+
+    <!-- FONT AWESOME ICONS -->
+    <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <!-- Header Navigation -->
+    <header class="header">
+        <nav class="nav container">
+            <div class="nav__logo">
+                <div class="logo-icon"> <img src="Images/Logo.png" alt="Logo"> </div>
+                <span class="logo-text">MediFinder</span>
+            </div>
+            
+            <button class="nav__toggle" id="nav-toggle" aria-label="Toggle navigation">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+            
+            <ul class="nav__menu" id="nav-menu">
+                <li class="nav__item"><a href="#home" class="nav__link">Home</a></li>
+                <li class="nav__item"><a href="#about" class="nav__link">About</a></li>
+                <li class="nav__item"><a href="#features" class="nav__link">Features</a></li>
+                <li class="nav__item"><a href="#how-it-works" class="nav__link">How It Works</a></li>
+                <li class="nav__item"><a href="#contact" class="nav__link">Contact</a></li>
+            </ul>
+            
+            <div class="nav__actions">
+                <a href="Login.html" class="btn btn--secondary">Sign In</a>
+                <a href="SignUp.html" class="btn btn--primary">Get Started</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+        <div class="container hero__container">
+            <div class="hero__content">
+                <h1 class="hero__title">Find your medicine</h1>
+                <p class="hero__subtitle">Instantly connect with local pharmacies.</p>
+                
+                <div class="search-box">
+                    <span class="search-box__icon">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input 
+                        type="search" 
+                        class="search-box__input" 
+                        placeholder="Search medicines, brands..."
+                        aria-label="Search medicines"
+                    >
+                    <button class="search-box__btn" aria-label="Search">
+                        <i class="fa-solid fa-camera"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="hero__image">
+                <!-- Image placeholder - Use a mockup of your mobile app showing the pharmacy map/search interface -->
+                <!-- Recommended size: 280px x 500px -->
+                <!-- Source: Create your own mockup or use https://www.figma.com or https://mockuphone.com -->
+                <div class="hero__mockup">
+                    <img src="Images/MockupImageForFrontPage.png" alt="mockup_image">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about" id="about">
+        <div class="container">
+            <div class="about__content">
+                <span class="section-tag">• ABOUT MEDIFINDER</span>
+                <h2 class="section-title">Connecting Care</h2>
+                <p class="about__text">
+                    MediFinder bridges the gap between patients and pharmacies in real-time. 
+                    We ensure you find the medicine you need, compare prices, and reserve stock 
+                    when it matters most—saving you time and anxiety.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <h2 class="section-title section-title--center">Features</h2>
+            <p class="section-subtitle">Everything you need to manage your health and business seamlessly.</p>
+            
+            <div class="features__grid">
+                <!-- For Users Features -->
+                <div class="features__column">
+                    <h3 class="features__heading">• FOR USERS</h3>
+                    
+                    <div class="feature-card feature-card--green">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Search medicine and real-time tracking of nearby pharmacies stock.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card feature-card--green">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-pills"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Prescription Scan and automatically generate matching drug search results.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card feature-card--green">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Alternatives are suggested if needed.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card feature-card--green">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-file"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Access detailed pharmacy profiles and contact.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card feature-card--green">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-truck"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Home delivery if pharmacy enabled.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card feature-card--green">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-bell"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Set Dosage and Expiry Alerts.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- For Pharmacies Features -->
+                <div class="features__column">
+                    <h3 class="features__heading">• FOR PHARMACIES</h3>
+                    
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-gear"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Stock Management Dashboard.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-chart-line"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Sales and Analytics Dashboard.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-map-pin"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            High Demand Products in a Specific Region.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-star"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Predictive Stock Suggestions.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-sack-dollar"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Generate Discounted Sale Packages For Near Expiry And Low Selling Products.
+                        </p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-card__icon">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <p class="feature-card__text">
+                            Expiry and Low Stock Alerts.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <h2 class="section-title section-title--center">How It Works</h2>
+            
+            <div class="how-it-works__grid">
+                <!-- For Users -->
+                <div class="how-it-works__column">
+                    <h3 class="how-it-works__heading">• FOR USERS</h3>
+                    
+                    <div class="step">
+                        <div class="step__icon">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <p class="step__text">Search Medication</p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step__icon">
+                            <i class="fa-solid fa-clock"></i>
+                        </div>
+                        <p class="step__text">Check Availability</p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step__icon">
+                            <i class="fa-solid fa-location-dot"></i>
+                        </div>
+                        <p class="step__text">Proximity</p>
+                    </div>
+                </div>
+                
+                <!-- For Pharmacies -->
+                <div class="how-it-works__column">
+                    <h3 class="how-it-works__heading">• FOR PHARMACIES</h3>
+                    
+                    <div class="step">
+                        <div class="step__icon">
+                            <i class="fa-solid fa-cloud-arrow-down"></i>
+                        </div>
+                        <p class="step__text">Data Collection</p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step__icon">
+                            <i class="fa-solid fa-arrow-trend-up"></i>
+                        </div>
+                        <p class="step__text">Forecasting</p>
+                    </div>
+                    
+                    <div class="step">
+                        <div class="step__icon">
+                            <i class="fa-solid fa-lightbulb"></i>
+                        </div>
+                        <p class="step__text">Optimized Suggestions</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Partnership Section -->
+    <section class="partnership">
+        <div class="container">
+            <div class="partnership__content">        
+                <span class="partnership__tag">PARTNERSHIP</span>
+                <h2 class="partnership__title">Grow Your Pharmacy Business</h2>
+                <p class="partnership__text">
+                    Join MediFinder to digitalize your inventory and connect with thousands 
+                    of patients in your area today.
+                </p>
+                <a href="#join" class="btn btn--primary btn--large">Join MedFinder</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contact">
+        <div class="container">
+            <div class="footer__logo">
+                <div class="logo-icon"> <img src="Images/Logo.png" alt="Logo"> </div>
+                <span class="logo-text">MediFinder</span>
+            </div>
+            
+            <div class="footer__contact">
+                <h3 class="footer__heading">CONTACT SUPPORT</h3>
+                
+                <div class="contact-item">
+                    <span class="contact-item__icon">
+                        <i class="fa-solid fa-phone"></i>
+                    </span>
+                    <span class="contact-item__text">+92 10001 10001</span>
+                </div>
+                
+                <div class="contact-item">
+                    <span class="contact-item__icon">
+                        <i class="fa-solid fa-envelope"></i>
+                    </span>
+                    <span class="contact-item__text">support@medifinder.pk</span>
+                </div>
+                
+                <div class="contact-item">
+                    <span class="contact-item__icon">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </span>
+                    <span class="contact-item__text">Karachi, Sindh</span>
+                </div>
+            </div>
+            
+            <div class="footer__bottom">
+                <p>&copy; 2026 MediFinder. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-top" id="scroll-top" aria-label="Scroll to top">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+
+    <script src="HomePage.js"></script>
+</body>
+</html>

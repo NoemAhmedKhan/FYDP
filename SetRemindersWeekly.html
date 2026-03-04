@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder – Set Reminders (Weekly)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="SetReminders.css">
+</head>
+<body>
+
+<div class="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
+        <!-- Header -->
+        <div class="m-head">
+            <div class="m-head-left">
+                <div class="m-brand">
+                    <div class="m-logo"><img src="Images/Logo.png" alt="MediFinder"></div>
+                    <span class="m-logo-text">MediFinder</span>
+                </div>
+                <h1 class="m-title" id="modalTitle">Set Reminders</h1>
+                <nav class="m-breadcrumb">
+                    <a href="HomePage.html" class="m-breadcrumb__link">Dashboard</a>
+                    <i class="fa-solid fa-chevron-right m-breadcrumb__sep"></i>
+                    <span class="m-breadcrumb__current">Reminders</span>
+                </nav>
+            </div>
+            <div class="m-head-right">
+                <span class="new-badge"><i class="fa-solid fa-bell"></i> New Reminder</span>
+            </div>
+        </div>
+
+        <!-- STEP 1: Medication Details -->
+        <section class="step-section">
+            <div class="step-head">
+                <span class="step-num">1</span>
+                <div>
+                    <h2 class="step-title">Medication Details</h2>
+                    <p class="step-sub">Configure your medication information.</p>
+                </div>
+            </div>
+            <div class="scard">
+
+                <div class="field-group">
+                    <label class="field-label" for="med-name">Medication Name</label>
+                    <div class="input-wrap">
+                        <i class="fa-solid fa-pills input-icon"></i>
+                        <input type="text" id="med-name" class="text-input text-input--icon" value="Amoxicillin" placeholder="Enter medication name">
+                    </div>
+                </div>
+
+                <div class="field-row field-row--three">
+                    <div class="field-group">
+                        <label class="field-label" for="dosage">Dosage</label>
+                        <input type="text" id="dosage" class="text-input" value="500mg" placeholder="e.g. 500mg">
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="med-form">Form</label>
+                        <div class="select-wrap">
+                            <select id="med-form" class="select-input">
+                                <option>Tablet</option>
+                                <option>Capsule</option>
+                                <option>Liquid</option>
+                                <option>Injection</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="start-date">Start Date</label>
+                        <input type="date" id="start-date" class="text-input" value="2026-01-01">
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Frequency</label>
+                    <div class="toggle-group" role="group">
+                        <button class="toggle-btn" onclick="location.href='SetRemindersDaily.html'">Daily</button>
+                        <button class="toggle-btn toggle-btn--active" onclick="location.href='SetRemindersWeekly.html'">Weekly</button>
+                        <button class="toggle-btn" onclick="location.href='SetRemindersAsNeeded.html'">As Needed</button>
+                        <button class="toggle-btn" onclick="location.href='SetRemindersSpecificDays.html'">Specific Days</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- STEP 2: Reminder Times -->
+        <section class="step-section">
+            <div class="step-head">
+                <span class="step-num">2</span>
+                <div>
+                    <h2 class="step-title">Reminder Times</h2>
+                    <p class="step-sub">Set when you want to be reminded each week.</p>
+                </div>
+            </div>
+            <div class="scard scard--flush">
+
+                <div class="times-header">
+                    <span class="sel-label">Scheduled Times</span>
+                </div>
+
+                <div class="time-scroll-box" id="timeRows">
+                    <div class="time-row">
+                        <input type="time" class="time-input" value="08:00" aria-label="Reminder time">
+                        <div class="select-wrap time-meal-select">
+                            <select class="select-input" aria-label="Meal timing">
+                                <option>After meal</option>
+                                <option>Before meal</option>
+                                <option>With meal</option>
+                                <option>Empty stomach</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                        <button class="time-remove" title="Remove" onclick="removeTimeRow(this)">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="time-row">
+                        <input type="time" class="time-input" value="14:00" aria-label="Reminder time">
+                        <div class="select-wrap time-meal-select">
+                            <select class="select-input" aria-label="Meal timing">
+                                <option>Before meal</option>
+                                <option>After meal</option>
+                                <option>With meal</option>
+                                <option>Empty stomach</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                        <button class="time-remove" title="Remove" onclick="removeTimeRow(this)">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="time-row">
+                        <input type="time" class="time-input" value="20:00" aria-label="Reminder time">
+                        <div class="select-wrap time-meal-select">
+                            <select class="select-input" aria-label="Meal timing">
+                                <option>After meal</option>
+                                <option>Before meal</option>
+                                <option>With meal</option>
+                                <option>Empty stomach</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-arrow"></i>
+                        </div>
+                        <button class="time-remove" title="Remove" onclick="removeTimeRow(this)">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="times-footer">
+                    <button class="add-time-btn" id="addTimeBtn">
+                        <i class="fa-solid fa-circle-plus"></i> Add Another Time
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- STEP 3: Notification Preferences -->
+        <section class="step-section">
+            <div class="step-head">
+                <span class="step-num">3</span>
+                <div>
+                    <h2 class="step-title">Notification Preferences</h2>
+                    <p class="step-sub">Choose how you want to receive your reminders.</p>
+                </div>
+            </div>
+            <div class="scard">
+                <div class="notif-cards">
+                    <label class="notif-card notif-card--active">
+                        <input type="checkbox" checked class="hidden-check">
+                        <span class="custom-check custom-check--checked"><i class="fa-solid fa-check"></i></span>
+                        <div class="notif-body">
+                            <span class="notif-title">Push Notification</span>
+                            <span class="notif-desc">Receive alerts directly on your device lock screen.</span>
+                        </div>
+                        <i class="fa-solid fa-mobile-screen notif-icon"></i>
+                    </label>
+                    <label class="notif-card">
+                        <input type="checkbox" class="hidden-check">
+                        <span class="custom-check"><i class="fa-solid fa-check"></i></span>
+                        <div class="notif-body">
+                            <span class="notif-title">Email Alert</span>
+                            <span class="notif-desc">Get a daily digest or instant email reminder.</span>
+                        </div>
+                        <i class="fa-regular fa-envelope notif-icon"></i>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Action Bar -->
+        <div class="action-bar">
+            <a href="UserReminders.html" class="btn-cancel">Cancel</a>
+            <button type="button" class="btn-save" id="saveBtn">
+                <i class="fa-solid fa-floppy-disk"></i> Save Reminder
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script src="SetReminders.js"></script>
+</body>
+</html>

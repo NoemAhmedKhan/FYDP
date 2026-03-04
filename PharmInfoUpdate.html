@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediFinder – Pharmacy Profile Update</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="PharmInfoUpdate.css" />
+</head>
+<body>
+
+<!-- ════════════════ SIDEBAR ════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="s-overlay" id="sOverlay"></div>
+  <div class="s-inner">
+
+    <div class="s-logo">
+      <div class="s-logo-icon">
+        <img src="Images/Logo.png" alt="MediFinder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <span class="mf-abbr">MF</span>
+      </div>
+      <div class="s-logo-text">
+        <span class="s-brand">MediFinder</span>
+        <span class="s-portal">Pharmacist Portal</span>
+      </div>
+    </div>
+
+    <nav class="s-nav">
+      <a href="PharmDashboard.html" class="nav-a">
+        <i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span>
+      </a>
+      <a href="PharmInfoUpdate.html" class="nav-a active">
+        <i class="fa-solid fa-gear"></i><span>Information Update</span>
+      </a>
+      <a href="PharmStockManagement.html" class="nav-a">
+        <i class="fa-solid fa-boxes-stacked"></i><span>Stock Management</span>
+      </a>
+      <a href="PharmBillingHistory.html" class="nav-a">
+        <i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span>
+      </a>
+      <a href="PharmExpiryAlerts.html" class="nav-a">
+        <i class="fa-solid fa-bell"></i><span>Expiry Alerts</span>
+      </a>
+      <a href="PharmSalesInsights.html" class="nav-a">
+        <i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span>
+      </a>
+      <a href="PharmAdvancedForecast.html" class="nav-a">
+        <i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span>
+      </a>
+    </nav>
+
+    <div class="s-user">
+      <div class="s-avatar">
+        <img src="Images/PharmAvatar.jpg" alt="Arsalan Ahmed" onerror="this.style.display='none'">
+      </div>
+      <div class="s-umeta">
+        <span class="s-uname">Arsalan Ahmed</span>
+        <span class="s-urole">Lead Pharmacist</span>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- ════════════════ MAIN ════════════════ -->
+<main class="main">
+
+  <header class="topbar">
+    <button class="topbar-ham" id="hamBtn" aria-label="Toggle sidebar">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="topbar-title">
+      <h1>Pharmacy Profile Update</h1>
+      <p>Manage your branch details and operational hours.</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-primary">
+        <i class="fa-solid fa-floppy-disk"></i> Save Profile Updates
+      </button>
+    </div>
+  </header>
+
+  <!-- Info Grid -->
+  <div class="info-grid">
+
+    <!-- General Information -->
+    <section class="card" aria-labelledby="generalHeading">
+      <div class="section-head">
+        <i class="fa-solid fa-circle-info section-icon--blue" aria-hidden="true"></i>
+        <h2 id="generalHeading">General Information</h2>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pharmacyName">Pharmacy Name</label>
+        <input class="form-input" type="text" id="pharmacyName" name="pharmacyName" value="MediFinder Central Branch">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="licenseNum">
+            License Number <i class="fa-solid fa-lock label-lock" aria-label="Read-only"></i>
+          </label>
+          <input class="form-input" type="text" id="licenseNum" name="licenseNum" value="LIC-99827-C" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="branchId">
+            Branch ID <i class="fa-solid fa-lock label-lock" aria-label="Read-only"></i>
+          </label>
+          <input class="form-input" type="text" id="branchId" name="branchId" value="KHI-CENTRAL-01" readonly>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact Details -->
+    <section class="card" aria-labelledby="contactHeading">
+      <div class="section-head">
+        <i class="fa-solid fa-address-card section-icon--purple" aria-hidden="true"></i>
+        <h2 id="contactHeading">Contact Details</h2>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="primaryPhone">Primary Phone</label>
+          <input class="form-input" type="tel" id="primaryPhone" name="primaryPhone" value="+92 21 34567890">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="emergencyPhone">Emergency Contact</label>
+          <input class="form-input" type="tel" id="emergencyPhone" name="emergencyPhone" value="+92 300 1234567">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="officialEmail">Official Email</label>
+        <input class="form-input" type="email" id="officialEmail" name="officialEmail" value="contact@medifinder.pk">
+      </div>
+    </section>
+
+    <!-- Location Details -->
+    <section class="card" aria-labelledby="locationHeading">
+      <div class="section-head">
+        <i class="fa-solid fa-location-dot section-icon--red" aria-hidden="true"></i>
+        <h2 id="locationHeading">Location Details</h2>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="streetAddress">Street Address</label>
+        <textarea class="form-input" id="streetAddress" name="streetAddress" rows="3">Suite 402, Medical Plaza, Block 6, PECHS</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="city">City</label>
+        <input class="form-input" type="text" id="city" name="city" value="Karachi, Sindh">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="gpsCoords">GPS Coordinates / Map Pin</label>
+        <div class="input-wrap">
+          <input class="form-input" type="text" id="gpsCoords" name="gpsCoords" value="24.8607° N, 67.0011° E">
+          <i class="fa-solid fa-map input-wrap-icon" aria-hidden="true"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Operating Hours -->
+    <section class="card" aria-labelledby="hoursHeading">
+      <div class="section-head">
+        <i class="fa-solid fa-clock section-icon--amber" aria-hidden="true"></i>
+        <h2 id="hoursHeading">Operating Hours</h2>
+      </div>
+      <div id="hoursContainer" role="list" aria-label="Operating hours by day"></div>
+    </section>
+
+  </div>
+
+  <!-- Profile Verification Banner -->
+  <aside class="verify-card" aria-label="Profile verification status">
+    <div class="verify-icon" aria-hidden="true">
+      <i class="fa-solid fa-shield-halved"></i>
+    </div>
+    <div class="verify-info">
+      <p class="verify-title">Profile Verification Status</p>
+      <p class="verify-sub">Your profile is 85% complete. Update your emergency contact and operating hours to reach 100% and maintain your "Verified Pharmacy" badge on the patient portal.</p>
+      <div class="verify-bar">
+        <div class="progress-bar" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100" aria-label="Profile completion 85%">
+          <div class="progress-fill" style="width:85%"></div>
+        </div>
+      </div>
+    </div>
+    <p class="verify-pct" aria-hidden="true">85%</p>
+  </aside>
+
+</main>
+
+<script src="PharmInfoUpdate.js"></script>
+</body>
+</html>

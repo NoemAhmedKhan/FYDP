@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediFinder – Pharmacist Dashboard</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  
+  <link rel="stylesheet" href="PharmDashboard.css" />
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="s-overlay" id="sOverlay"></div>
+  <div class="s-inner">
+    <div class="s-logo">
+      <div class="s-logo-icon">
+        <img src="Images/Logo.png" alt="MediFinder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <span class="mf-abbr">MF</span>
+      </div>
+      <div class="s-logo-text">
+        <span class="s-brand">MediFinder</span>
+        <span class="s-portal">Pharmacist Portal</span>
+      </div>
+    </div>
+
+    <nav class="s-nav">
+      <a href="PharmDashboard.html" class="nav-a active">
+        <i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span>
+      </a>
+      <a href="PharmInfoUpdate.html" class="nav-a">
+        <i class="fa-solid fa-gear"></i><span>Information Update</span>
+      </a>
+      <a href="PharmStockManagement.html" class="nav-a">
+        <i class="fa-solid fa-boxes-stacked"></i><span>Stock Management</span>
+      </a>
+      <a href="PharmBillingHistory.html" class="nav-a">
+        <i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span>
+      </a>
+      <a href="PharmExpiryAlerts.html" class="nav-a">
+        <i class="fa-solid fa-bell"></i><span>Expiry Alerts</span>
+      </a>
+      <a href="PharmSalesInsights.html" class="nav-a">
+        <i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span>
+      </a>
+      <a href="PharmAdvancedForecast.html" class="nav-a">
+        <i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span>
+      </a>
+    </nav>
+
+    <div class="s-user">
+      <div class="s-avatar">
+        <img src="Images/PharmAvatar.jpg" alt="Arsalan Ahmed" onerror="this.style.display='none'">
+      </div>
+      <div class="s-umeta">
+        <span class="s-uname">Arsalan Ahmed</span>
+        <span class="s-urole">Lead Pharmacist</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="topbar-ham" id="hamBtn" aria-label="Toggle sidebar">
+      <i class="fa-solid fa-bars"></i>
+    </button>
+    <div class="topbar-title">
+      <h1>Operational Overview</h1>
+      <p>Welcome back, Arsalan Ahmed.</p>
+    </div>
+    <a href="PharmBilling.html" class="btn-generate">
+      <i class="fa-solid fa-file-invoice"></i> Generate New Bill
+    </a>
+  </header>
+
+  <!-- Dashboard Grid -->
+  <div class="dash-grid">
+    <!-- LEFT COL -->
+    <div class="left-col">
+      <!-- Stat Cards -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon si-green">
+            <i class="fa-solid fa-kit-medical"></i>
+          </div>
+          <p class="stat-label">Total Medicine Count</p>
+          <p class="stat-val">2,482</p>
+          <p class="stat-trend">
+            <i class="fa-solid fa-arrow-up"></i> 12% increase
+          </p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-amber">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </div>
+          <p class="stat-label">Low Stock Alerts</p>
+          <p class="stat-val amber">18</p>
+          <p class="stat-sub">Requires reordering</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-red">
+            <i class="fa-regular fa-calendar-xmark"></i>
+          </div>
+          <p class="stat-label">Items Expiring Soon</p>
+          <p class="stat-val red">42</p>
+          <p class="stat-sub">Within 30 days</p>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-green">
+            <i class="fa-solid fa-sack-dollar"></i>
+          </div>
+          <p class="stat-label">Today's Sales</p>
+          <p class="stat-val">PKR 4,120</p>
+          <p class="stat-sub">82 Transactions</p>
+        </div>
+      </div>
+
+      <!-- Sales Chart -->
+      <div class="chart-card">
+        <div class="chart-head">
+          <div>
+            <p class="chart-title">Sales History</p>
+            <p class="chart-sub">Revenue performance trends (PKR)</p>
+          </div>
+          <div class="chart-tabs">
+            <button class="ctab" data-period="6m">6 Months</button>
+            <button class="ctab active" data-period="1y">1 Year</button>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="salesChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COL -->
+    <div class="right-col">
+      <!-- AI Insights -->
+      <div class="ai-card">
+        <div class="ai-head">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <h3>AI Insights</h3>
+        </div>
+        <p class="ai-text">Based on local health trends, expect a 20% increase in allergy medication demand next week.</p>
+        <div class="ai-item">
+          <span class="ai-item-lbl">Demand Forecast</span>
+          <span class="ai-item-val">High: Antihistamines</span>
+        </div>
+        <div class="ai-item">
+          <span class="ai-item-lbl">Seasonal Alert</span>
+          <span class="ai-item-val">Pollen surge detected</span>
+        </div>
+      </div>
+
+      <!-- Smart Pricing -->
+      <div class="sp-card">
+        <div class="sp-head">
+          <i class="fa-solid fa-tag"></i>
+          <h3>Smart Pricing</h3>
+        </div>
+        <div class="sp-bundle">
+          <span class="sp-rec-lbl">Recommended Bundle</span>
+          <p class="sp-name">Flu Kit (5 items)</p>
+          <div class="sp-price">
+            <span class="sp-new">PKR 4,500</span>
+            <span class="sp-old">5,200</span>
+          </div>
+        </div>
+        <a href="PharmSmartBundle.html" class="btn-create-bundle">Create Bundle</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="PharmDashboard.js"></script>
+</body>
+</html>

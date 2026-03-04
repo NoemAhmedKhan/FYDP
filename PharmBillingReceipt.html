@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediFinder – Transaction Receipt #TXN-84920</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="PharmBillingReceipt.css" />
+</head>
+<body>
+
+<!-- SIDEBAR — matches PharmDashboard exactly -->
+<aside class="sidebar" id="sidebar" aria-label="Main navigation">
+  <div class="s-overlay" id="sOverlay" aria-hidden="true"></div>
+  <div class="s-inner">
+
+    <div class="s-logo">
+      <div class="s-logo-icon" aria-hidden="true">
+        <img src="Images/Logo.png" alt="MediFinder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <span class="mf-abbr">MF</span>
+      </div>
+      <div class="s-logo-text">
+        <span class="s-brand">MediFinder</span>
+        <span class="s-portal">Pharmacist Portal</span>
+      </div>
+    </div>
+
+    <nav class="s-nav" aria-label="Dashboard navigation">
+      <a href="PharmDashboard.html" class="nav-a">
+        <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span>Dashboard</span>
+      </a>
+      <a href="PharmInfoUpdate.html" class="nav-a">
+        <i class="fa-solid fa-gear" aria-hidden="true"></i><span>Information Update</span>
+      </a>
+      <a href="PharmStockManagement.html" class="nav-a">
+        <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Stock Management</span>
+      </a>
+      <a href="PharmBillingHistory.html" class="nav-a active" aria-current="page">
+        <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i><span>Billing &amp; Transaction History</span>
+      </a>
+      <a href="PharmExpiryAlerts.html" class="nav-a">
+        <i class="fa-solid fa-bell" aria-hidden="true"></i><span>Expiry Alerts</span>
+      </a>
+      <a href="PharmSalesInsights.html" class="nav-a">
+        <i class="fa-solid fa-chart-bar" aria-hidden="true"></i><span>Sales Insights</span>
+      </a>
+      <a href="PharmAdvancedForecast.html" class="nav-a">
+        <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i><span>Advanced Forecasting</span>
+      </a>
+    </nav>
+
+    <div class="s-user">
+      <div class="s-avatar">
+        <img src="Images/PharmAvatar.jpg" alt="Arsalan Ahmed" onerror="this.style.display='none'">
+      </div>
+      <div class="s-umeta">
+        <span class="s-uname">Arsalan Ahmed</span>
+        <span class="s-urole">Lead Pharmacist</span>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- Page topbar -->
+  <div class="receipt-topbar">
+    <div class="receipt-topbar-left">
+      <a href="PharmBillingHistory.html" class="back-btn" aria-label="Back to transaction history">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+      </a>
+      <div class="topbar-meta">
+        <h1>Transaction Receipt — #TXN-84920</h1>
+        <p>Detailed breakdown of the customer transaction.</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-secondary">
+        <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Download PDF
+      </button>
+      <button class="btn-primary" onclick="window.print()">
+        <i class="fa-solid fa-print" aria-hidden="true"></i> Print Receipt
+      </button>
+    </div>
+  </div>
+
+  <!-- Receipt document -->
+  <article class="receipt-wrap" aria-label="Transaction receipt">
+    <div class="receipt-doc">
+
+      <!-- Header -->
+      <header class="receipt-header">
+        <div class="receipt-brand">
+          <div class="receipt-logo" aria-hidden="true">
+            <i class="fa-solid fa-briefcase-medical"></i>
+          </div>
+          <div>
+            <p class="receipt-pharmacy-name">CureWell Pharma &amp; Wellness</p>
+            <address class="receipt-address">
+              123 Medical Avenue,<br>
+              Healthcare City, Karachi,<br>
+              Pakistan<br>
+              <a href="tel:+922134567890">+92 21 3456789</a>
+            </address>
+          </div>
+        </div>
+        <div class="receipt-meta">
+          <span class="paid-badge">PAID</span>
+          <p class="receipt-txn-id">Transaction ID: #TXN-84920</p>
+        </div>
+      </header>
+
+      <!-- Parties -->
+      <div class="receipt-parties">
+        <section aria-labelledby="custLabel">
+          <p class="party-label" id="custLabel">Customer Information</p>
+          <div class="cust-row">
+            <div class="cust-avatar" aria-hidden="true">ZS</div>
+            <div>
+              <p class="cust-name">Zeeshan Sheikh</p>
+              <p class="cust-phone"><a href="tel:+923001234567">+92 300 1234567</a></p>
+              <p class="served-by">Served by: <strong>Arsalan Ahmed</strong></p>
+            </div>
+          </div>
+        </section>
+        <section aria-labelledby="txnLabel">
+          <p class="party-label" id="txnLabel">Transaction Details</p>
+          <time class="txn-date" datetime="2023-10-24T10:30">Oct 24, 2023, 10:30 AM</time>
+          <div class="txn-payment-row">
+            <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+            <span class="txn-payment-method">Visa **9923</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Items -->
+      <section class="items-section" aria-label="Purchased items">
+        <div class="items-head" aria-hidden="true">
+          <span>Item Description</span>
+          <span>Price (PKR)</span>
+        </div>
+        <div class="item-row">
+          <div>
+            <p class="item-name">Panadol 500mg</p>
+            <p class="item-qty">Quantity: 2 strips</p>
+          </div>
+          <p class="item-price">200.00</p>
+        </div>
+        <div class="item-row">
+          <div>
+            <p class="item-name">Amoxicillin 250mg</p>
+            <p class="item-qty">Quantity: 1 pack</p>
+          </div>
+          <p class="item-price">1,200.00</p>
+        </div>
+        <div class="item-row">
+          <div>
+            <p class="item-name">Surgical Masks (Box of 50)</p>
+            <p class="item-qty">Quantity: 1 unit</p>
+          </div>
+          <p class="item-price">3,100.00</p>
+        </div>
+      </section>
+
+      <!-- Totals -->
+      <div class="totals" aria-label="Price breakdown">
+        <div class="total-row">
+          <span class="total-row-label">Subtotal</span>
+          <span>4,500 PKR</span>
+        </div>
+        <div class="total-row">
+          <span class="total-row-label">Discount (5%)</span>
+          <span class="total-row-discount">−225 PKR</span>
+        </div>
+        <div class="total-row">
+          <span class="total-row-label">GST (17%)</span>
+          <span class="total-row-tax">+765 PKR</span>
+        </div>
+      </div>
+
+      <div class="grand-total">
+        <span class="grand-total-label">Total Amount</span>
+        <div>
+          <p class="grand-amount">5,040 PKR</p>
+          <p class="grand-incl">Inclusive of All Taxes</p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="receipt-footer">
+        <p class="receipt-tagline">"Serving health, delivering hope."</p>
+        <p class="receipt-thank">Thank You for Choosing CureWell Pharma &amp; Wellness</p>
+      </footer>
+
+    </div>
+
+    <!-- Signature note -->
+    <p class="receipt-signed">
+      <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+      Digitally signed and verified receipt generated by Pharmacist Arsalan Ahmed on Oct 24, 2023
+    </p>
+  </article>
+
+</main>
+
+<script src="PharmBillingReceipt.js"></script>
+</body>
+</html>

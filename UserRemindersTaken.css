@@ -1,0 +1,200 @@
+/* =============================================
+   MEDFINDER — UserRemindersTaken.css
+   Extends UserReminders.css for Taken/Completed
+   state cards. Import AFTER UserReminders.css.
+   ============================================= */
+
+/* ── Sidebar: Account section label ── */
+.nav-section-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--gray-mid);
+  padding: 14px 12px 4px;
+  user-select: none;
+}
+
+/* ── Tab: green active state (Taken tab) ── */
+.tab--green.tab--active {
+  background: var(--green);
+  color: white;
+}
+.tab--green.tab--active:hover { background: var(--green-light); }
+
+/* ── Taken card wrapper ── */
+.reminder-card--taken {
+  border-color: var(--gray-light);
+  background: var(--white-pure);
+}
+
+/* ── Visual block: muted/greyed-out with icon faded ── */
+.reminder-card__visual--taken {
+  width: 200px;
+  flex-shrink: 0;
+  background: var(--gray-xlight);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px 16px;
+  position: relative;
+}
+
+.reminder-card__visual--taken .card-icon {
+  font-size: 48px;
+  color: var(--gray-mid);
+  opacity: 0.45;
+}
+
+/* ── COMPLETED badge ── */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.status-badge--taken {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid var(--green-border);
+}
+
+.status-badge--taken i { font-size: 12px; }
+
+/* ── Card content layout ── */
+.reminder-card--taken .reminder-card__content {
+  padding: 20px 28px;
+  gap: 12px;
+}
+
+/* ── Top row: name left, time right ── */
+.card-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.card-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.reminder-card__name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1.2;
+}
+
+/* Green accent underline under name (from template) */
+.green-underline {
+  display: block;
+  width: 40px;
+  height: 2.5px;
+  background: var(--green);
+  border-radius: 2px;
+}
+
+/* ── Time block (top-right) ── */
+.card-time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.time-day {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--gray-mid);
+}
+
+.time-value {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--dark);
+  line-height: 1.1;
+}
+
+.time-date {
+  font-size: 11px;
+  color: var(--gray-mid);
+  letter-spacing: .3px;
+}
+
+/* ── Details row: 3 columns (no time cell needed here) ── */
+.reminder-card__details--taken {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  align-items: start;
+  padding-top: 4px;
+}
+
+/* ── Taken status footer row ── */
+.taken-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--gray-xlight);
+}
+
+.taken-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  flex-shrink: 0;
+}
+
+.taken-label {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--green);
+  font-weight: 500;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .reminder-card__visual--taken { width: 160px; }
+  .reminder-card__visual--taken .card-icon { font-size: 38px; }
+  .reminder-card__details--taken { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .reminder-card--taken { flex-direction: column; }
+  .reminder-card__visual--taken {
+    width: 100%;
+    flex-direction: row;
+    height: auto;
+    padding: 18px 24px;
+    justify-content: flex-start;
+    gap: 14px;
+  }
+  .reminder-card__visual--taken .card-icon { font-size: 32px; }
+  .reminder-card--taken .reminder-card__content { padding: 20px; }
+  .card-top-row { flex-wrap: wrap; gap: 12px; }
+  .card-time-col { align-items: flex-start; }
+  .time-value { font-size: 20px; }
+  .reminder-card__details--taken { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .reminder-card--taken .reminder-card__content { padding: 16px; }
+  .reminder-card__name { font-size: 18px; }
+  .reminder-card__details--taken { grid-template-columns: 1fr; gap: 10px; }
+}

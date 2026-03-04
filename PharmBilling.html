@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediFinder - Billing &amp; Transaction</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+
+  <link rel="stylesheet" href="PharmBilling.css" />
+</head>
+<body>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay open">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+
+    <!-- Modal Header -->
+    <div class="m-head">
+      <div>
+        <h2 class="m-pharmacy">Medix Pharma</h2>
+        <h1 class="m-title" id="modalTitle">Billing &amp; Transaction</h1>
+        <p class="m-sub">Generate a new invoice for customer purchase</p>
+      </div>
+      <div class="m-head-right">
+        <span class="live-badge">
+          <span class="live-dot"></span> Live Inventory Link Active
+        </span>
+        <a href="PharmDashboard.html" class="m-close" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- Customer Info -->
+    <div class="cust-row">
+      <div class="fg">
+        <label>Customer Name</label>
+        <input type="text" placeholder="Search or enter name">
+      </div>
+      <div class="fg">
+        <label>Phone Number</label>
+        <input type="tel" placeholder="+92 3XX XXXXXXX">
+      </div>
+      <div class="fg">
+        <label>Bill ID</label>
+        <input type="text" value="INV-2023-8842" readonly>
+      </div>
+      <div class="fg">
+        <label>Date</label>
+        <input type="date" value="2023-10-27">
+      </div>
+    </div>
+
+    <!-- Items Table with Fixed Height & Scroll -->
+    <div class="bill-wrap">
+      <div class="bill-head">
+        <span>Item Search / Scanner</span>
+        <span>Type</span>
+        <span>Batch No</span>
+        <span>Availability</span>
+        <span>Qty</span>
+        <span>Price (PKR)</span>
+        <span>Disc%</span>
+        <span>Subtotal</span>
+        <span></span>
+      </div>
+      
+      <!-- Scrollable Body Container -->
+      <div class="bill-body-scroll">
+        <div class="bill-body" id="billBody">
+          <!-- Row 1 -->
+          <div class="bill-row">
+            <div class="bi-name">
+              <i class="fa-solid fa-barcode"></i>
+              <span>Panadol CF 500mg</span>
+            </div>
+            <span class="tbadge tb-med">
+              <i class="fa-solid fa-kit-medical"></i> Medicine
+            </span>
+            <span>BN-88291</span>
+            <span class="abadge ab-ok">50 Units Left</span>
+            <input type="number" class="qty-in" value="2" min="1">
+            <span class="price-cell">450.00</span>
+            <input type="number" class="disc-input" value="0" min="0" max="100" step="1">
+            <span class="subtotal-cell fw7">900.00</span>
+            <button type="button" class="del-btn" aria-label="Delete row">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+          <!-- Row 2 -->
+          <div class="bill-row">
+            <div class="bi-name">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input class="bi-srch" type="text" placeholder="Search item...">
+            </div>
+            <span class="tbadge tb-surg">
+              <i class="fa-solid fa-plus"></i> Surgical
+            </span>
+            <span>SG-1102</span>
+            <span class="abadge ab-low">12 Units Left</span>
+            <input type="number" class="qty-in" value="1" min="1">
+            <span class="price-cell">1200.00</span>
+            <input type="number" class="disc-input" value="5" min="0" max="100" step="1">
+            <span class="subtotal-cell fw7">1140.00</span>
+            <button type="button" class="del-btn" aria-label="Delete row">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Add Row Button (always visible below scroll area) -->
+      <button type="button" class="add-row-btn" id="addRowBtn">
+        <i class="fa-solid fa-circle-plus"></i> Add Row
+      </button>
+    </div>
+
+    <!-- Payment + Summary -->
+    <div class="pay-sum">
+
+      <!-- Payment Section -->
+      <div>
+        <p class="sec-lbl">Payment Method</p>
+        <div class="pay-methods">
+          <button type="button" class="pm-btn active" data-method="cash">
+            <i class="fa-solid fa-money-bill-wave"></i> Cash
+          </button>
+          <button type="button" class="pm-btn" data-method="online">
+            <i class="fa-solid fa-globe"></i> Online
+          </button>
+        </div>
+
+        <!-- Cash Fields -->
+        <div class="cash-fields" id="cashFields">
+          <div class="cash-row">
+            <span>Cash Received</span>
+            <input type="number" class="cash-in" id="cashReceived" value="3000.00">
+          </div>
+          <div class="cash-row">
+            <span>Balance Return</span>
+            <span class="bal-ret" id="balanceReturn">PKR 960.00</span>
+          </div>
+        </div>
+
+        <!-- Online Fields -->
+        <div class="online-fields" id="onlineFields" style="display:none;">
+          <p class="online-lbl">Select Payment Service</p>
+          <div class="online-methods">
+            <label class="online-opt">
+              <input type="radio" name="onlineMethod" value="easypaisa">
+              <div class="opt-card">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+                <span>EasyPaisa</span>
+              </div>
+            </label>
+            <label class="online-opt">
+              <input type="radio" name="onlineMethod" value="jazzcash">
+              <div class="opt-card">
+                <i class="fa-solid fa-mobile-screen"></i>
+                <span>JazzCash</span>
+              </div>
+            </label>
+          </div>
+          <div class="fg phone-search-field" id="phoneField" style="display:none;">
+            <label>Search or Enter Phone Number</label>
+            <div class="phone-input-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="tel" class="online-phone" id="onlinePhone" placeholder="+92 3XX XXXXXXX">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary Section -->
+      <div>
+        <div class="sum-rows">
+          <div class="sum-row">
+            <span>Sub-total</span>
+            <span id="subtotalValue">PKR 2,100.00</span>
+          </div>
+          <div class="sum-row gst-row">
+            <span>GST (%)</span>
+            <div class="gst-input-wrap">
+              <input type="number" class="gst-input" id="gstInput" value="17" min="0" max="100" step="0.5">
+              <span class="percent-symbol">%</span>
+            </div>
+            <span id="gstValue">PKR 357.00</span>
+          </div>
+          <div class="sum-row disc">
+            <span>Discount Applied</span>
+            <span id="discountValue">- PKR 60.00</span>
+          </div>
+          <div class="sum-row total">
+            <span>Grand Total</span>
+            <span id="grandTotal">PKR 2,040.00</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-bar">
+      <a href="PharmDashboard.html" class="btn-cancel-tx">Cancel Transaction</a>
+      <button type="button" class="btn-confirm">
+        <i class="fa-solid fa-file-invoice"></i> Confirm &amp; Generate Invoice
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="PharmBilling.js"></script>
+</body>
+</html>

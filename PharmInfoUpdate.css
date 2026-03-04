@@ -1,0 +1,226 @@
+/* ============================================================
+   PharmInfoUpdate.css
+   Pharmacy Profile Update — Complete Standalone Stylesheet
+   ============================================================
+
+   TABLE OF CONTENTS
+   1.  Design Tokens
+   2.  Reset & Base
+   3.  Sidebar
+   4.  Main Layout & Topbar
+   5.  Buttons
+   6.  Card
+   7.  Form Controls
+   8.  Toggle Switch
+   9.  Progress Bar
+   10. Page Layout — Info Grid
+   11. Section Headings
+   12. Operating Hours
+   13. Profile Verification Banner
+   14. Responsive
+   ============================================================ */
+
+/* ─────────────────────────────────────────
+   1. DESIGN TOKENS
+   ───────────────────────────────────────── */
+:root {
+  --clr-green:      #208B3A;
+  --clr-green-lt:   #52B167;
+  --clr-green-bg:   #f0fdf4;
+  --clr-green-brd:  #bbf7d0;
+  --clr-white-pure: #ffffff;
+  --clr-dark:       #1a1a1a;
+  --clr-gray:       #6b7280;
+  --clr-gray-md:    #9ca3af;
+  --clr-gray-lt:    #e5e7eb;
+  --clr-gray-xlt:   #f3f4f6;
+  --clr-bg:         #f5f7f5;
+  --clr-red:        #ef4444;
+  --clr-amber:      #f59e0b;
+  --clr-blue:       #3b82f6;
+  --clr-purple:     #8b5cf6;
+
+  --font-family:    'Roboto', sans-serif;
+  --radius-md:      10px;
+  --radius-lg:      16px;
+  --radius-xl:      20px;
+  --radius-pill:    999px;
+  --shadow-sm:      0 1px 4px rgba(0,0,0,.07);
+  --shadow-md:      0 4px 14px rgba(0,0,0,.10);
+  --transition:     all .22s ease;
+  --sidebar-w:      240px;
+}
+
+/* ─────────────────────────────────────────
+   2. RESET & BASE
+   ───────────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html                   { scroll-behavior: smooth; }
+body                   { font-family: var(--font-family); background: var(--clr-bg); color: var(--clr-dark); min-height: 100vh; display: flex; overflow-x: hidden; }
+img                    { max-width: 100%; height: auto; display: block; }
+a                      { text-decoration: none; color: inherit; }
+button                 { font-family: inherit; cursor: pointer; border: none; background: none; }
+input, textarea        { font-family: inherit; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* ─────────────────────────────────────────
+   3. SIDEBAR
+   ───────────────────────────────────────── */
+.sidebar   { width: var(--sidebar-w); flex-shrink: 0; position: relative; z-index: 200; }
+.s-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 190; }
+.s-inner   { width: var(--sidebar-w); height: 100vh; position: fixed; top: 0; left: 0; background: var(--clr-white-pure); border-right: 1px solid var(--clr-gray-lt); display: flex; flex-direction: column; padding: 24px 14px 20px; overflow-y: auto; transition: transform .3s ease; }
+
+.s-logo      { display: flex; align-items: center; gap: 10px; padding: 0 6px; margin-bottom: 32px; }
+.s-logo-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--clr-green); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; }
+.s-logo-icon img { width: 28px; height: 28px; object-fit: contain; border-radius: 50%; }
+.s-logo-icon .mf-abbr { color: var(--clr-white-pure); font-weight: 700; font-size: 17px; display: none; }
+.s-logo-text { display: flex; flex-direction: column; line-height: 1.25; }
+.s-brand     { font-size: 16px; font-weight: 700; color: var(--clr-dark); }
+.s-portal    { font-size: 11px; color: var(--clr-gray); }
+
+.s-nav  { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-a  { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; color: var(--clr-gray); transition: var(--transition); }
+.nav-a:hover, .nav-a.active { background: var(--clr-green-bg); color: var(--clr-green); }
+.nav-a i                    { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
+
+.s-user   { display: flex; align-items: center; gap: 10px; padding: 10px; margin-top: auto; border-radius: var(--radius-md); border: 1px solid var(--clr-gray-lt); }
+.s-avatar { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: var(--clr-gray-lt); }
+.s-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.s-umeta  { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.s-uname  { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-urole  { font-size: 10px; color: var(--clr-green); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+
+/* ─────────────────────────────────────────
+   4. MAIN LAYOUT & TOPBAR
+   ───────────────────────────────────────── */
+.main        { flex: 1; min-width: 0; padding: 32px 40px 60px; display: flex; flex-direction: column; gap: 22px; }
+.topbar      { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.topbar-ham  { display: none; width: 40px; height: 40px; border-radius: var(--radius-md); border: 1px solid var(--clr-gray-lt); background: var(--clr-white-pure); align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+.topbar-title h1 { font-size: 28px; font-weight: 700; color: var(--clr-dark); }
+.topbar-title p  { font-size: 13px; color: var(--clr-gray); margin-top: 4px; }
+.topbar-actions  { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* ─────────────────────────────────────────
+   5. BUTTONS
+   ───────────────────────────────────────── */
+.btn-primary   { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 12px 22px; background: var(--clr-green); color: var(--clr-white-pure); border-radius: var(--radius-md); font-size: 14px; font-weight: 700; white-space: nowrap; transition: var(--transition); cursor: pointer; }
+.btn-primary:hover { background: var(--clr-green-lt); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+
+/* ─────────────────────────────────────────
+   6. CARD
+   ───────────────────────────────────────── */
+.card { background: var(--clr-white-pure); border-radius: var(--radius-xl); border: 1px solid var(--clr-gray-lt); box-shadow: var(--shadow-sm); padding: 24px; }
+
+/* ─────────────────────────────────────────
+   7. FORM CONTROLS
+   ───────────────────────────────────────── */
+.form-group     { display: flex; flex-direction: column; gap: 6px; }
+.form-label     { font-size: 12px; color: var(--clr-gray); font-weight: 500; }
+.form-input     { padding: 11px 14px; border: 1px solid var(--clr-gray-lt); border-radius: var(--radius-md); font-size: 14px; color: var(--clr-dark); background: var(--clr-white-pure); outline: none; transition: border-color .2s; width: 100%; }
+.form-input:focus            { border-color: var(--clr-green); }
+.form-input:disabled,
+.form-input[readonly]        { background: var(--clr-gray-xlt); color: var(--clr-gray-md); }
+.form-input::placeholder     { color: var(--clr-gray-md); }
+textarea.form-input          { resize: vertical; min-height: 80px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.form-group + .form-group,
+.form-row + .form-group,
+.form-group + .form-row { margin-top: 14px; }
+
+.input-wrap      { position: relative; }
+.input-wrap-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--clr-gray-md); font-size: 14px; pointer-events: none; }
+
+/* ─────────────────────────────────────────
+   8. TOGGLE SWITCH
+   ───────────────────────────────────────── */
+.toggle                                 { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle input                           { opacity: 0; width: 0; height: 0; }
+.toggle-slider                          { position: absolute; inset: 0; background: var(--clr-gray-lt); border-radius: var(--radius-pill); cursor: pointer; transition: .3s; }
+.toggle-slider::before                  { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: var(--clr-white-pure); border-radius: 50%; transition: .3s; }
+.toggle input:checked + .toggle-slider  { background: var(--clr-green); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+/* ─────────────────────────────────────────
+   9. PROGRESS BAR
+   ───────────────────────────────────────── */
+.progress-bar  { height: 4px; background: var(--clr-gray-lt); border-radius: var(--radius-pill); overflow: hidden; }
+.progress-fill { height: 100%; border-radius: var(--radius-pill); background: var(--clr-green); }
+
+/* ─────────────────────────────────────────
+   10. PAGE LAYOUT — INFO GRID
+   ───────────────────────────────────────── */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* ─────────────────────────────────────────
+   11. SECTION HEADINGS
+   ───────────────────────────────────────── */
+.section-head    { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.section-head i  { font-size: 18px; }
+.section-head h2 { font-size: 16px; font-weight: 700; color: var(--clr-dark); }
+
+.section-icon--blue   { color: var(--clr-blue); }
+.section-icon--purple { color: var(--clr-purple); }
+.section-icon--red    { color: var(--clr-red); }
+.section-icon--amber  { color: var(--clr-amber); }
+
+/* Lock icon on read-only labels */
+.label-lock { font-size: 10px; color: var(--clr-gray-md); margin-left: 4px; }
+
+/* ─────────────────────────────────────────
+   12. OPERATING HOURS
+   ───────────────────────────────────────── */
+.hours-row         { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--clr-gray-xlt); }
+.hours-row:last-child { border-bottom: none; }
+.hours-day         { width: 90px; font-size: 14px; font-weight: 500; flex-shrink: 0; }
+.hours-time        { display: flex; align-items: center; gap: 8px; flex: 1; }
+.hours-time input  { padding: 8px 10px; border: 1px solid var(--clr-gray-lt); border-radius: var(--radius-md); font-size: 13px; color: var(--clr-dark); background: var(--clr-white-pure); outline: none; width: 110px; font-family: inherit; transition: border-color .2s; }
+.hours-time input:focus    { border-color: var(--clr-green); }
+.hours-time input:disabled { background: var(--clr-gray-xlt); color: var(--clr-gray-md); }
+.hours-sep { font-size: 12px; color: var(--clr-gray-md); }
+.hours-icon { color: var(--clr-gray-md); font-size: 12px; }
+
+/* ─────────────────────────────────────────
+   13. PROFILE VERIFICATION BANNER
+   ───────────────────────────────────────── */
+.verify-card  { background: var(--clr-green-bg); border: 1px solid var(--clr-green-brd); border-radius: var(--radius-xl); padding: 22px 24px; display: flex; align-items: center; gap: 18px; }
+.verify-icon  { width: 48px; height: 48px; border-radius: 50%; background: rgba(32,139,58,.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.verify-icon i { font-size: 22px; color: var(--clr-green); }
+.verify-info  { flex: 1; }
+.verify-title { font-size: 16px; font-weight: 700; }
+.verify-sub   { font-size: 13px; color: var(--clr-gray); margin-top: 3px; line-height: 1.6; }
+.verify-bar   { margin-top: 10px; }
+.verify-pct   { font-size: 24px; font-weight: 700; color: var(--clr-green); white-space: nowrap; }
+
+/* ─────────────────────────────────────────
+   14. RESPONSIVE
+   ───────────────────────────────────────── */
+@media (max-width: 960px) {
+  .info-grid { grid-template-columns: 1fr; }
+  .verify-card { flex-wrap: wrap; }
+}
+
+@media (max-width: 768px) {
+  body          { display: block; }
+  .sidebar      { width: 0; position: fixed; }
+  .s-inner      { transform: translateX(-100%); }
+  .sidebar.open .s-inner   { transform: translateX(0); }
+  .sidebar.open .s-overlay { display: block; }
+  .main         { width: 100%; padding: 20px 16px 48px; gap: 16px; }
+  .topbar-ham   { display: flex; }
+  .topbar       { flex-wrap: wrap; }
+  .topbar-actions { flex-wrap: wrap; width: 100%; }
+  .btn-primary  { width: 100%; }
+  .form-row     { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .hours-time input { width: 85px; }
+}
+
+@media (max-width: 480px) {
+  .main { padding: 16px 12px 40px; }
+  .topbar-title h1 { font-size: 22px; }
+}

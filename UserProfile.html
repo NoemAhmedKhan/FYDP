@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - My Profile</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="UserProfile.css">
+</head>
+<body>
+
+    <!-- ===================== SIDEBAR ===================== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <div class="sidebar-inner">
+            <!-- Logo -->
+            <div class="sidebar__logo">
+                <div class="sidebar__logo-icon">
+                    <img src="Images/Logo.png" alt="MediFinder Logo">
+                </div>
+                <div class="sidebar__logo-text">
+                    <span class="sidebar__brand">MediFinder</span>
+                    <span class="sidebar__portal">User Portal</span>
+                </div>
+            </div>
+
+            <!-- Nav -->
+            <nav class="sidebar__nav">
+                <a href="UserDashboard.html" class="nav-item">
+                    <i class="fa-solid fa-table-cells-large nav-item__icon"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="UserPharmacySearch.html" class="nav-item">
+                    <i class="fa-solid fa-magnifying-glass nav-item__icon"></i>
+                    <span>Pharmacy Search</span>
+                </a>
+                <a href="UserProfile.html" class="nav-item nav-item--active">
+                    <i class="fa-regular fa-user nav-item__icon"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="UserHistory.html" class="nav-item">
+                    <i class="fa-solid fa-clock-rotate-left nav-item__icon"></i>
+                    <span>My History</span>
+                </a>
+                <a href="UserReminders.html" class="nav-item">
+                    <i class="fa-regular fa-bell nav-item__icon"></i>
+                    <span>Set Reminders</span>
+                </a>
+            </nav>
+
+            <!-- User footer -->
+            <div class="sidebar__user">
+                <div class="user-avatar">
+                    <img src="Images/ProfileAvatar.jpg" alt="John Doe" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                </div>
+                <div class="user-meta">
+                    <span class="user-name">John Doe</span>
+                    <span class="user-email">john.doe@medifinder.pk</span>
+                </div>
+                <a href="Login.html" class="user-logout" title="Log out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ===================== MAIN ===================== -->
+    <main class="main">
+
+        <!-- Topbar -->
+        <header class="topbar">
+            <button class="topbar__hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="topbar__title">
+                <h1>My Profile</h1>
+                <nav class="breadcrumb" aria-label="breadcrumb">
+                    <a href="Dashboard.html" class="breadcrumb__link">Dashboard</a>
+                    <i class="fa-solid fa-chevron-right"></i>
+                    <span class="breadcrumb__active">Profile</span>
+                </nav>
+            </div>
+        </header>
+
+        <!-- ── Avatar Card ── -->
+        <section class="profile-avatar-card">
+            <div class="avatar-wrap">
+                <div class="avatar-img" id="avatarImg">
+                    <img src="Images/ProfileAvatar.jpg" alt="Profile Photo" id="avatarPhoto" onerror="this.style.display='none'">
+                </div>
+                <label class="avatar-edit-btn" for="avatarInput" title="Change photo" aria-label="Change profile photo">
+                    <i class="fa-solid fa-pen"></i>
+                </label>
+                <input type="file" id="avatarInput" accept="image/*" class="sr-only">
+            </div>
+            <div class="avatar-info">
+                <h2 class="avatar-info__name">John Doe</h2>
+                <p class="avatar-info__email">john.doe@medfinder.com</p>
+            </div>
+        </section>
+
+        <!-- ── Personal Information ── -->
+        <section class="form-card">
+            <div class="form-card__header">
+                <h3 class="form-card__title">Personal Information</h3>
+                <p class="form-card__subtitle">Update your personal details and contact information.</p>
+            </div>
+
+            <form class="profile-form" id="profileForm" novalidate>
+                <!-- Row 1: First Name + Last Name -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="firstName">First Name</label>
+                        <input type="text" id="firstName" class="form-input" value="John" placeholder="Enter first name" autocomplete="given-name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="lastName">Last Name</label>
+                        <input type="text" id="lastName" class="form-input" value="Doe" placeholder="Enter last name" autocomplete="family-name">
+                    </div>
+                </div>
+
+                <!-- Row 2: Email + Phone -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email Address</label>
+                        <div class="input-wrap">
+                            <i class="fa-regular fa-envelope input-icon"></i>
+                            <input type="email" id="email" class="form-input form-input--icon" value="john.doe@medfinder.com" placeholder="Enter email address" autocomplete="email">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Phone Number</label>
+                        <div class="input-wrap">
+                            <i class="fa-solid fa-phone input-icon"></i>
+                            <input type="tel" id="phone" class="form-input form-input--icon" value="+1 (555) 012-3456" placeholder="Enter phone number" autocomplete="tel">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Street Address (full width) -->
+                <div class="form-row form-row--full">
+                    <div class="form-group">
+                        <label class="form-label" for="street">Street Address</label>
+                        <input type="text" id="street" class="form-input" value="123 Wellness Blvd, Suite 400" placeholder="Enter street address" autocomplete="street-address">
+                    </div>
+                </div>
+
+                <!-- Row 4: City + Zip -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="city">City</label>
+                        <input type="text" id="city" class="form-input" value="San Francisco" placeholder="Enter city" autocomplete="address-level2">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="zip">Coordinates</label>
+                        <input type="text" id="zip" class="form-input" value="24°55'33.0'N 67°07'03.6'E" placeholder="Enter coordinates" autocomplete="coordinates">
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <!-- ── Bottom Row: Notifications + Security ── -->
+        <div class="bottom-grid">
+
+            <!-- Notifications -->
+            <section class="form-card">
+                <div class="form-card__header">
+                    <h3 class="form-card__title">Notifications</h3>
+                    <p class="form-card__subtitle">Manage how you receive updates.</p>
+                </div>
+
+                <div class="toggle-list">
+                    <div class="toggle-item">
+                        <div class="toggle-item__text">
+                            <span class="toggle-item__label">Email Notifications</span>
+                            <span class="toggle-item__desc">Receive prescription updates via email</span>
+                        </div>
+                        <label class="toggle-switch" aria-label="Email Notifications">
+                            <input type="checkbox" checked>
+                            <span class="toggle-switch__track"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-item__text">
+                            <span class="toggle-item__label">SMS Alerts</span>
+                            <span class="toggle-item__desc">Get text messages for refill reminders</span>
+                        </div>
+                        <label class="toggle-switch" aria-label="SMS Alerts">
+                            <input type="checkbox" checked>
+                            <span class="toggle-switch__track"></span>
+                        </label>
+                    </div>
+
+                    <div class="toggle-item">
+                        <div class="toggle-item__text">
+                            <span class="toggle-item__label">Marketing</span>
+                            <span class="toggle-item__desc">Receive offers and pharmacy deals</span>
+                        </div>
+                        <label class="toggle-switch" aria-label="Marketing">
+                            <input type="checkbox">
+                            <span class="toggle-switch__track"></span>
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Security -->
+            <section class="form-card">
+                <div class="form-card__header">
+                    <h3 class="form-card__title">Security</h3>
+                    <p class="form-card__subtitle">Manage your password and account access.</p>
+                </div>
+
+                <div class="security-form">
+                    <div class="form-group">
+                        <label class="form-label" for="currentPassword">Current Password</label>
+                        <div class="input-wrap">
+                            <input type="password" id="currentPassword" class="form-input form-input--pw" value="password123" placeholder="Enter current password" autocomplete="current-password">
+                            <button type="button" class="pw-toggle" aria-label="Toggle password visibility" data-target="currentPassword">
+                                <i class="fa-regular fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="newPassword">New Password</label>
+                        <div class="input-wrap">
+                            <input type="password" id="newPassword" class="form-input form-input--pw" placeholder="Enter new password" autocomplete="new-password">
+                            <button type="button" class="pw-toggle" aria-label="Toggle new password visibility" data-target="newPassword">
+                                <i class="fa-regular fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <a href="#" class="forgot-link">
+                        <i class="fa-solid fa-rotate-right"></i> Forgot Password?
+                    </a>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- ── Action Bar ── -->
+        <div class="action-bar">
+            <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+            <button type="button" class="btn-save" id="saveBtn">
+                <i class="fa-solid fa-floppy-disk"></i> Save Changes
+            </button>
+        </div>
+
+    </main>
+
+    <script src="UserProfile.js"></script>
+</body>
+</html>

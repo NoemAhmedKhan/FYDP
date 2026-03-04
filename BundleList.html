@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediFinder – Bundle List</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+  
+  <link rel="stylesheet" href="BundleList.css" />
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header class="bl-header">
+    <div class="bl-tag">
+      <div class="bl-icon"><i class="fa-solid fa-basket-shopping"></i></div>
+      <span class="bl-excl">Exclusive Offer</span>
+    </div>
+    <h1 class="bl-title">Bundle List</h1>
+    <p class="bl-sub">Recovery Essentials Pack &mdash; Pricing Breakdown</p>
+  </header>
+
+  <!-- Summary Cards -->
+  <section class="sum-grid">
+    <!-- Total Original -->
+    <div class="sum-card">
+      <div class="sc-icon sci-gray"><i class="fa-solid fa-tag"></i></div>
+      <div class="sc-body">
+        <span class="sc-lbl">Total Original Value</span>
+        <span class="sc-val strike">PKR 1,300.00</span>
+      </div>
+    </div>
+    <!-- Total Bundle -->
+    <div class="sum-card featured">
+      <div class="sc-icon sci-green"><i class="fa-solid fa-sack-dollar"></i></div>
+      <div class="sc-body">
+        <span class="sc-lbl green">Total Bundle Value</span>
+        <span class="sc-val lg">PKR 1,105.00</span>
+      </div>
+    </div>
+    <!-- Overall Savings -->
+    <div class="sum-card savings">
+      <div class="sc-icon sci-savings"><i class="fa-solid fa-piggy-bank"></i></div>
+      <div class="sc-body">
+        <span class="sc-lbl green">Overall Savings</span>
+        <span class="sc-val grn">PKR 195.00</span>
+        <span class="disc-pill">15% Discount Applied</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Items Table -->
+  <section class="items-wrap">
+    <div class="items-head">
+      <span>Item Name</span>
+      <span>Original Price</span>
+      <span>Applied Discount</span>
+      <span>Your Price</span>
+    </div>
+
+    <!-- Row 1 -->
+    <div class="item-row">
+      <div class="ir-name">
+        <div class="ir-icon iri-green"><i class="fa-solid fa-kit-medical"></i></div>
+        <div class="ir-info">
+          <span class="ir-mname">Augmentin 625mg Tablets</span>
+          <span class="ir-msub">Antibiotic &bull; Standard Pack</span>
+        </div>
+      </div>
+      <span class="ir-orig">PKR 450.00</span>
+      <div class="ir-disc"><span class="off-pill">15% OFF</span></div>
+      <span class="ir-price">PKR 382.50</span>
+    </div>
+
+    <div class="item-sep"></div>
+
+    <!-- Row 2 -->
+    <div class="item-row">
+      <div class="ir-name">
+        <div class="ir-icon iri-amber"><i class="fa-solid fa-pills"></i></div>
+        <div class="ir-info">
+          <span class="ir-mname">Surbex Z Multivitamins</span>
+          <span class="ir-msub">Daily Supplement &bull; Essential Health</span>
+        </div>
+      </div>
+      <span class="ir-orig">PKR 850.00</span>
+      <div class="ir-disc"><span class="off-pill">15% OFF</span></div>
+      <span class="ir-price">PKR 722.50</span>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bl-foot">
+    <p class="bl-foot-copy">&copy; 2026 Medix Pharmacy &bull; Your Trusted Healthcare Partner</p>
+    <p class="bl-foot-ver"><i class="fa-solid fa-circle-check"></i> Pharmacist Verified Bundle Pricing</p>
+  </footer>
+
+</div>
+</body>
+</html>
