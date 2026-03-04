@@ -25,11 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const email = document.querySelector('#email').value;
             const password = document.querySelector('#password').value;
 
-            if(password === 'user'){
-                window.location.href = 'UserDashboard.html'
+            if(password == 'user'){
+                window.location.href = 'UserDashboard.html';
             }
-            else if(password === 'pharmacy'){
-                window.location.href = 'PharmDashboard.html'
+            else if(password == 'pharmacy'){
+                window.location.href = 'PharmDashboard.html';
             }
             // Basic validation
             // if (!email || !password) {
