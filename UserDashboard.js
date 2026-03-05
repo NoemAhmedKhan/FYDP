@@ -6,7 +6,7 @@
 async function initDashboard() {
 
     // Check if user has an active session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
 
     if (sessionError || !session) {
         // No session → redirect to login
@@ -16,7 +16,7 @@ async function initDashboard() {
 
     try {
         // ── Fetch profile from users table ──
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile, error: profileError } = await supabaseClient
             .from('users')
             .select('first_name, last_name, city')
             .eq('id', session.user.id)
@@ -48,7 +48,7 @@ const logoutBtn = document.querySelector('.user-logout');
 if (logoutBtn) {
     logoutBtn.addEventListener('click', async function (e) {
         e.preventDefault();
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
         window.location.href = 'index.html'; // ← logout goes to home page
     });
 }
