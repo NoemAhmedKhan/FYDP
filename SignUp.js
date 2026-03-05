@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         try {
             // ── STEP 1: Create auth account → triggers verification email ──
-            const { data, error: signUpError } = await supabase.auth.signUp({
+            const { data, error: signUpError } = await supabaseClient.auth.signUp({
                 email,
                 password,
                 options: {
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
             // Note: phone_no is numeric in your table so we parse it
             const phoneNumeric = phone ? parseInt(phone.replace(/\D/g, ''), 10) : null;
 
-            const { error: insertError } = await supabase
+            const { error: insertError } = await supabaseClient
                 .from('users')
                 .insert([{
                     id:          data.user.id,
