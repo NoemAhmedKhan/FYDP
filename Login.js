@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             try {
                 // ── Supabase Sign In ──
-                const { data, error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
                     email,
                     password
                 });
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // ── Check email verified ──
                 if (!data.user.email_confirmed_at) {
                     alert('Your email is not verified yet.\n\nPlease check your inbox and click the verification link first.');
-                    await supabase.auth.signOut();
+                    await supabaseClient.auth.signOut();
                     submitBtn.disabled    = false;
                     submitBtn.textContent = 'Log In';
                     return;
