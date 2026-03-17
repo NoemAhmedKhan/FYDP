@@ -30,7 +30,7 @@
                 </div>
             </div>
 
-            <!-- Single vertical nav stack — no section labels -->
+            <!-- Nav -->
             <nav class="sidebar__nav">
                 <a href="UserDashboard.html" class="nav-item">
                     <i class="fa-solid fa-table-cells-large nav-item__icon"></i>
@@ -57,13 +57,19 @@
             <!-- User Profile Footer -->
             <div class="sidebar__user">
                 <div class="user-avatar">
-                    <img src="Images/ProfileAvatar.jpg" alt="John Doe" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <img src="Images/ProfileAvatar.jpg" alt="User"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <div class="user-avatar__fallback" style="display:none">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
                 </div>
                 <div class="user-meta">
-                    <span class="user-name">John Doe</span>
-                    <span class="user-email">jane.doe@medifinder.pk</span>
+                    <!-- ✅ CHANGE: id added so JS can update name/email from Supabase session -->
+                    <span class="user-name" id="sidebarUserName">Loading...</span>
+                    <span class="user-email" id="sidebarUserEmail"></span>
                 </div>
-                <a href="Login.html" class="user-logout" title="Log out">
+                <!-- ✅ CHANGE: id added so JS can handle logout properly -->
+                <a href="#" class="user-logout" id="logoutBtn" title="Log out">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 </a>
             </div>
@@ -79,7 +85,7 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             <div class="topbar__title">
-                <h1>Pharmacy Results</h1>
+                <h1>Pharmacy Search</h1>
                 <nav class="breadcrumb" aria-label="breadcrumb">
                     <span>Dashboard</span>
                     <i class="fa-solid fa-chevron-right"></i>
@@ -88,20 +94,23 @@
             </div>
         </header>
 
-        <!-- Search Bar (no filter/bell buttons) -->
+        <!-- Search Bar -->
+        <!-- ✅ CHANGE: Added id="searchInput", removed hardcoded value, added autocomplete="off" -->
         <section class="search-section">
             <div class="search-bar">
                 <div class="search-bar__input-wrap">
                     <i class="fa-solid fa-magnifying-glass search-bar__icon"></i>
                     <input
                         type="search"
+                        id="searchInput"
                         class="search-bar__input"
-                        value="Paracetamol 100mg"
-                        placeholder="Search medicines, brands..."
+                        value=""
+                        placeholder="Search by medicine name, brand, or category..."
                         aria-label="Search medicines"
+                        autocomplete="off"
                     >
                 </div>
-                <button class="upload-btn">
+                <button class="upload-btn" id="uploadPrescriptionBtn">
                     <i class="fa-solid fa-camera"></i>
                     <span>Upload Prescription</span>
                 </button>
@@ -109,200 +118,42 @@
         </section>
 
         <!-- Results Header -->
+        <!-- ✅ CHANGE: Added id="resultsCount" so JS can update the count text dynamically -->
         <section class="results-header">
-            <p class="results-count">Found <strong>3 pharmacies</strong> with stock</p>
+            <p class="results-count" id="resultsCount">
+                Type a medicine name above to search
+            </p>
             <div class="sort-group">
-                <button class="sort-btn sort-btn--active">
+                <!-- ✅ CHANGE: Added data-sort attributes so JS knows which sort was clicked -->
+                <button class="sort-btn sort-btn--active" data-sort="nearest">
                     <i class="fa-solid fa-location-dot"></i> Nearest
                 </button>
-                <button class="sort-btn">
-                    <i class="fa-solid fa-dollar-sign"></i> Cheapest
+                <button class="sort-btn" data-sort="cheapest">
+                    <i class="fa-solid fa-tag"></i> Cheapest
                 </button>
             </div>
         </section>
 
         <!-- ===================== PHARMACY CARDS ===================== -->
-        <section class="pharmacy-list">
-
-            <!-- Card 1: CVS Pharmacy -->
-            <article class="pharmacy-card">
-                <!-- card-top: image | info | price -->
-                <div class="card-top">
-                    <div class="card-image">
-                        <img src="Images/CVS.jpg" alt="CVS Pharmacy" onerror="this.parentElement.classList.add('card-image--fallback')">
-                        <span class="status-pill status-pill--open">
-                            <i class="fa-solid fa-circle"></i> Open Now
-                        </span>
-                    </div>
-
-                    <div class="card-info">
-                        <div class="card-info__name-row">
-                            <h2 class="card-info__name">CVS Pharmacy</h2>
-                            <span class="badge badge--verified">
-                                <i class="fa-solid fa-circle-check"></i> Verified
-                            </span>
-                        </div>
-                        <ul class="card-info__details">
-                            <li>
-                                <i class="fa-solid fa-location-dot"></i>
-                                <span>123 Main St, Downtown &bull; <strong>0.5km away</strong></span>
-                            </li>
-                            <li>
-                                <i class="fa-regular fa-clock"></i>
-                                <span>9:00 A.M &ndash; 11:00 P.M</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="card-price">
-                        <span class="price">$12.00</span>
-                        <span class="price-label">per pack</span>
-                    </div>
-                </div>
-
-                <!-- card-footer: availability | contact | live -->
-                <div class="card-footer">
-                    <div class="info-cell">
-                        <span class="info-cell__label">Availability</span>
-                        <span class="info-cell__value info-cell__value--green">
-                            <i class="fa-solid fa-box-archive"></i> 20 Units
-                        </span>
-                    </div>
-                    <div class="info-cell">
-                        <span class="info-cell__label">Contact</span>
-                        <span class="info-cell__value">
-                            <i class="fa-solid fa-phone"></i> +1 (555) 019-2834
-                        </span>
-                    </div>
-                    <div class="live-badge live-badge--live">
-                        <span class="live-dot"></span> Live
-                    </div>
-                </div>
-
-                <button class="alternatives-btn">
-                    See Alternatives <i class="fa-solid fa-chevron-down"></i>
-                </button>
-            </article>
-
-            <!-- Card 2: Walgreens -->
-            <article class="pharmacy-card">
-                <div class="card-top">
-                    <div class="card-image">
-                        <img src="Images/Walgreens.jpg" alt="Walgreens" onerror="this.parentElement.classList.add('card-image--fallback')">
-                        <span class="status-pill status-pill--low">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Low Stock
-                        </span>
-                    </div>
-
-                    <div class="card-info">
-                        <div class="card-info__name-row">
-                            <h2 class="card-info__name">Walgreens</h2>
-                            <span class="badge badge--verified">
-                                <i class="fa-solid fa-circle-check"></i> Verified
-                            </span>
-                        </div>
-                        <ul class="card-info__details">
-                            <li>
-                                <i class="fa-solid fa-location-dot"></i>
-                                <span>456 Oak Ave, Midtown &bull; <strong>1.2km away</strong></span>
-                            </li>
-                            <li>
-                                <i class="fa-regular fa-clock"></i>
-                                <span>9:00 A.M &ndash; 11:00 P.M</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="card-price">
-                        <span class="price">$14.50</span>
-                        <span class="price-label">per pack</span>
-                    </div>
-                </div>
-
-                <div class="card-footer">
-                    <div class="info-cell">
-                        <span class="info-cell__label">Availability</span>
-                        <span class="info-cell__value info-cell__value--amber">
-                            <i class="fa-solid fa-triangle-exclamation"></i> 2 Units
-                        </span>
-                    </div>
-                    <div class="info-cell">
-                        <span class="info-cell__label">Contact</span>
-                        <span class="info-cell__value">
-                            <i class="fa-solid fa-phone"></i> +1 (555) 012-3456
-                        </span>
-                    </div>
-                    <div class="live-badge live-badge--live">
-                        <span class="live-dot"></span> Live
-                    </div>
-                </div>
-
-                <button class="alternatives-btn">
-                    See Alternatives <i class="fa-solid fa-chevron-down"></i>
-                </button>
-            </article>
-
-            <!-- Card 3: Downtown Meds -->
-            <article class="pharmacy-card pharmacy-card--muted">
-                <div class="card-top">
-                    <div class="card-image">
-                        <img src="Images/DowntownMeds.jpg" alt="Downtown Meds" onerror="this.parentElement.classList.add('card-image--fallback')">
-                        <span class="status-pill status-pill--closed">
-                            <i class="fa-solid fa-circle"></i> Closed
-                        </span>
-                    </div>
-
-                    <div class="card-info">
-                        <div class="card-info__name-row">
-                            <h2 class="card-info__name">Downtown Meds</h2>
-                            <span class="badge badge--unverified">
-                                <i class="fa-solid fa-circle-xmark"></i> Not Verified
-                            </span>
-                        </div>
-                        <ul class="card-info__details">
-                            <li>
-                                <i class="fa-solid fa-location-dot"></i>
-                                <span>789 Center St &bull; <strong>2.5km away</strong></span>
-                            </li>
-                            <li>
-                                <i class="fa-solid fa-ban"></i>
-                                <span>Closed</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <div class="card-price">
-                        <span class="price price--muted">$11.50</span>
-                        <span class="price-label">per pack</span>
-                    </div>
-                </div>
-
-                <div class="card-footer">
-                    <div class="info-cell">
-                        <span class="info-cell__label">Availability</span>
-                        <span class="info-cell__value info-cell__value--red">
-                            <i class="fa-solid fa-ban"></i> Out of Stock
-                        </span>
-                    </div>
-                    <div class="info-cell">
-                        <span class="info-cell__label">Contact</span>
-                        <span class="info-cell__value">
-                            <i class="fa-solid fa-phone"></i> +1 (555) 987-6543
-                        </span>
-                    </div>
-                    <div class="live-badge live-badge--offline">
-                        <span class="live-dot live-dot--offline"></span> Offline
-                    </div>
-                </div>
-
-                <button class="alternatives-btn">
-                    See Alternatives <i class="fa-solid fa-chevron-down"></i>
-                </button>
-            </article>
-
+        <!-- ✅ CHANGE: Added id="pharmacyList". All hardcoded cards removed.
+             Cards are now rendered dynamically by UserPharmacySearch.js
+             based on real Supabase data. -->
+        <section class="pharmacy-list" id="pharmacyList">
+            <!-- Cards injected here by JavaScript -->
+            <div class="empty-state" id="initialState">
+                <i class="fa-solid fa-pills"></i>
+                <p>Search for a medicine to see available pharmacies</p>
+            </div>
         </section>
+
     </main>
 
+    <!-- ===================== SCRIPTS ===================== -->
+    <!-- ✅ CHANGE: Added Supabase CDN + supabase.js (was completely missing before!)
+         Without these two lines, the search would never work. -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
     <script src="UserPharmacySearch.js"></script>
+
 </body>
 </html>
