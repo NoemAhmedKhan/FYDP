@@ -527,3 +527,151 @@ ul { list-style:none; }
     .card-info__name { font-size: 16px; }
     .sort-btn { padding: 8px 13px; font-size: 12px; }
 }
+
+
+/* =============================================
+   MEDFINDER — UserPharmacySearch additions
+   Paste these rules at the BOTTOM of your
+   existing UserPharmacySearch.css file.
+   ============================================= */
+
+/* ── Empty / Loading / Error State ── */
+.empty-state {
+    text-align: center;
+    padding: 56px 24px;
+    color: var(--gray);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    background: var(--white-pure);
+    border-radius: var(--r-xl);
+    border: 1px dashed var(--gray-light);
+}
+.empty-state i  { font-size: 36px; opacity: .35; }
+.empty-state p  { font-size: 14px; max-width: 320px; line-height: 1.6; }
+
+/* ── Medicine List Panel (expandable) ── */
+.medicine-list-panel {
+    border-top: 1px solid var(--gray-xlight);
+    padding: 0 24px 20px;
+    animation: slideDown .18s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.medicine-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Each matched medicine row */
+.medicine-row {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gray-xlight);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.medicine-row:last-child { border-bottom: none; }
+
+.medicine-row__main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.medicine-row__info {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.medicine-row__name {
+    font-size: 14px;
+    font-weight: var(--fw-b);
+    color: var(--dark);
+}
+.medicine-row__brand {
+    font-size: 12px;
+    color: var(--gray);
+    background: var(--gray-xlight);
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+}
+.medicine-row__category {
+    font-size: 11px;
+    color: var(--green);
+    background: var(--green-bg);
+    border: 1px solid var(--green-border);
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+    font-weight: var(--fw-m);
+}
+.medicine-row__rx {
+    font-size: 11px;
+    color: #d97706;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+    font-weight: var(--fw-m);
+}
+
+.medicine-row__pricing {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex-shrink: 0;
+}
+.medicine-row__price {
+    font-size: 15px;
+    font-weight: var(--fw-b);
+    color: var(--green);
+    white-space: nowrap;
+}
+.medicine-row__orig-price {
+    font-size: 12px;
+    color: var(--gray-mid);
+    text-decoration: line-through;
+    white-space: nowrap;
+}
+.medicine-row__pack {
+    font-size: 11px;
+    color: var(--gray);
+    white-space: nowrap;
+}
+
+.medicine-row__stock {
+    font-size: 12px;
+    font-weight: var(--fw-m);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* More items note */
+.medicine-more {
+    font-size: 12px;
+    color: var(--gray-mid);
+    text-align: center;
+    padding-top: 12px;
+    font-style: italic;
+}
+
+/* ── Responsive additions ── */
+@media (max-width: 768px) {
+    .medicine-list-panel { padding: 0 16px 16px; }
+    .medicine-row__main  { flex-direction: column; gap: 8px; }
+    .medicine-row__pricing { flex-direction: row; align-items: center; gap: 8px; }
+}
+
