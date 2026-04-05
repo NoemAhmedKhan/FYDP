@@ -247,7 +247,7 @@
         suggestionBox = document.createElement('ul');
         suggestionBox.className = 'suggestion-dropdown';
 
-        names.slice(0, 30).forEach(name => {  // cap at 30 visible items
+        names.slice(0, 100).forEach(name => {  // show up to 100 items in scrollable list
             const li = document.createElement('li');
             li.className    = 'suggestion-item';
             li.textContent  = name;
@@ -261,11 +261,11 @@
             suggestionBox.appendChild(li);
         });
 
-        // Add count note if more than 30
-        if (names.length > 30) {
+        // Add count note if more than 100 results exist
+        if (names.length > 100) {
             const note = document.createElement('li');
             note.className   = 'suggestion-more';
-            note.textContent = `+${names.length - 30} more — type more letters to narrow down`;
+            note.textContent = `+${names.length - 100} more results — type more letters to narrow down`;
             suggestionBox.appendChild(note);
         }
 
@@ -397,10 +397,11 @@
 
             if (error) throw error;
 
-            // Exclude any product already shown in pharmacy cards
-            return (data || []).filter(alt =>
-                !excludeNames.has(alt[COL.product_name])
-            );
+            // Exclude any product already shown in pharmacy cards (case-insensitive)
+            return (data || []).filter(alt => {
+                const name = (alt[COL.product_name] || '').toLowerCase().trim();
+                return !excludeNames.has(name);
+            });
 
         } catch (err) {
             console.warn('Alternatives fetch error:', err.message);
@@ -563,8 +564,11 @@
         }).join('');
 
         /* ── Fetch alternatives, excluding ALL products already shown in card ── */
-        // Build a set of every product_name shown in this pharmacy card
-        const shownNames = new Set(pharmacy.items.map(r => r[COL.product_name]));
+        // Build a case-normalised set of every product_name shown in this pharmacy card
+        // Normalise to lowercase + trimmed so "Panadol Extra" and "panadol extra" match
+        const shownNames = new Set(
+            pharmacy.items.map(r => (r[COL.product_name] || '').toLowerCase().trim())
+        );
 
         // Fetch alternatives for each item, passing shownNames to exclude them
         const altResults = await Promise.all(
@@ -575,7 +579,7 @@
         const altSeen    = new Set(shownNames); // start from already-shown names
         const uniqueAlts = [];
         altResults.flat().forEach(alt => {
-            const name = alt[COL.product_name];
+            const name = (alt[COL.product_name] || '').toLowerCase().trim();
             if (!altSeen.has(name)) {
                 altSeen.add(name);
                 uniqueAlts.push(alt);
@@ -587,7 +591,7 @@
 
         const altRowsHTML = uniqueAlts.length > 0
             ? uniqueAlts.map(alt => buildMedicineRow(alt)).join('')
-            : `<li class="alt-empty">No therapeutically equivalent alternatives found in stock.</li>`;
+            : '';
 
         const altBadge = uniqueAlts.length > 0
             ? `<span class="alt-count-badge">${uniqueAlts.length}</span>` : '';
@@ -642,11 +646,13 @@
                 <p class="alt-section-label">Matched Medicines</p>
                 <ul class="alt-list">${matchedRowsHTML}</ul>
 
+                ${uniqueAlts.length > 0 ? `
                 <p class="alt-section-label alt-section-label--sep">
                     Therapeutic Alternatives
                     <span class="alt-section-note">Same generic · dosage form · strength · release type</span>
                 </p>
                 <ul class="alt-list">${altRowsHTML}</ul>
+                ` : ''}
 
                 <div class="alt-safety-note">
                     <i class="fa-solid fa-triangle-exclamation"></i>
@@ -841,11 +847,8 @@
 
             const names = await fetchSuggestions(query);
             showSuggestions(names);
-
-            // If there's exactly one match, auto-select it
-            if (names.length === 1) {
-                selectProduct(names[0]);
-            }
+            // No auto-select — user must always click a suggestion.
+            // Even a single result stays in the dropdown for the user to confirm.
 
         }, 400);
     });
