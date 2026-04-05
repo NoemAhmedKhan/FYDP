@@ -56,7 +56,7 @@ ul { list-style: none; }
 }
 
 /* =============================================
-   SIDEBAR  (identical pattern to Pharmacy Search)
+   SIDEBAR
    ============================================= */
 .sidebar {
     width: var(--sidebar-w);
@@ -132,14 +132,14 @@ ul { list-style: none; }
 .user-avatar {
     width: 36px; height: 36px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    background: linear-gradient(135deg, #208B3A, #52B167);
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; flex-shrink: 0; position: relative;
 }
 .user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .user-avatar__fallback {
     display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 14px;
+    color: white; font-size: 14px; font-weight: var(--fw-b);
     position: absolute; inset: 0;
 }
 .user-meta {
@@ -183,6 +183,35 @@ ul { list-style: none; }
 .breadcrumb__active { color: var(--green); font-weight: var(--fw-m); }
 
 /* =============================================
+   TOAST NOTIFICATION
+   ============================================= */
+.toast {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    padding: 14px 20px;
+    border-radius: var(--r-md);
+    font-size: 14px;
+    font-weight: var(--fw-m);
+    color: white;
+    box-shadow: var(--shadow-md);
+    opacity: 0;
+    transform: translateY(-12px);
+    pointer-events: none;
+    transition: opacity .3s ease, transform .3s ease;
+    max-width: 340px;
+}
+.toast.toast--show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+.toast.toast--success { background: var(--green); }
+.toast.toast--error   { background: var(--red); }
+.toast.toast--info    { background: #3b82f6; }
+
+/* =============================================
    AVATAR CARD
    ============================================= */
 .profile-avatar-card {
@@ -201,8 +230,8 @@ ul { list-style: none; }
 .avatar-img {
     width: 80px; height: 80px;
     border-radius: 50%;
-    background: var(--gray-xlight);
-    border: 3px solid var(--gray-light);
+    background: linear-gradient(135deg, #208B3A, #52B167);
+    border: 3px solid var(--green-border);
     overflow: hidden;
     display: flex; align-items: center; justify-content: center;
     position: relative;
@@ -213,9 +242,10 @@ ul { list-style: none; }
     position: absolute; inset: 0;
 }
 .avatar-img__initials {
-    font-size: 24px; font-weight: var(--fw-b);
-    color: var(--gray); letter-spacing: .5px;
+    font-size: 28px; font-weight: var(--fw-b);
+    color: white; letter-spacing: .5px;
     z-index: 1;
+    text-transform: uppercase;
 }
 
 .avatar-edit-btn {
@@ -238,7 +268,7 @@ ul { list-style: none; }
 .avatar-info__email { font-size: 13px; color: var(--gray); }
 
 /* =============================================
-   FORM CARD  (reusable)
+   FORM CARD
    ============================================= */
 .form-card {
     background: var(--white-pure);
@@ -254,7 +284,7 @@ ul { list-style: none; }
 .form-card__title  { font-size: 16px; font-weight: var(--fw-b); color: var(--dark); margin-bottom: 4px; }
 .form-card__subtitle { font-size: 13px; color: var(--gray); }
 
-/* ── Form grid ── */
+/* Form grid */
 .profile-form { display: flex; flex-direction: column; gap: 20px; }
 
 .form-row {
@@ -292,6 +322,13 @@ ul { list-style: none; }
 }
 .form-input::placeholder { color: #b0b8c4; }
 
+/* Read-only email field */
+.form-input[readonly] {
+    background: var(--gray-xlight);
+    color: var(--gray);
+    cursor: not-allowed;
+}
+
 /* Password toggle */
 .pw-toggle {
     position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
@@ -300,6 +337,13 @@ ul { list-style: none; }
     transition: var(--t);
 }
 .pw-toggle:hover { color: var(--dark); }
+
+/* Save button loading/disabled state */
+.btn-save:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
 
 /* =============================================
    BOTTOM GRID  (Notifications + Security)
@@ -311,7 +355,7 @@ ul { list-style: none; }
     align-items: start;
 }
 
-/* ── Toggle list (Notifications) ── */
+/* Toggle list */
 .toggle-list { display: flex; flex-direction: column; gap: 0; }
 
 .toggle-item {
@@ -352,7 +396,7 @@ ul { list-style: none; }
 .toggle-switch input:checked + .toggle-switch__track::after { transform: translateX(20px); }
 .toggle-switch input:focus-visible + .toggle-switch__track { outline: 2px solid var(--green); outline-offset: 2px; }
 
-/* ── Security form ── */
+/* Security form */
 .security-form { display: flex; flex-direction: column; gap: 20px; }
 
 .forgot-link {
@@ -416,24 +460,20 @@ ul { list-style: none; }
     .main { width: 100%; padding: 20px 16px 48px; gap: 18px; }
     .topbar__hamburger { display: flex; }
 
-    /* Form rows collapse to single column */
     .form-row { grid-template-columns: 1fr; gap: 16px; }
-
-    /* Bottom grid stacks */
     .bottom-grid { grid-template-columns: 1fr; gap: 18px; }
 
-    /* Avatar card compact */
     .profile-avatar-card { padding: 20px; gap: 16px; }
     .avatar-img { width: 68px; height: 68px; }
     .avatar-info__name { font-size: 18px; }
 
-    /* Action bar full width */
     .action-bar { flex-direction: column-reverse; gap: 10px; }
     .btn-cancel,
     .btn-save { width: 100%; justify-content: center; }
 
-    /* Form card padding reduced */
     .form-card { padding: 20px; }
+
+    .toast { right: 12px; left: 12px; max-width: none; }
 }
 
 /* =============================================
