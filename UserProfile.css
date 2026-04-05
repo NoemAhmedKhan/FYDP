@@ -3,7 +3,6 @@
    Roboto | #208B3A Green System
    ============================================= */
 
-/* ── Variables ── */
 :root {
     --green:         #208B3A;
     --green-light:   #52B167;
@@ -31,7 +30,6 @@
     --sidebar-w: 256px;
 }
 
-/* ── Reset ── */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 body {
@@ -48,7 +46,6 @@ a   { text-decoration: none; color: inherit; }
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
 ul { list-style: none; }
 
-/* Screen-reader only */
 .sr-only {
     position: absolute; width: 1px; height: 1px;
     padding: 0; margin: -1px; overflow: hidden;
@@ -66,32 +63,25 @@ ul { list-style: none; }
 }
 .sidebar-overlay {
     display: none;
-    position: fixed;
-    inset: 0;
+    position: fixed; inset: 0;
     background: rgba(0,0,0,.45);
     z-index: 190;
 }
 .sidebar-inner {
     width: var(--sidebar-w);
     height: 100vh;
-    position: fixed;
-    top: 0; left: 0;
+    position: fixed; top: 0; left: 0;
     background: var(--white-pure);
     border-right: 1px solid var(--gray-light);
-    display: flex;
-    flex-direction: column;
+    display: flex; flex-direction: column;
     padding: 24px 14px 20px;
     overflow-y: auto;
     transition: transform .3s ease;
 }
 
-/* Logo */
 .sidebar__logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 6px;
-    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 6px; margin-bottom: 28px;
 }
 .sidebar__logo-icon {
     width: 40px; height: 40px;
@@ -106,7 +96,6 @@ ul { list-style: none; }
 .sidebar__brand  { font-size: 16px; font-weight: var(--fw-b); color: var(--dark); }
 .sidebar__portal { font-size: 11px; color: var(--gray); }
 
-/* Nav */
 .sidebar__nav { display: flex; flex-direction: column; gap: 2px; }
 .nav-item {
     display: flex; align-items: center; gap: 12px;
@@ -116,11 +105,10 @@ ul { list-style: none; }
     color: var(--gray);
     transition: var(--t);
 }
-.nav-item:hover       { background: var(--green-bg); color: var(--green); }
-.nav-item--active     { background: var(--green-bg); color: var(--green); }
-.nav-item__icon       { width: 17px; text-align: center; font-size: 14px; flex-shrink: 0; }
+.nav-item:hover   { background: var(--green-bg); color: var(--green); }
+.nav-item--active { background: var(--green-bg); color: var(--green); }
+.nav-item__icon   { width: 17px; text-align: center; font-size: 14px; flex-shrink: 0; }
 
-/* User footer */
 .sidebar__user {
     margin-top: auto;
     display: flex; align-items: center; gap: 10px;
@@ -136,11 +124,16 @@ ul { list-style: none; }
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; flex-shrink: 0; position: relative;
 }
-.user-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.user-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover; border-radius: 50%;
+    position: absolute; inset: 0;
+}
 .user-avatar__fallback {
     display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 14px; font-weight: var(--fw-b);
+    color: white; font-size: 13px; font-weight: var(--fw-b);
     position: absolute; inset: 0;
+    text-transform: uppercase;
 }
 .user-meta {
     flex: 1; min-width: 0;
@@ -155,15 +148,12 @@ ul { list-style: none; }
    MAIN
    ============================================= */
 .main {
-    flex: 1;
-    min-width: 0;
+    flex: 1; min-width: 0;
     padding: 32px 40px 56px;
-    display: flex;
-    flex-direction: column;
+    display: flex; flex-direction: column;
     gap: 22px;
 }
 
-/* Topbar */
 .topbar { display: flex; align-items: flex-start; gap: 14px; }
 .topbar__hamburger {
     display: none;
@@ -183,17 +173,15 @@ ul { list-style: none; }
 .breadcrumb__active { color: var(--green); font-weight: var(--fw-m); }
 
 /* =============================================
-   TOAST NOTIFICATION
+   TOAST
    ============================================= */
 .toast {
     position: fixed;
-    top: 24px;
-    right: 24px;
+    top: 24px; right: 24px;
     z-index: 9999;
     padding: 14px 20px;
     border-radius: var(--r-md);
-    font-size: 14px;
-    font-weight: var(--fw-m);
+    font-size: 14px; font-weight: var(--fw-m);
     color: white;
     box-shadow: var(--shadow-md);
     opacity: 0;
@@ -202,11 +190,7 @@ ul { list-style: none; }
     transition: opacity .3s ease, transform .3s ease;
     max-width: 340px;
 }
-.toast.toast--show {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-}
+.toast.toast--show    { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .toast.toast--success { background: var(--green); }
 .toast.toast--error   { background: var(--red); }
 .toast.toast--info    { background: #3b82f6; }
@@ -220,9 +204,7 @@ ul { list-style: none; }
     border: 1px solid var(--gray-light);
     box-shadow: var(--shadow-sm);
     padding: 24px 28px;
-    display: flex;
-    align-items: center;
-    gap: 20px;
+    display: flex; align-items: center; gap: 20px;
 }
 
 .avatar-wrap { position: relative; flex-shrink: 0; }
@@ -244,22 +226,20 @@ ul { list-style: none; }
 .avatar-img__initials {
     font-size: 28px; font-weight: var(--fw-b);
     color: white; letter-spacing: .5px;
-    z-index: 1;
-    text-transform: uppercase;
+    z-index: 1; text-transform: uppercase;
+    /* shown/hidden by JS and onerror */
 }
 
 .avatar-edit-btn {
     position: absolute; bottom: 2px; right: 2px;
     width: 26px; height: 26px;
     border-radius: 50%;
-    background: var(--green);
-    color: white;
+    background: var(--green); color: white;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px;
     border: 2px solid var(--white-pure);
     cursor: pointer;
-    transition: var(--t);
-    z-index: 2;
+    transition: var(--t); z-index: 2;
 }
 .avatar-edit-btn:hover { background: var(--green-light); transform: scale(1.1); }
 
@@ -281,23 +261,25 @@ ul { list-style: none; }
 .form-card:hover { box-shadow: var(--shadow-md); }
 
 .form-card__header { margin-bottom: 24px; }
-.form-card__title  { font-size: 16px; font-weight: var(--fw-b); color: var(--dark); margin-bottom: 4px; }
+.form-card__title    { font-size: 16px; font-weight: var(--fw-b); color: var(--dark); margin-bottom: 4px; }
 .form-card__subtitle { font-size: 13px; color: var(--gray); }
 
-/* Form grid */
 .profile-form { display: flex; flex-direction: column; gap: 20px; }
 
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .form-row--full { grid-template-columns: 1fr; }
 
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-label  { font-size: 13px; font-weight: var(--fw-m); color: var(--dark); }
 
-/* Input */
+/* Small note beside label (e.g. "cannot be changed here") */
+.form-label__note {
+    font-size: 11px;
+    font-weight: var(--fw-r);
+    color: var(--gray-mid);
+    margin-left: 4px;
+}
+
 .input-wrap { position: relative; }
 .input-icon {
     position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
@@ -322,14 +304,17 @@ ul { list-style: none; }
 }
 .form-input::placeholder { color: #b0b8c4; }
 
-/* Read-only email field */
+/* Read-only email */
 .form-input[readonly] {
     background: var(--gray-xlight);
     color: var(--gray);
-    cursor: not-allowed;
+    cursor: default;
+}
+.form-input[readonly]:focus {
+    border-color: var(--gray-light);
+    box-shadow: none;
 }
 
-/* Password toggle */
 .pw-toggle {
     position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
     color: var(--gray-mid); font-size: 15px;
@@ -338,42 +323,31 @@ ul { list-style: none; }
 }
 .pw-toggle:hover { color: var(--dark); }
 
-/* Save button loading/disabled state */
-.btn-save:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none !important;
-}
+.btn-save:disabled { opacity: 0.7; cursor: not-allowed; transform: none !important; }
 
 /* =============================================
-   BOTTOM GRID  (Notifications + Security)
+   BOTTOM GRID
    ============================================= */
 .bottom-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 22px;
-    align-items: start;
+    gap: 22px; align-items: start;
 }
 
-/* Toggle list */
 .toggle-list { display: flex; flex-direction: column; gap: 0; }
-
 .toggle-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 16px;
     padding: 16px 0;
     border-bottom: 1px solid var(--gray-xlight);
 }
-.toggle-item:last-child { border-bottom: none; padding-bottom: 0; }
+.toggle-item:last-child  { border-bottom: none; padding-bottom: 0; }
 .toggle-item:first-child { padding-top: 0; }
 
 .toggle-item__text  { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .toggle-item__label { font-size: 14px; font-weight: var(--fw-m); color: var(--dark); }
 .toggle-item__desc  { font-size: 12px; color: var(--gray); }
 
-/* Toggle switch */
 .toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer; }
 .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
 .toggle-switch__track {
@@ -385,8 +359,7 @@ ul { list-style: none; }
 .toggle-switch__track::after {
     content: '';
     position: absolute;
-    width: 18px; height: 18px;
-    border-radius: 50%;
+    width: 18px; height: 18px; border-radius: 50%;
     background: white;
     top: 3px; left: 3px;
     transition: var(--t);
@@ -396,14 +369,12 @@ ul { list-style: none; }
 .toggle-switch input:checked + .toggle-switch__track::after { transform: translateX(20px); }
 .toggle-switch input:focus-visible + .toggle-switch__track { outline: 2px solid var(--green); outline-offset: 2px; }
 
-/* Security form */
 .security-form { display: flex; flex-direction: column; gap: 20px; }
 
 .forgot-link {
     display: inline-flex; align-items: center; gap: 6px;
     font-size: 13px; font-weight: var(--fw-m);
-    color: var(--green);
-    transition: var(--t);
+    color: var(--green); transition: var(--t);
     width: fit-content;
 }
 .forgot-link:hover { color: var(--green-light); }
@@ -412,13 +383,9 @@ ul { list-style: none; }
    ACTION BAR
    ============================================= */
 .action-bar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-    padding-top: 4px;
+    display: flex; justify-content: flex-end; align-items: center;
+    gap: 12px; padding-top: 4px;
 }
-
 .btn-cancel {
     padding: 12px 28px;
     border: 1.5px solid var(--gray-light);
@@ -440,15 +407,12 @@ ul { list-style: none; }
 .btn-save:hover { background: var(--green-light); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 
 /* =============================================
-   RESPONSIVE — Tablet (≤1024px)
+   RESPONSIVE
    ============================================= */
 @media (max-width: 1024px) {
     .main { padding: 24px 24px 48px; }
 }
 
-/* =============================================
-   RESPONSIVE — Mobile (≤768px)
-   ============================================= */
 @media (max-width: 768px) {
     body { display: block; }
 
@@ -460,7 +424,7 @@ ul { list-style: none; }
     .main { width: 100%; padding: 20px 16px 48px; gap: 18px; }
     .topbar__hamburger { display: flex; }
 
-    .form-row { grid-template-columns: 1fr; gap: 16px; }
+    .form-row    { grid-template-columns: 1fr; gap: 16px; }
     .bottom-grid { grid-template-columns: 1fr; gap: 18px; }
 
     .profile-avatar-card { padding: 20px; gap: 16px; }
@@ -468,17 +432,12 @@ ul { list-style: none; }
     .avatar-info__name { font-size: 18px; }
 
     .action-bar { flex-direction: column-reverse; gap: 10px; }
-    .btn-cancel,
-    .btn-save { width: 100%; justify-content: center; }
+    .btn-cancel, .btn-save { width: 100%; justify-content: center; }
 
     .form-card { padding: 20px; }
-
     .toast { right: 12px; left: 12px; max-width: none; }
 }
 
-/* =============================================
-   RESPONSIVE — Small (≤480px)
-   ============================================= */
 @media (max-width: 480px) {
     .main { padding: 16px 12px 40px; }
     .topbar__title h1 { font-size: 21px; }
