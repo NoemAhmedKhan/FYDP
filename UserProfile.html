@@ -54,14 +54,14 @@
                 </a>
             </nav>
 
-            <!-- User footer — fully populated by JS -->
+            <!-- Sidebar user footer — JS populates name, email, avatar -->
             <div class="sidebar__user">
                 <div class="user-avatar">
-                    <img id="sidebarAvatarImg"
-                         src="Images/ProfileAvatar.jpg"
-                         alt="User Avatar"
-                         onerror="this.style.display='none';document.getElementById('sidebarInitials').style.display='flex';">
-                    <span class="user-avatar__fallback" id="sidebarInitials" style="display:none;"></span>
+                    <!--
+                        .sidebar-avatar-inner is controlled entirely by JS.
+                        JS renders either an <img> or initials span inside it.
+                    -->
+                    <div class="sidebar-avatar-inner" id="sidebarAvatarInner"></div>
                 </div>
                 <div class="user-meta">
                     <span class="user-name"  id="sidebarUserName">Loading…</span>
@@ -95,26 +95,22 @@
         <!-- Toast Notification -->
         <div id="toast" class="toast" role="alert" aria-live="polite"></div>
 
-        <!-- Avatar Card -->
+        <!-- ── Avatar Card ── -->
         <section class="profile-avatar-card">
             <div class="avatar-wrap">
-                <div class="avatar-img">
-                    <!--
-                      Priority:
-                        1. profile_img URL from users table  (set by JS if exists)
-                        2. Images/ProfileAvatar.jpg           (default, shown below)
-                        3. Initials fallback                  (if image file missing)
-                    -->
-                    <img id="avatarPhoto"
-                         src="Images/ProfileAvatar.jpg"
-                         alt="Profile Photo"
-                         onerror="this.style.display='none';document.getElementById('avatarInitials').style.display='flex';">
-                    <span class="avatar-img__initials" id="avatarInitials" style="display:none;"></span>
-                </div>
-                <label class="avatar-edit-btn" for="avatarInput" title="Change photo" aria-label="Change profile photo">
+                <!--
+                    .avatar-img-inner is controlled entirely by JS — no onerror
+                    trickery needed. JS renders the right content based on whether
+                    a custom URL exists, the default image loads, or we fall back
+                    to initials. This avoids the display:none-gets-stuck bug.
+                -->
+                <div class="avatar-img" id="avatarImgContainer"></div>
+
+                <label class="avatar-edit-btn" for="avatarInput"
+                       title="Change photo" aria-label="Change profile photo">
                     <i class="fa-solid fa-pen"></i>
                 </label>
-                <input type="file" id="avatarInput" accept="image/*" class="sr-only">
+                <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp,image/gif" class="sr-only">
             </div>
             <div class="avatar-info">
                 <h2 class="avatar-info__name"  id="avatarName">Loading…</h2>
@@ -122,7 +118,7 @@
             </div>
         </section>
 
-        <!-- Personal Information -->
+        <!-- ── Personal Information ── -->
         <section class="form-card">
             <div class="form-card__header">
                 <h3 class="form-card__title">Personal Information</h3>
@@ -130,20 +126,25 @@
             </div>
 
             <form class="profile-form" id="profileForm" novalidate>
+                <!-- Row 1 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="firstName">First Name</label>
-                        <input type="text" id="firstName" class="form-input" placeholder="Enter first name" autocomplete="given-name">
+                        <input type="text" id="firstName" class="form-input"
+                               placeholder="Enter first name" autocomplete="given-name">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="lastName">Last Name</label>
-                        <input type="text" id="lastName" class="form-input" placeholder="Enter last name" autocomplete="family-name">
+                        <input type="text" id="lastName" class="form-input"
+                               placeholder="Enter last name" autocomplete="family-name">
                     </div>
                 </div>
 
+                <!-- Row 2 -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label" for="email">Email Address
+                        <label class="form-label" for="email">
+                            Email Address
                             <span class="form-label__note">(cannot be changed here)</span>
                         </label>
                         <div class="input-wrap">
@@ -162,6 +163,7 @@
                     </div>
                 </div>
 
+                <!-- Row 3 -->
                 <div class="form-row form-row--full">
                     <div class="form-group">
                         <label class="form-label" for="street">Street Address</label>
@@ -170,6 +172,7 @@
                     </div>
                 </div>
 
+                <!-- Row 4 -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="city">City</label>
@@ -185,7 +188,7 @@
             </form>
         </section>
 
-        <!-- Bottom Row: Notifications + Security -->
+        <!-- ── Bottom Row: Notifications + Security ── -->
         <div class="bottom-grid">
 
             <!-- Notifications -->
@@ -232,31 +235,42 @@
             <section class="form-card">
                 <div class="form-card__header">
                     <h3 class="form-card__title">Security</h3>
-                    <p class="form-card__subtitle">Manage your password and account access.</p>
+                    <p class="form-card__subtitle">Change your password. Leave blank to keep current.</p>
                 </div>
                 <div class="security-form">
+
+                    <!-- Old Password — verified via re-sign-in before updating -->
+                    <div class="form-group">
+                        <label class="form-label" for="oldPassword">Old Password</label>
+                        <div class="input-wrap">
+                            <input type="password" id="oldPassword"
+                                   class="form-input form-input--pw"
+                                   placeholder="Enter current password"
+                                   autocomplete="current-password">
+                            <button type="button" class="pw-toggle"
+                                    data-target="oldPassword"
+                                    aria-label="Toggle old password visibility">
+                                <i class="fa-regular fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- New Password -->
                     <div class="form-group">
                         <label class="form-label" for="newPassword">New Password</label>
                         <div class="input-wrap">
-                            <input type="password" id="newPassword" class="form-input form-input--pw"
-                                   placeholder="Enter new password" autocomplete="new-password">
-                            <button type="button" class="pw-toggle" data-target="newPassword"
-                                    aria-label="Toggle password visibility">
+                            <input type="password" id="newPassword"
+                                   class="form-input form-input--pw"
+                                   placeholder="Enter new password"
+                                   autocomplete="new-password">
+                            <button type="button" class="pw-toggle"
+                                    data-target="newPassword"
+                                    aria-label="Toggle new password visibility">
                                 <i class="fa-regular fa-eye-slash"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label" for="confirmPassword">Confirm New Password</label>
-                        <div class="input-wrap">
-                            <input type="password" id="confirmPassword" class="form-input form-input--pw"
-                                   placeholder="Confirm new password" autocomplete="new-password">
-                            <button type="button" class="pw-toggle" data-target="confirmPassword"
-                                    aria-label="Toggle confirm password visibility">
-                                <i class="fa-regular fa-eye-slash"></i>
-                            </button>
-                        </div>
-                    </div>
+
                     <a href="#" class="forgot-link" id="forgotPasswordLink">
                         <i class="fa-solid fa-rotate-right"></i> Forgot Password?
                     </a>
@@ -265,7 +279,7 @@
 
         </div>
 
-        <!-- Action Bar -->
+        <!-- ── Action Bar ── -->
         <div class="action-bar">
             <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
             <button type="button" class="btn-save" id="saveBtn">
@@ -276,10 +290,10 @@
     </main>
 
     <!--
-        LOAD ORDER (critical):
-        1. Supabase SDK      — defines window.supabase
-        2. supabase.js       — creates window.supabaseClient using the SDK
-        3. UserProfile.js    — reuses window.supabaseClient (no duplicate client)
+        LOAD ORDER (critical — do not change):
+        1. Supabase SDK   → defines window.supabase
+        2. supabase.js    → creates window.supabaseClient
+        3. UserProfile.js → reuses window.supabaseClient
     -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
