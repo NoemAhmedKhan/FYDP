@@ -1,32 +1,43 @@
 /* ============================================================
-   MediFinder — UserProfile.js
+   MediFinder — UserProfile.js   (final fixed version)
 
-   Key fixes in this version:
-   ─ Avatar rendered 100% by JS (no HTML onerror display:none bug)
-   ─ Default image = Images/ProfileAvatar.jpg; falls back to initials
-     only if that file itself fails to load
-   ─ Old Password + New Password with proper re-authentication
-     before applying the password change
-   ─ Reuses window.supabaseClient (no duplicate client / session bug)
-   ─ Correct table: 'users', correct columns: phone_no, address
+   Root causes fixed vs previous version:
+   1. SESSION TIMING BUG — getUser() returns null on first page load
+      because Supabase restores the session asynchronously from
+      localStorage. Fix: use onAuthStateChange to wait for the
+      session to be ready before loading the profile.
+
+   2. CACHED IMAGE ONLOAD BUG — setting img.src before appending
+      to DOM means onload never fires for cached images in some
+      browsers (Chrome especially). Fix: append first, set src last.
+
+   3. STORAGE RLS — uploads fail silently with RLS errors if the
+      Storage policy isn't set. The JS now surfaces the exact error
+      message so you know what policy to add.
+
+   4. FILE SIZE — shows inline red text below avatar, not just toast.
+
+   5. All other features: Old+New password with re-auth, forgot
+      password email, cancel restore, sidebar toggle.
    ============================================================ */
 (function () {
     'use strict';
 
-    /* ── Reuse shared Supabase client from supabase.js ── */
+    /* ── Shared Supabase client from supabase.js ── */
     const db = window.supabaseClient;
     if (!db) {
-        console.error('UserProfile.js: window.supabaseClient not found. Load supabase.js first.');
+        console.error('UserProfile.js: window.supabaseClient not found. Ensure supabase.js loads first.');
         return;
     }
 
-    const AVATAR_BUCKET = 'avatars';   // your public Supabase Storage bucket
+    const AVATAR_BUCKET = 'avatars';
 
     /* ============================================================
        TOAST
        ============================================================ */
     const toastEl = document.getElementById('toast');
     let _toastTimer;
+
     function showToast(msg, type = 'success') {
         if (!toastEl) return;
         clearTimeout(_toastTimer);
@@ -38,72 +49,71 @@
     /* ============================================================
        DOM HELPERS
        ============================================================ */
-    const $  = id => document.getElementById(id);
-    const val      = id => $(id)?.value.trim() || '';
-    const setVal   = (id, v) => { const el = $(id); if (el) el.value       = v ?? ''; };
-    const setText  = (id, v) => { const el = $(id); if (el) el.textContent = v ?? ''; };
+    const $      = id  => document.getElementById(id);
+    const val    = id  => $(id)?.value.trim() || '';
+    const setVal = (id, v) => { const el = $(id); if (el) el.value       = v ?? ''; };
+    const setText= (id, v) => { const el = $(id); if (el) el.textContent = v ?? ''; };
 
     function getInitials(first, last) {
-        return (((first || '')[0]) + ((last || '')[0])).toUpperCase();
+        const f = (first || '').trim()[0] || '';
+        const l = (last  || '').trim()[0] || '';
+        return (f + l).toUpperCase();
     }
 
     /* ============================================================
-       AVATAR RENDERING
+       AVATAR RENDERING  (fully JS-driven, no HTML img tags)
        ─────────────────────────────────────────────────────────────
-       Instead of placing an <img> in the HTML and fighting
-       onerror/display:none state, we let JS own the container
-       completely. renderAvatar() always clears and re-renders.
+       FIX FOR CACHED-IMAGE ONLOAD BUG:
+       Append the <img> to DOM *first*, then set src.
+       This guarantees onload fires even when the browser has the
+       image cached (Chrome skips onload if src is set before append).
 
        Priority:
-         1. customUrl  — user's uploaded photo from Supabase Storage
-         2. Default    — Images/ProfileAvatar.jpg
-         3. Initials   — if default image also fails to load
+         1. customUrl  — saved profile_img from Supabase Storage
+         2. Fallback   — Images/ProfileAvatar.jpg  (your default)
+         3. Initials   — if the image file itself fails to load
        ============================================================ */
-    function renderAvatar(containerId, imageUrl, initialsText, size = 'large') {
+    function renderAvatar(containerId, imageUrl, initialsText) {
         const container = $(containerId);
         if (!container) return;
 
-        /* Always start clean */
+        /* Clear previous content */
         container.innerHTML = '';
 
-        const imgSrc = imageUrl || 'Images/ProfileAvatar.jpg';
-        const img    = document.createElement('img');
+        const src = imageUrl || 'Images/ProfileAvatar.jpg';
+        const img = document.createElement('img');
+        img.alt   = 'Profile Photo';
+        /* Class used by CSS for sizing */
+        img.className = 'avatar-photo';
 
-        if (size === 'large') {
-            img.className = 'avatar-photo';
-        } else {
-            /* sidebar small avatar — inline style since it inherits from .sidebar-avatar-inner img */
-        }
+        /* ── Append FIRST, set src LAST ──
+           This is the critical fix. If src is set before the element
+           is in the DOM, cached images fire load synchronously before
+           the onload handler is attached, so the handler never runs. */
+        container.appendChild(img);
 
-        img.alt = 'Profile Photo';
-        img.src = imgSrc;
-
-        /* If the image loads successfully, show it */
         img.onload = () => {
-            container.innerHTML = '';
-            container.appendChild(img);
+            /* Image loaded fine — already in DOM, nothing else needed */
         };
 
-        /* If the image fails (e.g. ProfileAvatar.jpg missing on GitHub Pages),
-           fall back to initials text */
         img.onerror = () => {
+            /* Image missing or broken — show initials instead */
             container.innerHTML = '';
-            const span       = document.createElement('span');
+            const span = document.createElement('span');
             span.className   = 'avatar-initials-text';
             span.textContent = initialsText || '?';
             container.appendChild(span);
         };
 
-        /* Kick off the load — onload/onerror will fire asynchronously */
-        /* For blob/data URLs (local preview) they fire synchronously-ish */
+        /* Set src after appending and after onload/onerror are attached */
+        img.src = src;
     }
 
-    /* Convenience wrappers */
     function setMainAvatar(url, initials) {
-        renderAvatar('avatarImgContainer', url, initials, 'large');
+        renderAvatar('avatarImgContainer', url, initials);
     }
     function setSidebarAvatar(url, initials) {
-        renderAvatar('sidebarAvatarInner', url, initials, 'small');
+        renderAvatar('sidebarAvatarInner', url, initials);
     }
 
     /* ============================================================
@@ -130,72 +140,95 @@
             if (!input) return;
             const hidden = input.type === 'password';
             input.type   = hidden ? 'text' : 'password';
-            btn.querySelector('i').classList.toggle('fa-eye-slash', !hidden);
-            btn.querySelector('i').classList.toggle('fa-eye',        hidden);
+            const icon   = btn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-eye-slash', !hidden);
+                icon.classList.toggle('fa-eye',        hidden);
+            }
         });
     });
 
     /* ============================================================
-       AVATAR FILE SELECTION
-       ─ Shows an instant local preview (blob URL)
-       ─ Stores the file; actual upload happens on Save
+       AVATAR FILE SELECTION & VALIDATION
+       ─ Validates size (≤ 2 MB)
+       ─ Shows inline red error text below avatar (not just toast)
+       ─ Shows instant local blob preview
+       ─ Stores file — actual upload happens only on Save
        ============================================================ */
-    const avatarInput = $('avatarInput');
+    const avatarInput    = $('avatarInput');
+    const avatarSizeErr  = $('avatarSizeError');   /* inline error element */
     let pendingAvatarFile = null;
-    let currentInitials   = '';
+    let currentInitials   = '?';
+
+    function showAvatarError(msg) {
+        if (avatarSizeErr) {
+            avatarSizeErr.textContent = msg;
+            avatarSizeErr.style.display = msg ? 'block' : 'none';
+        }
+        /* Also show as toast for visibility */
+        if (msg) showToast(msg, 'error');
+    }
 
     avatarInput && avatarInput.addEventListener('change', function () {
         const file = this.files[0];
         if (!file) return;
 
-        /* Validate size (≤ 2 MB — matches your bucket policy) */
+        /* ── Size check: 2 MB max (matches your bucket policy) ── */
         if (file.size > 2 * 1024 * 1024) {
-            showToast('Image must be 2 MB or smaller.', 'error');
-            this.value = '';
+            showAvatarError('Image is too large. Maximum allowed size is 2 MB.');
+            this.value = '';          /* reset input so same file can be re-selected after resize */
+            pendingAvatarFile = null;
             return;
         }
 
+        /* Clear any previous error */
+        showAvatarError('');
+
         pendingAvatarFile = file;
 
-        /* Local blob URL preview — no upload yet */
+        /* Instant local preview using blob URL — no Supabase call yet */
         const blobUrl = URL.createObjectURL(file);
         setMainAvatar(blobUrl, currentInitials);
         setSidebarAvatar(blobUrl, currentInitials);
     });
 
-    /* ── Upload file to Supabase Storage, return permanent public URL ── */
+    /* ── Upload to Supabase Storage, return permanent public URL ── */
     async function uploadAvatar(userId, file) {
-        /* Always use the same filename so it replaces the previous upload */
-        const ext      = file.name.split('.').pop().toLowerCase() || 'jpg';
+        const ext      = (file.name.split('.').pop() || 'jpg').toLowerCase();
+        /* Fixed filename per user — always overwrites the previous avatar */
         const filePath = `${userId}/avatar.${ext}`;
 
-        const { error } = await db.storage
+        const { error: uploadErr } = await db.storage
             .from(AVATAR_BUCKET)
             .upload(filePath, file, {
-                upsert:      true,       // overwrite if exists
-                contentType: file.type,
+                upsert:       true,
+                contentType:  file.type,
                 cacheControl: '3600',
             });
 
-        if (error) throw new Error(error.message);
+        if (uploadErr) {
+            /* Surface the exact Supabase error so you can diagnose
+               RLS policy issues vs network issues vs other problems */
+            throw new Error(`Storage upload failed: ${uploadErr.message}`);
+        }
 
-        /* getPublicUrl is synchronous — returns the URL string */
         const { data } = db.storage
             .from(AVATAR_BUCKET)
             .getPublicUrl(filePath);
 
-        /* Cache-bust so the browser re-fetches the new version */
+        /* Cache-bust query param so browser re-fetches new version */
         return `${data.publicUrl}?v=${Date.now()}`;
     }
 
     /* ============================================================
-       POPULATE UI
+       POPULATE UI FROM FETCHED DATA
        ============================================================ */
     function populateUI(user, profile) {
-        const email     = user.email      || '';
+        const email     = user.email         || '';
         const firstName = profile.first_name || '';
         const lastName  = profile.last_name  || '';
         const fullName  = [firstName, lastName].filter(Boolean).join(' ') || 'User';
+
         currentInitials = getInitials(firstName, lastName) || '?';
 
         /* Form fields */
@@ -207,13 +240,13 @@
         setVal('city',        profile.city        || '');
         setVal('coordinates', profile.coordinates || '');
 
-        /* Name / email display */
+        /* Header displays */
         setText('avatarName',       fullName);
         setText('avatarEmail',      email);
         setText('sidebarUserName',  fullName);
         setText('sidebarUserEmail', email);
 
-        /* Avatars — custom URL if saved, otherwise default image */
+        /* Avatars: use saved custom URL if it exists, else default */
         const customUrl = profile.profile_img || null;
         setMainAvatar(customUrl, currentInitials);
         setSidebarAvatar(customUrl, currentInitials);
@@ -221,16 +254,22 @@
 
     /* ============================================================
        LOAD PROFILE
+       ─────────────────────────────────────────────────────────────
+       FIX FOR SESSION TIMING BUG:
+       Supabase restores the auth session from localStorage async-
+       ronously on page load. Calling getUser() immediately can
+       return null even when the user IS logged in, because the
+       session hasn't been restored yet.
+
+       The correct approach is to use onAuthStateChange which fires
+       once the session is definitely ready (either restored or null).
+       We use { data: { subscription } } and unsubscribe after the
+       first event so we don't create a persistent listener.
        ============================================================ */
     let currentUser     = null;
     let originalProfile = null;
 
-    async function loadProfile() {
-        const { data: { user }, error: authErr } = await db.auth.getUser();
-        if (authErr || !user) {
-            window.location.href = 'Login.html';
-            return;
-        }
+    async function fetchAndRender(user) {
         currentUser = user;
 
         const { data: profile, error: dbErr } = await db
@@ -240,12 +279,30 @@
             .single();
 
         if (dbErr && dbErr.code !== 'PGRST116') {
+            /* PGRST116 = row not found (brand new user) — that's fine */
             showToast('Could not load profile: ' + dbErr.message, 'error');
             return;
         }
 
         originalProfile = profile || {};
         populateUI(user, originalProfile);
+    }
+
+    function initAuth() {
+        /* onAuthStateChange fires immediately with the current session state,
+           so we don't need a separate getUser() call. */
+        const { data: { subscription } } = db.auth.onAuthStateChange((event, session) => {
+            /* Unsubscribe after first event — we only need the initial state */
+            subscription.unsubscribe();
+
+            if (!session || !session.user) {
+                /* No active session → redirect to login */
+                window.location.href = 'Login.html';
+                return;
+            }
+
+            fetchAndRender(session.user);
+        });
     }
 
     /* ============================================================
@@ -258,10 +315,9 @@
 
     /* ============================================================
        SAVE CHANGES
-       Step 1 — Upload avatar (if a new file was selected)
-       Step 2 — Update profile fields in users table
-       Step 3 — Change password (if Old + New password provided)
-                Uses re-authentication with old password for safety
+       Step 1 — Upload avatar  (if new file selected)
+       Step 2 — Update users table  (profile fields + profile_img)
+       Step 3 — Change password  (if Old + New both provided)
        ============================================================ */
     const saveBtn = $('saveBtn');
 
@@ -274,18 +330,18 @@
         let hasError     = false;
         let newAvatarUrl = null;
 
-        /* ─────── Step 1: Avatar upload ─────── */
+        /* ─── Step 1: Avatar upload ─── */
         if (pendingAvatarFile) {
             try {
                 newAvatarUrl      = await uploadAvatar(currentUser.id, pendingAvatarFile);
                 pendingAvatarFile = null;
             } catch (err) {
-                showToast('Avatar upload failed: ' + err.message, 'error');
+                showToast(err.message, 'error');
                 hasError = true;
             }
         }
 
-        /* ─────── Step 2: Profile fields ─────── */
+        /* ─── Step 2: Profile fields ─── */
         if (!hasError) {
             const patch = {
                 first_name:  val('firstName')   || null,
@@ -306,14 +362,16 @@
                 showToast('Profile update failed: ' + updateErr.message, 'error');
                 hasError = true;
             } else {
-                /* Update local cache & UI */
                 originalProfile = { ...originalProfile, ...patch };
-                const fullName  = [patch.first_name, patch.last_name].filter(Boolean).join(' ') || 'User';
+
+                const fullName = [patch.first_name, patch.last_name]
+                    .filter(Boolean).join(' ') || 'User';
                 currentInitials = getInitials(patch.first_name, patch.last_name) || '?';
 
                 setText('avatarName',      fullName);
                 setText('sidebarUserName', fullName);
 
+                /* Update avatar only if a new image was uploaded */
                 if (newAvatarUrl) {
                     setMainAvatar(newAvatarUrl, currentInitials);
                     setSidebarAvatar(newAvatarUrl, currentInitials);
@@ -321,17 +379,16 @@
             }
         }
 
-        /* ─────── Step 3: Password change ─────── */
+        /* ─── Step 3: Password change ─── */
         const oldPw = val('oldPassword');
         const newPw = val('newPassword');
 
         if (oldPw || newPw) {
-            /* Both fields are required when changing password */
             if (!oldPw) {
-                showToast('Please enter your current (old) password.', 'error');
+                showToast('Enter your current (old) password to change it.', 'error');
                 hasError = true;
             } else if (!newPw) {
-                showToast('Please enter a new password.', 'error');
+                showToast('Enter a new password.', 'error');
                 hasError = true;
             } else if (newPw.length < 6) {
                 showToast('New password must be at least 6 characters.', 'error');
@@ -340,12 +397,7 @@
                 showToast('New password must be different from the old one.', 'error');
                 hasError = true;
             } else {
-                /*
-                   Re-authenticate with old password first.
-                   Supabase doesn't have a "verify current password" API directly,
-                   so we sign in again with the user's email + old password.
-                   If it succeeds, the old password is correct → we update.
-                */
+                /* Re-authenticate with old password to verify it's correct */
                 const { error: reAuthErr } = await db.auth.signInWithPassword({
                     email:    currentUser.email,
                     password: oldPw,
@@ -362,13 +414,11 @@
                     } else {
                         setVal('oldPassword', '');
                         setVal('newPassword', '');
-                        /* No toast here — combined success toast below */
                     }
                 }
             }
         }
 
-        /* ─────── Result ─────── */
         if (!hasError) {
             showToast('✓ Profile saved successfully!', 'success');
         }
@@ -380,10 +430,11 @@
     saveBtn && saveBtn.addEventListener('click', saveProfile);
 
     /* ============================================================
-       CANCEL
+       CANCEL — restore last saved data
        ============================================================ */
     $('cancelBtn') && $('cancelBtn').addEventListener('click', () => {
         pendingAvatarFile = null;
+        showAvatarError('');
         if (currentUser && originalProfile) populateUI(currentUser, originalProfile);
         setVal('oldPassword', '');
         setVal('newPassword', '');
@@ -393,20 +444,17 @@
     /* ============================================================
        FORGOT PASSWORD
        Sends a Supabase Auth password-reset email.
-       User clicks the link in the email → lands on ResetPassword.html
-       where they set a brand-new password without needing the old one.
        ============================================================ */
     $('forgotPasswordLink') && $('forgotPasswordLink').addEventListener('click', async e => {
         e.preventDefault();
 
         const email = currentUser?.email;
-        if (!email) { showToast('No email found for your account.', 'error'); return; }
+        if (!email) { showToast('No email address found.', 'error'); return; }
 
         const link = $('forgotPasswordLink');
         link.style.pointerEvents = 'none';
         link.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
 
-        /* redirectTo: page user lands on after clicking the email link */
         const redirectTo = window.location.origin
             + window.location.pathname.replace(/UserProfile\.html.*$/, '')
             + 'ResetPassword.html';
@@ -419,13 +467,13 @@
         if (error) {
             showToast('Could not send reset email: ' + error.message, 'error');
         } else {
-            showToast(`✓ Password reset email sent to ${email}`, 'success');
+            showToast(`✓ Reset email sent to ${email}. Check your inbox.`, 'success');
         }
     });
 
     /* ============================================================
-       INIT
+       INIT — wait for auth session to be ready before loading
        ============================================================ */
-    loadProfile();
+    initAuth();
 
 })();
