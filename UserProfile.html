@@ -54,12 +54,12 @@
                 </a>
             </nav>
 
-            <!-- Sidebar user footer — JS populates name, email, avatar -->
+            <!-- Sidebar user footer — JS populates all content -->
             <div class="sidebar__user">
                 <div class="user-avatar">
                     <!--
-                        .sidebar-avatar-inner is controlled entirely by JS.
-                        JS renders either an <img> or initials span inside it.
+                        Empty — JS renders img or initials span inside this.
+                        Never put an <img> here directly (causes display:none stuck bug).
                     -->
                     <div class="sidebar-avatar-inner" id="sidebarAvatarInner"></div>
                 </div>
@@ -99,10 +99,9 @@
         <section class="profile-avatar-card">
             <div class="avatar-wrap">
                 <!--
-                    .avatar-img-inner is controlled entirely by JS — no onerror
-                    trickery needed. JS renders the right content based on whether
-                    a custom URL exists, the default image loads, or we fall back
-                    to initials. This avoids the display:none-gets-stuck bug.
+                    avatarImgContainer is intentionally empty.
+                    JS renders either an <img> or a <span> (initials) inside it.
+                    This completely avoids the onerror/display:none-stuck bug.
                 -->
                 <div class="avatar-img" id="avatarImgContainer"></div>
 
@@ -110,11 +109,19 @@
                        title="Change photo" aria-label="Change profile photo">
                     <i class="fa-solid fa-pen"></i>
                 </label>
-                <input type="file" id="avatarInput" accept="image/jpeg,image/png,image/webp,image/gif" class="sr-only">
+                <input type="file" id="avatarInput"
+                       accept="image/jpeg,image/png,image/webp,image/gif"
+                       class="sr-only">
             </div>
+
             <div class="avatar-info">
                 <h2 class="avatar-info__name"  id="avatarName">Loading…</h2>
                 <p  class="avatar-info__email" id="avatarEmail"></p>
+                <!--
+                    Inline error shown in red when the selected image exceeds 2 MB.
+                    JS toggles display on this element.
+                -->
+                <p id="avatarSizeError" class="avatar-size-error" style="display:none;"></p>
             </div>
         </section>
 
@@ -126,7 +133,7 @@
             </div>
 
             <form class="profile-form" id="profileForm" novalidate>
-                <!-- Row 1 -->
+                <!-- Row 1: First + Last Name -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="firstName">First Name</label>
@@ -140,7 +147,7 @@
                     </div>
                 </div>
 
-                <!-- Row 2 -->
+                <!-- Row 2: Email (read-only) + Phone -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="email">
@@ -163,7 +170,7 @@
                     </div>
                 </div>
 
-                <!-- Row 3 -->
+                <!-- Row 3: Street Address -->
                 <div class="form-row form-row--full">
                     <div class="form-group">
                         <label class="form-label" for="street">Street Address</label>
@@ -172,7 +179,7 @@
                     </div>
                 </div>
 
-                <!-- Row 4 -->
+                <!-- Row 4: City + Coordinates -->
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="city">City</label>
@@ -239,7 +246,6 @@
                 </div>
                 <div class="security-form">
 
-                    <!-- Old Password — verified via re-sign-in before updating -->
                     <div class="form-group">
                         <label class="form-label" for="oldPassword">Old Password</label>
                         <div class="input-wrap">
@@ -255,7 +261,6 @@
                         </div>
                     </div>
 
-                    <!-- New Password -->
                     <div class="form-group">
                         <label class="form-label" for="newPassword">New Password</label>
                         <div class="input-wrap">
@@ -290,10 +295,10 @@
     </main>
 
     <!--
-        LOAD ORDER (critical — do not change):
-        1. Supabase SDK   → defines window.supabase
-        2. supabase.js    → creates window.supabaseClient
-        3. UserProfile.js → reuses window.supabaseClient
+        LOAD ORDER — do not change:
+        1. Supabase SDK  → window.supabase
+        2. supabase.js   → window.supabaseClient
+        3. UserProfile.js → uses window.supabaseClient
     -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
