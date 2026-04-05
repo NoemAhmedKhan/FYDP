@@ -270,6 +270,17 @@ ul { list-style: none; }
 .avatar-info__name  { font-size: 20px; font-weight: var(--fw-b); color: var(--dark); }
 .avatar-info__email { font-size: 13px; color: var(--gray); }
 
+/* Inline error shown when user selects an image > 2 MB */
+.avatar-size-error {
+    font-size: 12px;
+    font-weight: var(--fw-m);
+    color: var(--red);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
 /* =============================================
    FORM CARD
    ============================================= */
