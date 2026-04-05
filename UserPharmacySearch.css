@@ -527,3 +527,61 @@ ul { list-style:none; }
     margin-top: 1px;
     flex-shrink: 0;
 }
+
+/* =============================================
+   SUGGESTION DROPDOWN  (v3.0 addition)
+   ─────────────────────────────────────────────
+   Appears below the search input while user types.
+   Scrollable list of product names to pick from.
+   ============================================= */
+.suggestion-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--white-pure);
+    border: 1.5px solid var(--green-border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-md);
+    list-style: none;
+    margin: 0; padding: 4px 0;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 999;
+}
+
+/* Each product name row */
+.suggestion-item {
+    padding: 10px 16px;
+    font-size: 14px;
+    color: var(--dark);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background .12s ease;
+}
+.suggestion-item::before {
+    content: '\f0ec';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    font-size: 11px;
+    color: var(--green);
+    flex-shrink: 0;
+}
+.suggestion-item:hover { background: var(--green-bg); color: var(--green); }
+
+/* "+N more" overflow note */
+.suggestion-more {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--gray-mid);
+    font-style: italic;
+    border-top: 1px solid var(--gray-xlight);
+    cursor: default;
+}
+
+/* Scrollbar styling for suggestion dropdown */
+.suggestion-dropdown::-webkit-scrollbar       { width: 4px; }
+.suggestion-dropdown::-webkit-scrollbar-track { background: transparent; }
+.suggestion-dropdown::-webkit-scrollbar-thumb { background: var(--gray-light); border-radius: 4px; }
