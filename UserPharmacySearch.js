@@ -1,62 +1,76 @@
 /* =============================================
-   MediFinder — UserPharmacySearch.js
-   
-   What this file does:
-   1. Auth guard — redirects to login if no session
-   2. Loads user name/email into the sidebar
-   3. Listens to the search input (debounced 400ms)
-   4. Queries Supabase "Pharmacy Data" table
-   5. Groups results by pharmacy (future-proof for multi-pharmacy)
-   6. Sorts by Nearest (GPS) or Cheapest (price)
-   7. Renders pharmacy cards dynamically
-   8. Handles sidebar toggle on mobile
+   MediFinder — UserPharmacySearch.js  v2.0
+   ─────────────────────────────────────────────
+   EXECUTION ORDER ON PAGE LOAD:
+   1.  COL constants        — column name map
+   2.  TEST_PHARMACY        — placeholder pharmacy
+   3.  DOM refs + state     — variables
+   4.  initPage()           — auth guard + sidebar
+   5.  GPS request          — background, non-blocking
+   6.  searchMedicines()    — called on user input
+   7.  fetchAlternatives()  — called per matched item
+   8.  groupByPharmacy()    — groups rows into cards
+   9.  sortPharmacies()     — nearest or cheapest
+   10. renderResults()      — orchestrates 8+9+card build
+   11. buildPharmacyCard()  — main card HTML builder
+   12. buildMedicineRow()   — matched item row HTML
+   13. buildAlternativeRow()— alternative item row HTML
+   14. Helpers              — price, distance, rx utils
+   15. UI state helpers     — initial/loading/empty/error
+   16. attachPanelToggle()  — expand/collapse listeners
+   17. Sort button events   — re-sort without re-query
+   18. Search input event   — 400ms debounced trigger
+   19. Logout event
+   20. Sidebar toggle       — mobile hamburger
    ============================================= */
 
 (function () {
     'use strict';
 
     /* =============================================
-       COLUMN NAME CONSTANTS
-       Your exact Supabase "Pharmacy Data" column names.
-       If you ever rename a column, just change it here — 
-       no need to hunt through the rest of the code.
+       1. COLUMN NAME CONSTANTS
+       ─────────────────────────────────────────────
+       Maps friendly names to exact Supabase column
+       names from your "Pharmacy Data" table.
+       Update ONLY here if you rename any column.
        ============================================= */
     const COL = {
-        product_name:    'product_name',
-        brand:           'brand',
-        category:        'category',
-        generic_name:    'generic_name',
-        used_for:        'used_for',
-        discounted_price:'discounted_price',
-        original_price:  'original_price',
-        pack_size:       'pack_size',
-        quantity:        'quantity',
-        prescription:    'prescription_required',
-        indication:      'indication',
-        side_effects:    'side_effects',
+        product_name:     'product_name',
+        brand:            'brand',
+        category:         'category',
+        generic_name:     'generic_name',
+        strength:         'strength',
+        dosage_form:      'dosage_form',
+        release_type:     'release_type',
+        used_for:         'used_for',
+        discounted_price: 'discounted_price',
+        original_price:   'original_price',
+        pack_size:        'pack_size',
+        quantity:         'quantity',
+        prescription:     'prescription_required',
     };
 
     /* =============================================
-       TEST PHARMACY PROFILE
-       Since your current dataset is a medicine catalogue
-       (not yet per-pharmacy), we use this test pharmacy
-       for the current single-pharmacy testing phase.
-       
-       When real pharmacies connect and upload their own
-       stock tables, this will be replaced by actual
-       pharmacy data fetched from a "pharmacies" table.
+       2. TEST PHARMACY PROFILE
+       ─────────────────────────────────────────────
+       Placeholder used during single-pharmacy testing.
+       Your current dataset is a medicine catalogue —
+       not per-pharmacy — so this fills in the blanks.
+
+       FUTURE: When real pharmacies connect and have
+       a pharmacy_name / pharmacy_phone column in the
+       dataset, replace TEST_PHARMACY references with
+       row['pharmacy_name'] etc. inside groupByPharmacy().
        ============================================= */
     const TEST_PHARMACY = {
-        name:    'MediFinder Test Pharmacy',
-        address: 'Karachi, Pakistan',
-        phone:   '+92 300 0000000',
-        hours:   '9:00 AM – 11:00 PM',
-        lat:     24.8607,   // Karachi coordinates
-        lng:     67.0011,
+        name:  'MediFinder Test Pharmacy',
+        phone: '+92 300 0000000',
+        lat:   24.8607,   // Karachi latitude
+        lng:   67.0011,   // Karachi longitude
     };
 
     /* =============================================
-       DOM REFERENCES
+       3. DOM REFERENCES + STATE VARIABLES
        ============================================= */
     const searchInput  = document.getElementById('searchInput');
     const pharmacyList = document.getElementById('pharmacyList');
@@ -64,20 +78,18 @@
     const sortBtns     = document.querySelectorAll('.sort-btn');
     const logoutBtn    = document.getElementById('logoutBtn');
 
-    /* =============================================
-       STATE
-       ============================================= */
-    let currentSort    = 'nearest';
-    let currentResults = [];        // raw rows from Supabase
-    let debounceTimer  = null;
-    let userLat        = null;
-    let userLng        = null;
+    let currentSort    = 'nearest'; // active sort mode
+    let currentResults = [];        // cached Supabase rows (avoids re-query on sort)
+    let debounceTimer  = null;      // setTimeout handle for search debounce
+    let userLat        = null;      // GPS latitude (null if denied)
+    let userLng        = null;      // GPS longitude (null if denied)
 
     /* =============================================
-       STEP 1 — AUTH GUARD + LOAD USER PROFILE
-       Checks if user is logged in.
-       If not → redirect to Login.html
-       If yes → show their name/email in sidebar
+       4. AUTH GUARD + SIDEBAR PROFILE LOADER
+       ─────────────────────────────────────────────
+       • No session  → redirect to Login.html
+       • Session OK  → load first_name + last_name
+                        from "users" table → sidebar
        ============================================= */
     async function initPage() {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
@@ -87,7 +99,6 @@
             return;
         }
 
-        // Load user profile from the "users" table
         try {
             const { data: profile } = await supabaseClient
                 .from('users')
@@ -97,20 +108,21 @@
 
             if (profile) {
                 const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-                document.getElementById('sidebarUserName').textContent  = fullName  || 'User';
+                document.getElementById('sidebarUserName').textContent  = fullName || 'User';
                 document.getElementById('sidebarUserEmail').textContent = session.user.email || '';
             }
         } catch (err) {
-            // Profile load failed — not critical, page still works
-            console.warn('Could not load profile:', err.message);
+            // Non-critical — sidebar shows "Loading..." fallback
+            console.warn('Profile load failed:', err.message);
         }
     }
 
     /* =============================================
-       STEP 2 — GET USER GPS LOCATION
-       Used for the "Nearest" sort.
-       If user denies location, Nearest sort just
-       keeps the original order from Supabase.
+       5. GPS LOCATION (background, non-blocking)
+       ─────────────────────────────────────────────
+       Runs in background as page loads.
+       Sets userLat/userLng for Nearest sort.
+       If denied → Nearest sort keeps Supabase order.
        ============================================= */
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -118,25 +130,23 @@
                 userLat = pos.coords.latitude;
                 userLng = pos.coords.longitude;
             },
-            err => {
-                console.warn('Location access denied:', err.message);
-                // Not a problem — Nearest sort will skip distance calculation
-            }
+            err => console.warn('Location denied:', err.message)
         );
     }
 
     /* =============================================
-       STEP 3 — SEARCH FUNCTION
-       Queries Supabase across 5 columns:
-       product_name, brand, category, generic_name, used_for
-       
-       Only returns rows where quantity > 0 (in stock).
-       Limits to 200 rows — enough for any realistic search.
+       6. SEARCH FUNCTION
+       ─────────────────────────────────────────────
+       Called 400ms after user stops typing.
+       • Searches 5 columns (case-insensitive ilike)
+       • Filters: quantity > 0 (in-stock only)
+       • Selects ONLY displayed columns (lean query —
+         skips heavy text: how_it_works, warnings etc.)
+       • limit(200) handles future multi-pharmacy scale
        ============================================= */
     async function searchMedicines(query) {
         query = query.trim();
 
-        // Don't search for 1 character — too broad, too many results
         if (query.length < 2) {
             showInitialState();
             return;
@@ -146,22 +156,21 @@
 
         try {
             const { data, error } = await supabaseClient
-                .from('Pharmacy Data')               // ← Your Supabase table name
-                .select(`
-                    ${COL.product_name},
-                    ${COL.brand},
-                    ${COL.category},
-                    ${COL.generic_name},
-                    ${COL.used_for},
-                    ${COL.discounted_price},
-                    ${COL.original_price},
-                    ${COL.pack_size},
-                    ${COL.quantity},
-                    ${COL.prescription},
-                    ${COL.indication},
-                    ${COL.side_effects}
-                `)
-                // Search across 5 columns — case-insensitive
+                .from('Pharmacy Data')
+                .select([
+                    COL.product_name,
+                    COL.brand,
+                    COL.category,
+                    COL.generic_name,
+                    COL.strength,
+                    COL.dosage_form,
+                    COL.release_type,
+                    COL.discounted_price,
+                    COL.original_price,
+                    COL.pack_size,
+                    COL.quantity,
+                    COL.prescription,
+                ].join(', '))
                 .or([
                     `${COL.product_name}.ilike.%${query}%`,
                     `${COL.brand}.ilike.%${query}%`,
@@ -169,8 +178,8 @@
                     `${COL.generic_name}.ilike.%${query}%`,
                     `${COL.used_for}.ilike.%${query}%`,
                 ].join(','))
-                .gt(COL.quantity, 0)                 // Only in-stock items
-                .limit(200);                         // Future-proof for multi-pharmacy
+                .gt(COL.quantity, 0)
+                .limit(200);
 
             if (error) throw error;
 
@@ -178,65 +187,117 @@
             renderResults(currentResults, currentSort);
 
         } catch (err) {
-            console.error('Supabase search error:', err.message);
+            console.error('Search error:', err.message);
             showErrorState('Search failed. Check your connection and try again.');
         }
     }
 
     /* =============================================
-       STEP 4 — GROUP RESULTS BY PHARMACY
-       
-       RIGHT NOW (single pharmacy testing):
-       All rows are grouped under TEST_PHARMACY.
-       
-       FUTURE (multiple pharmacies connected):
-       Each pharmacy will upload their own stock table
-       OR have a pharmacy_id column. The grouping logic
-       below will automatically group them correctly —
-       no changes needed to this function.
+       7. FETCH ALTERNATIVES (per searched item)
+       ─────────────────────────────────────────────
+       Finds therapeutically equivalent products by
+       matching ALL 4 fields EXACTLY:
+         generic_name  — same active ingredient
+         dosage_form   — same form (tablet, syrup…)
+         strength      — same dose (500mg, 10mg…)
+         release_type  — same release (immediate, ER…)
+
+       Excludes the original product by product_name.
+       Only returns in-stock items (quantity > 0).
+       Returns [] if any matching field is missing
+       or if no alternatives exist.
+       ============================================= */
+    async function fetchAlternatives(row) {
+        const gn = row[COL.generic_name];
+        const df = row[COL.dosage_form];
+        const st = row[COL.strength];
+        const rt = row[COL.release_type];
+
+        // All 4 fields must be present for a meaningful match
+        if (!gn || !df || !st || !rt) return [];
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('Pharmacy Data')
+                .select([
+                    COL.product_name,
+                    COL.brand,
+                    COL.category,
+                    COL.strength,
+                    COL.dosage_form,
+                    COL.release_type,
+                    COL.discounted_price,
+                    COL.original_price,
+                    COL.quantity,
+                    COL.prescription,
+                ].join(', '))
+                .eq(COL.generic_name, gn)   // exact match
+                .eq(COL.dosage_form,  df)   // exact match
+                .eq(COL.strength,     st)   // exact match
+                .eq(COL.release_type, rt)   // exact match
+                .neq(COL.product_name, row[COL.product_name]) // exclude self
+                .gt(COL.quantity, 0)        // in stock only
+                .limit(10);
+
+            if (error) throw error;
+            return data || [];
+
+        } catch (err) {
+            console.warn('Alternatives fetch error:', err.message);
+            return [];
+        }
+    }
+
+    /* =============================================
+       8. GROUP RESULTS BY PHARMACY
+       ─────────────────────────────────────────────
+       RIGHT NOW: All rows → single TEST_PHARMACY card.
+
+       FUTURE: Replace `TEST_PHARMACY.name` with
+       `row['pharmacy_name']` to auto-group rows from
+       multiple pharmacies into separate cards.
+       No other changes needed here.
        ============================================= */
     function groupByPharmacy(rows) {
         const map = {};
 
         rows.forEach(row => {
-            // Future: replace 'TEST_PHARMACY.name' with row['pharmacy_name']
-            const key = TEST_PHARMACY.name;
+            const key = TEST_PHARMACY.name; // FUTURE: row['pharmacy_name']
 
             if (!map[key]) {
                 map[key] = {
-                    // Pharmacy info — future: from row['pharmacy_*'] columns
-                    name:     TEST_PHARMACY.name,
-                    address:  TEST_PHARMACY.address,
-                    phone:    TEST_PHARMACY.phone,
-                    hours:    TEST_PHARMACY.hours,
-                    lat:      TEST_PHARMACY.lat,
-                    lng:      TEST_PHARMACY.lng,
-                    items:    [],
+                    name:        TEST_PHARMACY.name,  // FUTURE: row['pharmacy_name']
+                    phone:       TEST_PHARMACY.phone, // FUTURE: row['pharmacy_phone']
+                    lat:         TEST_PHARMACY.lat,   // FUTURE: row['pharmacy_lat']
+                    lng:         TEST_PHARMACY.lng,   // FUTURE: row['pharmacy_lng']
+                    items:       [],
                     lowestPrice: Infinity,
-                    totalUnits:  0,
+                    lowestOrig:  Infinity,
                 };
             }
 
-            const price = getPrice(row);
             map[key].items.push(row);
-            map[key].totalUnits  += parseInt(row[COL.quantity] || 0);
-            if (price < map[key].lowestPrice) map[key].lowestPrice = price;
+
+            const eff  = getEffectivePrice(row);
+            const orig = parseFloat(row[COL.original_price] || 0);
+            if (eff  > 0 && eff  < map[key].lowestPrice) map[key].lowestPrice = eff;
+            if (orig > 0 && orig < map[key].lowestOrig)  map[key].lowestOrig  = orig;
         });
 
         return Object.values(map);
     }
 
     /* =============================================
-       STEP 5 — SORT PHARMACIES
-       Nearest: sorts by GPS distance (Haversine formula)
-       Cheapest: sorts by lowest medicine price
+       9. SORT PHARMACIES
+       ─────────────────────────────────────────────
+       cheapest → sort by lowestPrice ascending
+       nearest  → sort by GPS distance ascending
+                  (skips if user denied location)
        ============================================= */
     function sortPharmacies(pharmacies, sortMode) {
         if (sortMode === 'cheapest') {
             return [...pharmacies].sort((a, b) => a.lowestPrice - b.lowestPrice);
         }
-
-        // Nearest — calculate distance only if we have user GPS
         if (userLat !== null && userLng !== null) {
             return [...pharmacies]
                 .map(p => ({
@@ -247,132 +308,152 @@
                 }))
                 .sort((a, b) => a.distance - b.distance);
         }
-
-        return pharmacies; // No GPS — keep original order
+        return pharmacies; // no GPS → original order
     }
 
     /* =============================================
-       STEP 6 — RENDER RESULTS
-       Groups → sorts → builds HTML → injects into page
+       10. RENDER RESULTS
+       ─────────────────────────────────────────────
+       Orchestrates: group → sort → build cards →
+       inject into DOM → attach toggle listeners.
+       Uses Promise.all so all alternatives are
+       fetched in parallel (fast even with many items).
        ============================================= */
-    function renderResults(rows, sortMode) {
+    async function renderResults(rows, sortMode) {
         if (rows.length === 0) {
             showEmptyState('No medicines found in stock matching your search.');
             return;
         }
 
         const pharmacies = sortPharmacies(groupByPharmacy(rows), sortMode);
+        const count      = pharmacies.length;
 
-        // Update result count
-        const count = pharmacies.length;
         resultsCount.innerHTML =
-            `Found <strong>${count} ${count === 1 ? 'pharmacy' : 'pharmacies'}</strong> with <strong>${rows.length} matching item${rows.length !== 1 ? 's' : ''}</strong> in stock`;
+            `Found <strong>${count} ${count === 1 ? 'pharmacy' : 'pharmacies'}</strong> ` +
+            `with <strong>${rows.length} matching item${rows.length !== 1 ? 's' : ''}</strong> in stock`;
 
-        // Render all cards
-        pharmacyList.innerHTML = pharmacies.map(p => buildPharmacyCard(p)).join('');
+        // Build all pharmacy cards (alternatives fetched in parallel inside)
+        const cardHTMLs = await Promise.all(pharmacies.map(p => buildPharmacyCard(p)));
+        pharmacyList.innerHTML = cardHTMLs.join('');
 
-        // Attach toggle listeners for "View Details" panels
-        attachDetailToggleListeners();
+        attachPanelToggleListeners();
     }
 
     /* =============================================
-       STEP 7 — BUILD PHARMACY CARD HTML
-       Creates one card per pharmacy with:
-       - Pharmacy name, address, hours, phone
-       - Lowest price found
-       - Total units available
-       - List of matched medicines (expandable)
+       11. BUILD PHARMACY CARD
+       ─────────────────────────────────────────────
+       CARD LAYOUT (updated per requirements):
+
+       ┌──────────────────────────────────────────┐
+       │ [In Stock]  Pharmacy Name  [✓ Verified]  │
+       │             Product Name                 │
+       │             Category · Strength          │
+       │             [Rx Required] or [OTC]       │
+       │             📞 Phone number              │
+       │                          Rs.XX  Rs.YY~~  │
+       ├──────────────────────────────────────────│
+       │  [ View Alternatives ▼ ]                 │
+       ├──────────────────────────────────────────│
+       │  Matched Medicines                       │
+       │    Product · Category · Str  ✓ In Stock  │
+       │    Rs.XX  ~~Rs.YY~~                      │
+       │  ─────────────────────────               │
+       │  Therapeutic Alternatives                │
+       │    Product · Category · Str  ✓ In Stock  │
+       │    Rs.XX  ~~Rs.YY~~                      │
+       └──────────────────────────────────────────┘
+
+       REMOVED (per requirements):
+       • Location / address / distance
+       • Operational hours
+       • Availability units count
+       • card-footer section
+
+       UPDATED:
+       • Price: discounted + crossed-out original, OR original only
+       • Contact phone moved into card-info body
+       • Rx / OTC badge per matched product
+       • Alternatives renamed from "View Matched Medicines"
        ============================================= */
-    function buildPharmacyCard(pharmacy) {
-        const priceDisplay = pharmacy.lowestPrice === Infinity
-            ? 'N/A'
-            : `Rs. ${pharmacy.lowestPrice.toFixed(2)}`;
+    async function buildPharmacyCard(pharmacy) {
 
-        const units = pharmacy.totalUnits;
+        /* ── Header price block ── */
+        const hasHeaderDiscount =
+            pharmacy.lowestPrice !== Infinity &&
+            pharmacy.lowestOrig  !== Infinity &&
+            pharmacy.lowestPrice < pharmacy.lowestOrig;
 
-        // Distance text (only shown if GPS available)
-        const distText = (pharmacy.distance != null && pharmacy.distance < 9999)
-            ? `<strong>${pharmacy.distance.toFixed(1)}km away</strong>`
-            : '';
-
-        const addressLine = distText
-            ? `${pharmacy.address} &bull; ${distText}`
-            : pharmacy.address;
-
-        // Availability styling based on unit count
-        let availClass, availIcon, availLabel, statusPillClass, statusPillLabel;
-        if (units <= 0) {
-            availClass      = 'info-cell__value--red';
-            availIcon       = 'fa-ban';
-            availLabel      = 'Out of Stock';
-            statusPillClass = 'status-pill--closed';
-            statusPillLabel = 'Out of Stock';
-        } else if (units <= 10) {
-            availClass      = 'info-cell__value--amber';
-            availIcon       = 'fa-triangle-exclamation';
-            availLabel      = `${units} Units (Low)`;
-            statusPillClass = 'status-pill--low';
-            statusPillLabel = 'Low Stock';
+        let priceBlockHTML;
+        if (hasHeaderDiscount) {
+            priceBlockHTML = `
+                <span class="price">Rs. ${pharmacy.lowestPrice.toFixed(2)}</span>
+                <span class="price-orig">Rs. ${pharmacy.lowestOrig.toFixed(2)}</span>
+                <span class="price-label">starting from</span>`;
+        } else if (pharmacy.lowestOrig !== Infinity) {
+            priceBlockHTML = `
+                <span class="price">Rs. ${pharmacy.lowestOrig.toFixed(2)}</span>
+                <span class="price-label">starting from</span>`;
+        } else if (pharmacy.lowestPrice !== Infinity) {
+            priceBlockHTML = `
+                <span class="price">Rs. ${pharmacy.lowestPrice.toFixed(2)}</span>
+                <span class="price-label">starting from</span>`;
         } else {
-            availClass      = 'info-cell__value--green';
-            availIcon       = 'fa-box-archive';
-            availLabel      = `${units} Units`;
-            statusPillClass = 'status-pill--open';
-            statusPillLabel = 'In Stock';
+            priceBlockHTML = `<span class="price-label">Price not available</span>`;
         }
 
-        // Build expandable medicine list (max 10 shown)
-        const itemsToShow = pharmacy.items.slice(0, 10);
-        const moreCount   = pharmacy.items.length - itemsToShow.length;
-
-        const medicineRows = itemsToShow.map(row => {
-            const price        = getPrice(row);
-            const origPrice    = parseFloat(row[COL.original_price] || 0);
-            const hasDiscount  = origPrice > 0 && price < origPrice;
-            const rxRequired   = row[COL.prescription] === true || row[COL.prescription] === 'Yes' || row[COL.prescription] === '1';
-            const qty          = parseInt(row[COL.quantity] || 0);
-
-            // Stock badge per item
-            let itemStockColor = '#208B3A';
-            if (qty <= 0)  itemStockColor = '#ef4444';
-            if (qty <= 10) itemStockColor = '#d97706';
+        /* ── Matched items summary lines ── */
+        const itemLinesHTML = pharmacy.items.map(row => {
+            const meta    = [row[COL.category], row[COL.strength]].filter(Boolean).join(' · ');
+            const rxBadge = isPrescriptionRequired(row)
+                ? `<span class="rx-badge rx-badge--required"><i class="fa-solid fa-file-prescription"></i> Rx Required</span>`
+                : `<span class="rx-badge rx-badge--otc"><i class="fa-solid fa-circle-check"></i> OTC</span>`;
 
             return `
-            <li class="medicine-row">
-                <div class="medicine-row__main">
-                    <div class="medicine-row__info">
-                        <span class="medicine-row__name">${row[COL.product_name] || 'Unknown'}</span>
-                        ${row[COL.brand] ? `<span class="medicine-row__brand">${row[COL.brand]}</span>` : ''}
-                        ${row[COL.category] ? `<span class="medicine-row__category">${row[COL.category]}</span>` : ''}
-                        ${rxRequired ? `<span class="medicine-row__rx"><i class="fa-solid fa-prescription"></i> Rx Required</span>` : ''}
-                    </div>
-                    <div class="medicine-row__pricing">
-                        ${hasDiscount ? `<span class="medicine-row__orig-price">Rs. ${origPrice.toFixed(2)}</span>` : ''}
-                        <span class="medicine-row__price">Rs. ${price.toFixed(2)}</span>
-                        ${row[COL.pack_size] ? `<span class="medicine-row__pack">${row[COL.pack_size]}</span>` : ''}
-                    </div>
+            <div class="card-item-line">
+                <div class="card-item-line__text">
+                    <span class="card-item-line__name">${row[COL.product_name] || '—'}</span>
+                    ${meta ? `<span class="card-item-line__meta">${meta}</span>` : ''}
                 </div>
-                <div class="medicine-row__stock" style="color:${itemStockColor}">
-                    <i class="fa-solid fa-cubes"></i> ${qty} in stock
-                </div>
-            </li>`;
+                ${rxBadge}
+            </div>`;
         }).join('');
 
-        const moreNote = moreCount > 0
-            ? `<p class="medicine-more">+${moreCount} more items matched — refine your search to narrow down.</p>`
-            : '';
+        /* ── Fetch alternatives for each matched item in parallel ── */
+        const altResults  = await Promise.all(pharmacy.items.map(row => fetchAlternatives(row)));
+        const allAlts     = altResults.flat();
+
+        // Deduplicate: skip if already shown in main results
+        const seenNames  = new Set(pharmacy.items.map(r => r[COL.product_name]));
+        const uniqueAlts = allAlts.filter(alt => {
+            const name = alt[COL.product_name];
+            if (seenNames.has(name)) return false;
+            seenNames.add(name);
+            return true;
+        });
+
+        /* ── Build section HTML ── */
+        const matchedRowsHTML = pharmacy.items.map(row => buildMedicineRow(row)).join('');
+        const altRowsHTML     = uniqueAlts.length > 0
+            ? uniqueAlts.map(alt => buildMedicineRow(alt)).join('')
+            : `<li class="alt-empty">No therapeutically equivalent alternatives found in stock.</li>`;
+
+        const altBadge = uniqueAlts.length > 0
+            ? `<span class="alt-count-badge">${uniqueAlts.length}</span>` : '';
 
         return `
         <article class="pharmacy-card">
 
-            <!-- Card Top: Image | Info | Price -->
+            <!-- CARD TOP -->
             <div class="card-top">
+
+                <!-- Left: status image block -->
                 <div class="card-image card-image--fallback">
-                    <span class="status-pill ${statusPillClass}">
-                        <i class="fa-solid fa-circle"></i> ${statusPillLabel}
+                    <span class="status-pill status-pill--open">
+                        <i class="fa-solid fa-circle"></i> In Stock
                     </span>
                 </div>
 
+                <!-- Centre: pharmacy name + product lines + phone -->
                 <div class="card-info">
                     <div class="card-info__name-row">
                         <h2 class="card-info__name">${pharmacy.name}</h2>
@@ -380,80 +461,126 @@
                             <i class="fa-solid fa-circle-check"></i> Verified
                         </span>
                     </div>
-                    <ul class="card-info__details">
-                        <li>
-                            <i class="fa-solid fa-location-dot"></i>
-                            <span>${addressLine}</span>
-                        </li>
-                        <li>
-                            <i class="fa-regular fa-clock"></i>
-                            <span>${pharmacy.hours}</span>
-                        </li>
-                    </ul>
+
+                    <!-- Product · Category · Strength + Rx badge per item -->
+                    <div class="card-items-summary">
+                        ${itemLinesHTML}
+                    </div>
+
+                    <!-- Contact phone -->
+                    <div class="card-contact">
+                        <i class="fa-solid fa-phone"></i>
+                        <span>${pharmacy.phone}</span>
+                    </div>
                 </div>
 
+                <!-- Right: price block -->
                 <div class="card-price">
-                    <span class="price">${priceDisplay}</span>
-                    <span class="price-label">starting from</span>
+                    ${priceBlockHTML}
                 </div>
-            </div>
 
-            <!-- Card Footer: Availability | Contact | Live -->
-            <div class="card-footer">
-                <div class="info-cell">
-                    <span class="info-cell__label">Availability</span>
-                    <span class="info-cell__value ${availClass}">
-                        <i class="fa-solid ${availIcon}"></i> ${availLabel}
-                    </span>
-                </div>
-                <div class="info-cell">
-                    <span class="info-cell__label">Contact</span>
-                    <span class="info-cell__value">
-                        <i class="fa-solid fa-phone"></i> ${pharmacy.phone}
-                    </span>
-                </div>
-                <div class="live-badge live-badge--live">
-                    <span class="live-dot"></span> Live
-                </div>
-            </div>
+            </div><!-- /.card-top -->
 
-            <!-- Expandable Matched Medicines -->
-            <button class="alternatives-btn detail-toggle-btn">
+            <!-- VIEW ALTERNATIVES TOGGLE BUTTON -->
+            <button class="alternatives-btn panel-toggle-btn" aria-expanded="false">
                 <i class="fa-solid fa-pills" style="margin-right:6px"></i>
-                View Matched Medicines (${pharmacy.items.length})
-                <i class="fa-solid fa-chevron-down" style="margin-left:auto"></i>
+                View Alternatives
+                ${altBadge}
+                <i class="fa-solid fa-chevron-down toggle-icon" style="margin-left:auto"></i>
             </button>
 
-            <div class="medicine-list-panel" style="display:none">
-                <ul class="medicine-list">
-                    ${medicineRows}
+            <!-- ALTERNATIVES PANEL (hidden by default) -->
+            <div class="alternatives-panel" style="display:none" aria-hidden="true">
+
+                <!-- Section 1: Matched Medicines -->
+                <p class="alt-section-label">Matched Medicines</p>
+                <ul class="alt-list">
+                    ${matchedRowsHTML}
                 </ul>
-                ${moreNote}
-            </div>
+
+                <!-- Section 2: Therapeutic Alternatives -->
+                <p class="alt-section-label alt-section-label--sep">
+                    Therapeutic Alternatives
+                    <span class="alt-section-note">Same generic · dosage form · strength · release type</span>
+                </p>
+                <ul class="alt-list">
+                    ${altRowsHTML}
+                </ul>
+
+            </div><!-- /.alternatives-panel -->
 
         </article>`;
     }
 
     /* =============================================
-       HELPER — Get Effective Price
-       Uses discounted_price if available, falls back
-       to original_price.
+       12 & 13. BUILD MEDICINE / ALTERNATIVE ROW
+       ─────────────────────────────────────────────
+       Shared builder for both "Matched Medicines"
+       and "Therapeutic Alternatives" rows.
+
+       Each row shows:
+       • Product name
+       • Category · Strength
+       • ✓ In Stock  (no unit count — per requirement)
+       • Price: discounted + ~~original~~ if discounted,
+                OR just original price if no discount
        ============================================= */
-    function getPrice(row) {
-        const discounted = parseFloat(row[COL.discounted_price] || 0);
-        const original   = parseFloat(row[COL.original_price]   || 0);
-        if (discounted > 0) return discounted;
-        if (original   > 0) return original;
-        return 0;
+    function buildMedicineRow(row) {
+        const discPrice  = parseFloat(row[COL.discounted_price] || 0);
+        const origPrice  = parseFloat(row[COL.original_price]   || 0);
+        const hasDisc    = discPrice > 0 && origPrice > 0 && discPrice < origPrice;
+        const meta       = [row[COL.category], row[COL.strength]].filter(Boolean).join(' · ');
+
+        let rowPriceHTML;
+        if (hasDisc) {
+            // Show discounted price + original crossed out
+            rowPriceHTML = `
+                <span class="alt-row__price">Rs. ${discPrice.toFixed(2)}</span>
+                <span class="alt-row__orig-price">Rs. ${origPrice.toFixed(2)}</span>`;
+        } else if (origPrice > 0) {
+            // No discount — show original price only
+            rowPriceHTML = `<span class="alt-row__price">Rs. ${origPrice.toFixed(2)}</span>`;
+        } else {
+            rowPriceHTML = `<span class="alt-row__price alt-row__price--na">Price N/A</span>`;
+        }
+
+        return `
+        <li class="alt-row">
+            <div class="alt-row__left">
+                <span class="alt-row__name">${row[COL.product_name] || '—'}</span>
+                ${meta ? `<span class="alt-row__meta">${meta}</span>` : ''}
+                <span class="alt-row__instock">
+                    <i class="fa-solid fa-circle-check"></i> In Stock
+                </span>
+            </div>
+            <div class="alt-row__right">
+                ${rowPriceHTML}
+            </div>
+        </li>`;
     }
 
     /* =============================================
-       HELPER — Haversine Distance Formula
-       Calculates straight-line distance in km
-       between two GPS coordinates.
+       14. UTILITY HELPERS
        ============================================= */
+
+    // Returns discounted price if valid, else original price, else 0
+    function getEffectivePrice(row) {
+        const disc = parseFloat(row[COL.discounted_price] || 0);
+        const orig = parseFloat(row[COL.original_price]   || 0);
+        if (disc > 0) return disc;
+        if (orig > 0) return orig;
+        return 0;
+    }
+
+    // Returns true if prescription_required is set in any common truthy format
+    function isPrescriptionRequired(row) {
+        const val = row[COL.prescription];
+        return val === true || val === 'Yes' || val === 'yes' || val === '1' || val === 1;
+    }
+
+    // Haversine formula: straight-line km distance between two lat/lng points
     function getDistanceKm(lat1, lng1, lat2, lng2) {
-        const R    = 6371; // Earth radius in km
+        const R    = 6371;
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLng = (lng2 - lng1) * Math.PI / 180;
         const a    =
@@ -465,7 +592,13 @@
     }
 
     /* =============================================
-       UI STATE HELPERS
+       15. UI STATE HELPERS
+       ─────────────────────────────────────────────
+       Four states for #pharmacyList:
+       initial → nothing typed yet
+       loading → query in progress
+       empty   → zero results returned
+       error   → Supabase threw an exception
        ============================================= */
     function showInitialState() {
         resultsCount.textContent = 'Type a medicine name above to search';
@@ -504,16 +637,23 @@
     }
 
     /* =============================================
-       EXPAND/COLLAPSE — Matched Medicines Panel
+       16. PANEL TOGGLE — View Alternatives
+       ─────────────────────────────────────────────
+       Must be called after every renderResults()
+       because cards are replaced in the DOM each time.
+       Toggles display + flips chevron icon.
        ============================================= */
-    function attachDetailToggleListeners() {
-        document.querySelectorAll('.detail-toggle-btn').forEach(btn => {
+    function attachPanelToggleListeners() {
+        document.querySelectorAll('.panel-toggle-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const panel  = btn.nextElementSibling;
-                const icon   = btn.querySelector('.fa-chevron-down, .fa-chevron-up');
+                const icon   = btn.querySelector('.toggle-icon');
                 const isOpen = panel.style.display === 'block';
 
-                panel.style.display = isOpen ? 'none' : 'block';
+                panel.style.display = isOpen ? 'none'  : 'block';
+                panel.ariaHidden    = isOpen ? 'true'  : 'false';
+                btn.ariaExpanded    = isOpen ? 'false' : 'true';
+
                 if (icon) {
                     icon.classList.toggle('fa-chevron-down', isOpen);
                     icon.classList.toggle('fa-chevron-up',  !isOpen);
@@ -523,44 +663,35 @@
     }
 
     /* =============================================
-       SORT BUTTONS
-       Clicking a sort button re-sorts the already-
-       fetched results — no new Supabase query needed.
+       17. SORT BUTTONS
+       ─────────────────────────────────────────────
+       Re-sorts currentResults in memory.
+       Does NOT send a new Supabase query.
        ============================================= */
     sortBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             sortBtns.forEach(b => b.classList.remove('sort-btn--active'));
             btn.classList.add('sort-btn--active');
             currentSort = btn.dataset.sort || 'nearest';
-
-            if (currentResults.length > 0) {
-                renderResults(currentResults, currentSort);
-            }
+            if (currentResults.length > 0) renderResults(currentResults, currentSort);
         });
     });
 
     /* =============================================
-       SEARCH INPUT — Debounced (400ms)
-       Waits 400ms after the user stops typing before
-       sending the query. Prevents flooding Supabase
-       with a request on every single keystroke.
+       18. SEARCH INPUT — 400ms debounce
+       ─────────────────────────────────────────────
+       Resets timer on every keystroke.
+       Fires searchMedicines() only after user pauses.
        ============================================= */
     searchInput && searchInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         const query = searchInput.value.trim();
-
-        if (query.length === 0) {
-            showInitialState();
-            return;
-        }
-
-        debounceTimer = setTimeout(() => {
-            searchMedicines(query);
-        }, 400);
+        if (query.length === 0) { showInitialState(); return; }
+        debounceTimer = setTimeout(() => searchMedicines(query), 400);
     });
 
     /* =============================================
-       LOGOUT
+       19. LOGOUT
        ============================================= */
     logoutBtn && logoutBtn.addEventListener('click', async (e) => {
         e.preventDefault();
@@ -569,14 +700,14 @@
     });
 
     /* =============================================
-       SIDEBAR TOGGLE (Mobile)
+       20. SIDEBAR TOGGLE — mobile hamburger
        ============================================= */
     const sidebar        = document.getElementById('sidebar');
     const hamburgerBtn   = document.getElementById('hamburgerBtn');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
 
-    function openSidebar()  { sidebar.classList.add('sidebar--open');    document.body.style.overflow = 'hidden'; }
-    function closeSidebar() { sidebar.classList.remove('sidebar--open'); document.body.style.overflow = ''; }
+    const openSidebar  = () => { sidebar.classList.add('sidebar--open');    document.body.style.overflow = 'hidden'; };
+    const closeSidebar = () => { sidebar.classList.remove('sidebar--open'); document.body.style.overflow = ''; };
 
     hamburgerBtn   && hamburgerBtn.addEventListener('click', () =>
         sidebar.classList.contains('sidebar--open') ? closeSidebar() : openSidebar()
@@ -585,7 +716,7 @@
     document.addEventListener('keydown', e => e.key === 'Escape' && closeSidebar());
 
     /* =============================================
-       INIT — Run on page load
+       INIT — entry point
        ============================================= */
     initPage();
 
