@@ -109,6 +109,7 @@ ul { list-style: none; }
 .nav-item--active { background: var(--green-bg); color: var(--green); }
 .nav-item__icon   { width: 17px; text-align: center; font-size: 14px; flex-shrink: 0; }
 
+/* ── Sidebar user footer ── */
 .sidebar__user {
     margin-top: auto;
     display: flex; align-items: center; gap: 10px;
@@ -117,24 +118,37 @@ ul { list-style: none; }
     border: 1px solid var(--gray-light);
     background: var(--white-pure);
 }
+
+/* Outer circle wrapper */
 .user-avatar {
     width: 36px; height: 36px;
     border-radius: 50%;
     background: linear-gradient(135deg, #208B3A, #52B167);
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden; flex-shrink: 0; position: relative;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
 }
-.user-avatar img {
+
+/*
+   Inner div — JS renders either an <img> or a <span> with initials.
+   Both fill the circle completely.
+*/
+.sidebar-avatar-inner {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+}
+.sidebar-avatar-inner img {
     width: 100%; height: 100%;
     object-fit: cover; border-radius: 50%;
-    position: absolute; inset: 0;
+    display: block;
 }
-.user-avatar__fallback {
-    display: flex; align-items: center; justify-content: center;
-    color: white; font-size: 13px; font-weight: var(--fw-b);
-    position: absolute; inset: 0;
+.sidebar-avatar-inner .avatar-initials-text {
+    color: white;
+    font-size: 13px; font-weight: var(--fw-b);
     text-transform: uppercase;
+    line-height: 1;
 }
+
 .user-meta {
     flex: 1; min-width: 0;
     display: flex; flex-direction: column; line-height: 1.3;
@@ -209,6 +223,10 @@ ul { list-style: none; }
 
 .avatar-wrap { position: relative; flex-shrink: 0; }
 
+/*
+   Outer circle — green gradient background always visible.
+   JS renders content inside via #avatarImgContainer.
+*/
 .avatar-img {
     width: 80px; height: 80px;
     border-radius: 50%;
@@ -216,18 +234,23 @@ ul { list-style: none; }
     border: 3px solid var(--green-border);
     overflow: hidden;
     display: flex; align-items: center; justify-content: center;
-    position: relative;
 }
-.avatar-img img {
+
+/* JS-rendered image inside the avatar circle */
+.avatar-img img.avatar-photo {
     width: 100%; height: 100%;
-    object-fit: cover; border-radius: 50%;
-    position: absolute; inset: 0;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
 }
-.avatar-img__initials {
+
+/* JS-rendered initials span inside the avatar circle */
+.avatar-img .avatar-initials-text {
     font-size: 28px; font-weight: var(--fw-b);
     color: white; letter-spacing: .5px;
-    z-index: 1; text-transform: uppercase;
-    /* shown/hidden by JS and onerror */
+    text-transform: uppercase;
+    line-height: 1;
+    user-select: none;
 }
 
 .avatar-edit-btn {
@@ -265,19 +288,14 @@ ul { list-style: none; }
 .form-card__subtitle { font-size: 13px; color: var(--gray); }
 
 .profile-form { display: flex; flex-direction: column; gap: 20px; }
-
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .form-row--full { grid-template-columns: 1fr; }
 
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-label  { font-size: 13px; font-weight: var(--fw-m); color: var(--dark); }
-
-/* Small note beside label (e.g. "cannot be changed here") */
 .form-label__note {
-    font-size: 11px;
-    font-weight: var(--fw-r);
-    color: var(--gray-mid);
-    margin-left: 4px;
+    font-size: 11px; font-weight: var(--fw-r);
+    color: var(--gray-mid); margin-left: 4px;
 }
 
 .input-wrap { position: relative; }
@@ -297,7 +315,6 @@ ul { list-style: none; }
 }
 .form-input--icon { padding-left: 40px; }
 .form-input--pw   { padding-right: 44px; }
-
 .form-input:focus {
     border-color: var(--green);
     box-shadow: 0 0 0 3px rgba(32,139,58,.09);
@@ -323,6 +340,7 @@ ul { list-style: none; }
 }
 .pw-toggle:hover { color: var(--dark); }
 
+/* Save button disabled state */
 .btn-save:disabled { opacity: 0.7; cursor: not-allowed; transform: none !important; }
 
 /* =============================================
@@ -348,7 +366,10 @@ ul { list-style: none; }
 .toggle-item__label { font-size: 14px; font-weight: var(--fw-m); color: var(--dark); }
 .toggle-item__desc  { font-size: 12px; color: var(--gray); }
 
-.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; cursor: pointer; }
+.toggle-switch {
+    position: relative; display: inline-block;
+    width: 44px; height: 24px; flex-shrink: 0; cursor: pointer;
+}
 .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
 .toggle-switch__track {
     position: absolute; inset: 0;
@@ -367,7 +388,9 @@ ul { list-style: none; }
 }
 .toggle-switch input:checked + .toggle-switch__track { background: var(--green); }
 .toggle-switch input:checked + .toggle-switch__track::after { transform: translateX(20px); }
-.toggle-switch input:focus-visible + .toggle-switch__track { outline: 2px solid var(--green); outline-offset: 2px; }
+.toggle-switch input:focus-visible + .toggle-switch__track {
+    outline: 2px solid var(--green); outline-offset: 2px;
+}
 
 .security-form { display: flex; flex-direction: column; gap: 20px; }
 
