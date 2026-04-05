@@ -398,7 +398,7 @@
                 <span class="price">Rs. ${pharmacy.lowestPrice.toFixed(2)}</span>
                 <span class="price-label">starting from</span>`;
         } else {
-            priceBlockHTML = `<span class="price-label">Price not available</span>`;
+            priceBlockHTML = `<span class="price-label">Ask pharmacist for price</span>`;
         }
 
         /* ── Matched items summary lines ── */
@@ -507,6 +507,13 @@
                     ${altRowsHTML}
                 </ul>
 
+            <!-- Safety guidance footer -->
+                <div class="alt-safety-note">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Always consult your doctor or pharmacist before switching to an alternative medicine, 
+                    even if it contains the same active ingredient.
+                </div>
+
             </div><!-- /.alternatives-panel -->
 
         </article>`;
@@ -531,17 +538,22 @@
         const hasDisc    = discPrice > 0 && origPrice > 0 && discPrice < origPrice;
         const meta       = [row[COL.category], row[COL.strength]].filter(Boolean).join(' · ');
 
+        // Try pack_size as fallback label, show price from whichever field has data
+        const displayPrice = discPrice > 0 ? discPrice : origPrice;
+        const packLabel    = row[COL.pack_size] ? ` / ${row[COL.pack_size]}` : '';
+
         let rowPriceHTML;
         if (hasDisc) {
-            // Show discounted price + original crossed out
-            rowPriceHTML = `
-                <span class="alt-row__price">Rs. ${discPrice.toFixed(2)}</span>
-                <span class="alt-row__orig-price">Rs. ${origPrice.toFixed(2)}</span>`;
-        } else if (origPrice > 0) {
-            // No discount — show original price only
-            rowPriceHTML = `<span class="alt-row__price">Rs. ${origPrice.toFixed(2)}</span>`;
+        // Discounted: show discounted price + crossed-out original
+        rowPriceHTML = `
+            <span class="alt-row__price">Rs. ${discPrice.toFixed(2)}${packLabel}</span>
+            <span class="alt-row__orig-price">Rs. ${origPrice.toFixed(2)}</span>`;
+        } else if (displayPrice > 0) {
+            // Original price only
+            rowPriceHTML = `<span class="alt-row__price">Rs. ${displayPrice.toFixed(2)}${packLabel}</span>`;
         } else {
-            rowPriceHTML = `<span class="alt-row__price alt-row__price--na">Price N/A</span>`;
+            // Truly no price in dataset — show a softer message
+            rowPriceHTML = `<span class="alt-row__price alt-row__price--na">Ask pharmacist</span>`;
         }
 
         return `
