@@ -405,13 +405,7 @@ ul { list-style: none; }
 
 .security-form { display: flex; flex-direction: column; gap: 20px; }
 
-.forgot-link {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 13px; font-weight: var(--fw-m);
-    color: var(--green); transition: var(--t);
-    width: fit-content;
-}
-.forgot-link:hover { color: var(--green-light); }
+/* .forgot-link removed */
 
 /* =============================================
    ACTION BAR
