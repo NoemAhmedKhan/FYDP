@@ -1,30 +1,33 @@
 /* ============================================================
    MediFinder — UserProfile.js
 
-   THE ROOT CAUSE OF ALL "Loading..." ISSUES WAS:
-   supabase.js used `const supabaseClient = createClient(...)`
-   instead of `window.supabaseClient = createClient(...)`.
-   A plain const is not visible to other script files.
-   This made window.supabaseClient undefined here, causing
-   the IIFE to return immediately at the guard check.
-   Fix: supabase.js now assigns to window.supabaseClient.
-
-   This file is correct and complete — do not modify supabase.js
-   back to using a plain const or this will break again.
+   FIXES IN THIS VERSION:
+   1. Self-sufficient: creates own Supabase client if
+      window.supabaseClient is undefined (supabase.js const bug).
+   2. Uses upsert instead of update — update silently does nothing
+      if RLS blocks the row, upsert surfaces the error clearly.
+   3. Detailed console.log at every step so you can see exactly
+      what is happening in browser DevTools > Console.
+   4. profile_img URL always saved alongside other fields in one
+      single upsert call — no separate update for avatar URL.
    ============================================================ */
 (function () {
     'use strict';
 
-    /* ── Guard: ensure supabase.js loaded correctly ── */
-    const db = window.supabaseClient;
+    const SUPABASE_URL = 'https://ktzsshlllyjuzphprzso.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic';
+
+    /* Use shared client if available, otherwise create our own.
+       Both share the same session via localStorage. */
+    const db = window.supabaseClient
+        || (window.supabase && window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY));
+
     if (!db) {
-        console.error(
-            '[UserProfile] window.supabaseClient is undefined.\n' +
-            'Make sure supabase.js uses: window.supabaseClient = createClient(...)\n' +
-            'NOT: const supabaseClient = createClient(...)'
-        );
+        console.error('[UserProfile] Supabase SDK not found. Check script load order.');
         return;
     }
+
+    console.log('[UserProfile] Supabase client ready.');
 
     const AVATAR_BUCKET = 'avatars';
 
@@ -53,19 +56,13 @@
     function getInitials(first, last) {
         const f = (first || '').trim()[0] || '';
         const l = (last  || '').trim()[0] || '';
-        return (f + l).toUpperCase();
+        return (f + l).toUpperCase() || '?';
     }
 
     /* ============================================================
-       AVATAR RENDERING — 100% JS driven, no static <img> in HTML
-
-       Order: append to DOM → attach handlers → set src LAST.
-       This ensures onload/onerror fire even for cached images.
-
-       Priority:
-         1. customUrl  — profile_img from Supabase Storage
-         2. Default    — Images/ProfileAvatar.jpg
-         3. Initials   — if image file missing/broken
+       AVATAR RENDERING — 100% JS-driven, no static img in HTML
+       Priority: customUrl → Images/ProfileAvatar.jpg → initials
+       Append to DOM first, then set src (cached-image onload fix)
        ============================================================ */
     function renderAvatar(containerId, imageUrl, initialsText) {
         const container = $(containerId);
@@ -73,30 +70,26 @@
 
         container.innerHTML = '';
 
-        const src = imageUrl || 'Images/ProfileAvatar.jpg';
-        const img = document.createElement('img');
+        const img     = document.createElement('img');
         img.alt       = 'Profile Photo';
         img.className = 'avatar-photo';
 
-        /* Append FIRST so onload fires for cached images too */
-        container.appendChild(img);
+        container.appendChild(img);       // append FIRST
 
-        img.onload = () => { /* already in DOM and visible — nothing needed */ };
-
+        img.onload  = () => {};           // already visible in DOM
         img.onerror = () => {
             container.innerHTML = '';
-            const span = document.createElement('span');
+            const span       = document.createElement('span');
             span.className   = 'avatar-initials-text';
             span.textContent = initialsText || '?';
             container.appendChild(span);
         };
 
-        /* Set src LAST — after element is in DOM and handlers attached */
-        img.src = src;
+        img.src = imageUrl || 'Images/ProfileAvatar.jpg';   // set src LAST
     }
 
-    function setMainAvatar(url, initials)    { renderAvatar('avatarImgContainer', url, initials); }
-    function setSidebarAvatar(url, initials) { renderAvatar('sidebarAvatarInner', url, initials); }
+    const setMainAvatar    = (url, ini) => renderAvatar('avatarImgContainer', url, ini);
+    const setSidebarAvatar = (url, ini) => renderAvatar('sidebarAvatarInner', url, ini);
 
     /* ============================================================
        SIDEBAR TOGGLE (mobile)
@@ -121,8 +114,8 @@
             const input = $(btn.dataset.target);
             if (!input) return;
             const hidden = input.type === 'password';
-            input.type   = hidden ? 'text' : 'password';
-            const icon   = btn.querySelector('i');
+            input.type = hidden ? 'text' : 'password';
+            const icon = btn.querySelector('i');
             if (icon) {
                 icon.classList.toggle('fa-eye-slash', !hidden);
                 icon.classList.toggle('fa-eye',        hidden);
@@ -150,7 +143,6 @@
         const file = this.files[0];
         if (!file) return;
 
-        /* 2 MB limit — matches bucket policy */
         if (file.size > 2 * 1024 * 1024) {
             showAvatarError('Image is too large. Maximum allowed size is 2 MB.');
             this.value        = '';
@@ -161,16 +153,18 @@
         showAvatarError('');
         pendingAvatarFile = file;
 
-        /* Instant local preview — no upload yet */
         const blobUrl = URL.createObjectURL(file);
         setMainAvatar(blobUrl, currentInitials);
         setSidebarAvatar(blobUrl, currentInitials);
+        console.log('[UserProfile] Avatar preview set (local blob). Will upload on Save.');
     });
 
-    /* Upload file to Supabase Storage → return permanent public URL */
+    /* Upload to Supabase Storage → return permanent public URL */
     async function uploadAvatar(userId, file) {
         const ext      = (file.name.split('.').pop() || 'jpg').toLowerCase();
         const filePath = `${userId}/avatar.${ext}`;
+
+        console.log('[UserProfile] Uploading avatar to:', filePath);
 
         const { error: uploadErr } = await db.storage
             .from(AVATAR_BUCKET)
@@ -180,14 +174,19 @@
                 cacheControl: '3600',
             });
 
-        if (uploadErr) throw new Error('Storage upload failed: ' + uploadErr.message);
+        if (uploadErr) {
+            console.error('[UserProfile] Avatar upload error:', uploadErr);
+            throw new Error('Avatar upload failed: ' + uploadErr.message);
+        }
 
         const { data } = db.storage.from(AVATAR_BUCKET).getPublicUrl(filePath);
-        return `${data.publicUrl}?v=${Date.now()}`;
+        const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
+        console.log('[UserProfile] Avatar uploaded. Public URL:', publicUrl);
+        return publicUrl;
     }
 
     /* ============================================================
-       POPULATE UI
+       POPULATE UI FROM FETCHED DATA
        ============================================================ */
     function populateUI(user, profile) {
         const email     = user.email         || '';
@@ -195,7 +194,7 @@
         const lastName  = profile.last_name  || '';
         const fullName  = [firstName, lastName].filter(Boolean).join(' ') || 'User';
 
-        currentInitials = getInitials(firstName, lastName) || '?';
+        currentInitials = getInitials(firstName, lastName);
 
         setVal('firstName',   firstName);
         setVal('lastName',    lastName);
@@ -213,16 +212,21 @@
         const customUrl = profile.profile_img || null;
         setMainAvatar(customUrl, currentInitials);
         setSidebarAvatar(customUrl, currentInitials);
+
+        console.log('[UserProfile] UI populated. Name:', fullName, '| Avatar URL:', customUrl || 'default');
     }
 
     /* ============================================================
-       AUTH — fetch session then load profile
+       AUTH + LOAD
+       onAuthStateChange fires after session restored from localStorage
+       — avoids the getUser()-returns-null timing bug.
        ============================================================ */
     let currentUser     = null;
     let originalProfile = null;
 
     async function fetchAndRender(user) {
         currentUser = user;
+        console.log('[UserProfile] Auth user ID:', user.id, '| Email:', user.email);
 
         const { data: profile, error: dbErr } = await db
             .from('users')
@@ -230,20 +234,32 @@
             .eq('id', user.id)
             .single();
 
-        if (dbErr && dbErr.code !== 'PGRST116') {
-            showToast('Could not load profile: ' + dbErr.message, 'error');
+        if (dbErr) {
+            if (dbErr.code === 'PGRST116') {
+                /* No row found — new user, populate with auth data only */
+                console.warn('[UserProfile] No row in users table for this user yet.');
+                originalProfile = {};
+                populateUI(user, {});
+            } else {
+                console.error('[UserProfile] DB fetch error:', dbErr);
+                showToast('Could not load profile: ' + dbErr.message, 'error');
+            }
             return;
         }
 
-        originalProfile = profile || {};
-        populateUI(user, originalProfile);
+        console.log('[UserProfile] Profile fetched:', profile);
+        originalProfile = profile;
+        populateUI(user, profile);
     }
 
     function initAuth() {
+        console.log('[UserProfile] Initialising auth listener...');
         const { data: { subscription } } = db.auth.onAuthStateChange((event, session) => {
-            subscription.unsubscribe();   // only need first event
+            console.log('[UserProfile] Auth event:', event, '| Has session:', !!session);
+            subscription.unsubscribe();
 
             if (!session || !session.user) {
+                console.warn('[UserProfile] No session — redirecting to Login.html');
                 window.location.href = 'Login.html';
                 return;
             }
@@ -262,35 +278,52 @@
 
     /* ============================================================
        SAVE CHANGES
-       1. Upload avatar (if new file selected)
-       2. Update users table
-       3. Change password (if both old + new provided)
+       ─────────────────────────────────────────────────────────────
+       Step 1: Upload avatar to Storage (if new file selected)
+       Step 2: Upsert ALL fields + profile_img into users table
+               Uses upsert (not update) so it works even if RLS
+               would silently swallow a plain update call.
+       Step 3: Change password (if old + new both provided)
        ============================================================ */
     const saveBtn = $('saveBtn');
 
     async function saveProfile() {
-        if (!currentUser) return;
+        if (!currentUser) {
+            console.warn('[UserProfile] saveProfile called but currentUser is null');
+            return;
+        }
 
+        console.log('[UserProfile] Save started for user:', currentUser.id);
         saveBtn.disabled  = true;
         saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
 
         let hasError     = false;
         let newAvatarUrl = null;
 
-        /* Step 1 — Avatar */
+        /* ── Step 1: Upload avatar if selected ── */
         if (pendingAvatarFile) {
             try {
                 newAvatarUrl      = await uploadAvatar(currentUser.id, pendingAvatarFile);
                 pendingAvatarFile = null;
             } catch (err) {
+                console.error('[UserProfile] Avatar upload failed:', err.message);
                 showToast(err.message, 'error');
                 hasError = true;
             }
         }
 
-        /* Step 2 — Profile fields */
+        /* ── Step 2: Upsert profile fields into users table ── */
         if (!hasError) {
-            const patch = {
+            /*
+               We include the id in the upsert payload so Supabase knows
+               which row to target. onConflict:'id' means:
+                 - if row with this id exists → UPDATE it
+                 - if it doesn't exist yet   → INSERT it
+               This is more reliable than a plain .update() which can
+               silently do nothing if RLS denies or the row is missing.
+            */
+            const payload = {
+                id:          currentUser.id,
                 first_name:  val('firstName')   || null,
                 last_name:   val('lastName')    || null,
                 phone_no:    val('phone')       || null,
@@ -298,34 +331,44 @@
                 city:        val('city')        || null,
                 coordinates: val('coordinates') || null,
             };
-            if (newAvatarUrl) patch.profile_img = newAvatarUrl;
 
-            const { error: updateErr } = await db
+            /* Only include profile_img if we have a new URL */
+            if (newAvatarUrl) {
+                payload.profile_img = newAvatarUrl;
+            }
+
+            console.log('[UserProfile] Upserting payload:', payload);
+
+            const { data: upsertData, error: upsertErr } = await db
                 .from('users')
-                .update(patch)
-                .eq('id', currentUser.id);
+                .upsert(payload, { onConflict: 'id' })
+                .select();   /* .select() forces Supabase to return the updated row */
 
-            if (updateErr) {
-                showToast('Profile update failed: ' + updateErr.message, 'error');
+            if (upsertErr) {
+                console.error('[UserProfile] Upsert error:', upsertErr);
+                showToast('Save failed: ' + upsertErr.message, 'error');
                 hasError = true;
             } else {
-                originalProfile = { ...originalProfile, ...patch };
+                console.log('[UserProfile] Upsert success. Returned:', upsertData);
 
-                const fullName = [patch.first_name, patch.last_name]
+                originalProfile = { ...originalProfile, ...payload };
+
+                const fullName = [payload.first_name, payload.last_name]
                     .filter(Boolean).join(' ') || 'User';
-                currentInitials = getInitials(patch.first_name, patch.last_name) || '?';
+                currentInitials = getInitials(payload.first_name, payload.last_name);
 
                 setText('avatarName',      fullName);
                 setText('sidebarUserName', fullName);
 
                 if (newAvatarUrl) {
+                    originalProfile.profile_img = newAvatarUrl;
                     setMainAvatar(newAvatarUrl, currentInitials);
                     setSidebarAvatar(newAvatarUrl, currentInitials);
                 }
             }
         }
 
-        /* Step 3 — Password */
+        /* ── Step 3: Password change ── */
         const oldPw = val('oldPassword');
         const newPw = val('newPassword');
 
@@ -343,19 +386,23 @@
                 showToast('New password must be different from the old one.', 'error');
                 hasError = true;
             } else {
+                console.log('[UserProfile] Re-authenticating to verify old password...');
                 const { error: reAuthErr } = await db.auth.signInWithPassword({
                     email:    currentUser.email,
                     password: oldPw,
                 });
                 if (reAuthErr) {
+                    console.error('[UserProfile] Re-auth failed:', reAuthErr.message);
                     showToast('Old password is incorrect.', 'error');
                     hasError = true;
                 } else {
                     const { error: pwErr } = await db.auth.updateUser({ password: newPw });
                     if (pwErr) {
+                        console.error('[UserProfile] Password update failed:', pwErr.message);
                         showToast('Password update failed: ' + pwErr.message, 'error');
                         hasError = true;
                     } else {
+                        console.log('[UserProfile] Password updated successfully.');
                         setVal('oldPassword', '');
                         setVal('newPassword', '');
                     }
@@ -363,10 +410,13 @@
             }
         }
 
-        if (!hasError) showToast('✓ Profile saved successfully!', 'success');
+        if (!hasError) {
+            showToast('✓ Profile saved successfully!', 'success');
+        }
 
         saveBtn.disabled  = false;
         saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+        console.log('[UserProfile] Save complete. hasError:', hasError);
     }
 
     saveBtn && saveBtn.addEventListener('click', saveProfile);
@@ -388,7 +438,6 @@
        ============================================================ */
     $('forgotPasswordLink') && $('forgotPasswordLink').addEventListener('click', async e => {
         e.preventDefault();
-
         const email = currentUser?.email;
         if (!email) { showToast('No email address found.', 'error'); return; }
 
