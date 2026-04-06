@@ -87,7 +87,7 @@
        4. AUTH GUARD + SIDEBAR PROFILE LOADER
        ─────────────────────────────────────────────
        • No session  → redirect to Login.html
-       • Session OK  → load name/email into sidebar
+       • Session OK  → load name/email/avatar into sidebar
        ============================================= */
     async function initPage() {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
@@ -96,7 +96,7 @@
         try {
             const { data: profile } = await supabaseClient
                 .from('users')
-                .select('first_name, last_name')
+                .select('first_name, last_name, profile_img')
                 .eq('id', session.user.id)
                 .single();
 
@@ -104,10 +104,44 @@
                 const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
                 document.getElementById('sidebarUserName').textContent  = fullName || 'User';
                 document.getElementById('sidebarUserEmail').textContent = session.user.email || '';
+
+                // Load profile photo from Supabase, fallback to default avatar
+                renderSidebarAvatar(profile.profile_img || null);
             }
         } catch (err) {
             console.warn('Profile load failed:', err.message);
         }
+    }
+
+    /* ─────────────────────────────────────────────
+       SIDEBAR AVATAR RENDERER
+       Shows Supabase profile photo if available,
+       else shows Images/ProfileAvatar.jpg.
+       ───────────────────────────────────────────── */
+    function renderSidebarAvatar(profileImgUrl) {
+        const avatarEl = document.querySelector('.user-avatar');
+        if (!avatarEl) return;
+
+        // Clear fallback content set in HTML
+        const fallback = avatarEl.querySelector('.user-avatar__fallback');
+        const existing = avatarEl.querySelector('img');
+        if (existing) existing.remove();
+
+        const img = document.createElement('img');
+        img.alt   = 'User Avatar';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;position:relative;z-index:1;';
+
+        img.onerror = () => {
+            img.remove();
+            if (fallback) fallback.style.display = 'flex';
+        };
+
+        img.onload = () => {
+            if (fallback) fallback.style.display = 'none';
+        };
+
+        img.src = profileImgUrl || 'Images/ProfileAvatar.jpg';
+        avatarEl.insertBefore(img, avatarEl.firstChild);
     }
 
     /* =============================================
