@@ -1,25 +1,41 @@
 /* =============================================
-   MediFinder — UserPharmacySearch.js  v3.0
+   MediFinder — UserPharmacySearch.js  v4.0
    ─────────────────────────────────────────────
    CHANGES IN v3.0:
-   A. Smart word-boundary search — only triggers
-      after the user finishes typing a complete word
-      (space or punctuation detected), not on every
-      partial character like "Ga".
-   B. Two-phase search UX:
-      Phase 1 — Suggestion dropdown: shows a
-        deduplicated list of matching product names
-        across ALL pharmacies. User clicks one.
-      Phase 2 — Pharmacy cards: shows only pharmacies
-        that have EXACTLY that selected product in stock.
-   C. Price parsing — strips "Rs. " prefix and commas
-      from text-format prices like "Rs. 2,280.00"
-      before converting to number.
-   D. Alternatives deduplication — products already
-      shown in pharmacy cards are excluded from the
-      alternatives panel completely.
+   A. Smart word-boundary search.
+   B. Two-phase search UX (dropdown → cards).
+   C. Price parsing for "Rs. X,XXX.XX" format.
+   D. Alternatives deduplication.
    E. Safety message text updated.
-   F. COL map updated with all new dataset columns.
+   F. COL map updated with all dataset columns.
+
+   CHANGES IN v4.0:
+   G. Smart multi-value alternatives engine:
+      • New tokeniseField() splits generic_name on
+        ',' and strength on '/' into individual token
+        Sets, then strips noise words ("and","or",
+        "with") from every token so "And Zinc Oxide"
+        normalises to "Zinc Oxide".
+      • New setsOverlap() checks if any token from
+        source and candidate share at least one match,
+        enabling partial-ingredient/partial-strength
+        alternatives to be correctly surfaced.
+      • New isTherapeuticAlternative() applies exact
+        normalised match on dosage_form + release_type
+        (single-value fields) and token-overlap match
+        on generic_name + strength (multi-value fields).
+      • fetchAlternatives() now uses a two-phase fetch:
+        Phase A — broad Supabase query filtered only on
+          the safe single-value fields (dosage_form,
+          release_type) with a limit of 200.
+        Phase B — client-side smart filter via
+          isTherapeuticAlternative() for final results.
+      This correctly handles cases like:
+        A: generic="Metronidazole, Chlorhexidine"
+           strength="100mg/65mg"
+        B: generic="Metronidazole"
+           strength="65mg"
+        → B is now correctly shown as an alternative.
    ============================================= */
 
 (function () {
@@ -383,20 +399,142 @@
     }
 
     /* =============================================
+       14-A. SMART FIELD TOKENISER
+       ─────────────────────────────────────────────
+       Splits a raw field value into a normalised Set
+       of individual tokens so multi-value fields can
+       be compared element-by-element.
+
+       Rules applied in order:
+         1. Coerce to string, bail on empty.
+         2. Split strengths on '/'  → ["100mg","5ml"]
+            Split generics  on ','  → ["Metronidazole","Chlorhexidine gluconate"]
+         3. Trim whitespace from every token.
+         4. Strip leading/trailing noise words:
+              "and", "or", "with"  (case-insensitive)
+            so "And Zinc Oxide" normalises the same as
+            "Zinc Oxide".
+         5. Lowercase everything for case-insensitive
+            matching.
+         6. Discard empty tokens after the above steps.
+
+       Returns a Set<string> of cleaned tokens.
+       ─────────────────────────────────────────────
+       Examples:
+         "Homosalate, Octisalate, And Zinc Oxide"
+           → Set { "homosalate", "octisalate", "zinc oxide" }
+
+         "100mg/5ml"
+           → Set { "100mg", "5ml" }
+
+         "Metronidazole, Chlorhexidine gluconate"
+           → Set { "metronidazole", "chlorhexidine gluconate" }
+
+         "And Zinc Oxide"
+           → Set { "zinc oxide" }
+       ============================================= */
+    const NOISE_WORDS = /^(and|or|with)\s+|\s+(and|or|with)$/gi;
+
+    function tokeniseField(raw, splitChar) {
+        if (!raw) return new Set();
+        return new Set(
+            String(raw)
+                .split(splitChar)
+                .map(t => t.replace(NOISE_WORDS, '').trim().toLowerCase())
+                .filter(Boolean)
+        );
+    }
+
+    /* =============================================
+       14-B. FIELD OVERLAP CHECKER
+       ─────────────────────────────────────────────
+       Returns true when sets A and B share at least
+       one token — i.e., at least one active ingredient
+       (or strength) overlaps between the two products.
+
+       This is the core "partial match" logic that lets:
+         Product A: generic="Metronidazole, Chlorhexidine gluconate", strength="100mg/65mg"
+         Product B: generic="Metronidazole",                          strength="65mg"
+       …still qualify as alternatives because one
+       generic token and one strength token overlap.
+       ============================================= */
+    function setsOverlap(setA, setB) {
+        if (setA.size === 0 || setB.size === 0) return false;
+        for (const token of setA) {
+            if (setB.has(token)) return true;
+        }
+        return false;
+    }
+
+    /* =============================================
+       14-C. CLIENT-SIDE ALTERNATIVE MATCHER
+       ─────────────────────────────────────────────
+       Given a source row and a pool of candidate rows
+       (already fetched from Supabase), returns only
+       those candidates that are genuine therapeutic
+       alternatives by applying the smart token-overlap
+       logic across all 4 equivalence fields.
+
+       Match criteria (ALL must pass):
+         • generic_name : at least 1 token overlaps
+         • dosage_form  : exact match (single value,
+                          no splitting needed)
+         • strength     : at least 1 token overlaps
+         • release_type : exact match (single value)
+
+       dosage_form and release_type are single-value
+       fields in practice, so we still do an exact
+       normalised comparison for them rather than
+       token overlap (which would be too permissive).
+       ============================================= */
+    function isTherapeuticAlternative(sourceRow, candidateRow) {
+        /* ── dosage_form: exact normalised match ── */
+        const srcDF  = (sourceRow[COL.dosage_form]  || '').trim().toLowerCase();
+        const canDF  = (candidateRow[COL.dosage_form] || '').trim().toLowerCase();
+        if (!srcDF || !canDF || srcDF !== canDF) return false;
+
+        /* ── release_type: exact normalised match ── */
+        const srcRT  = (sourceRow[COL.release_type]  || '').trim().toLowerCase();
+        const canRT  = (candidateRow[COL.release_type] || '').trim().toLowerCase();
+        if (!srcRT || !canRT || srcRT !== canRT) return false;
+
+        /* ── generic_name: token overlap (split on ',') ── */
+        const srcGN  = tokeniseField(sourceRow[COL.generic_name],    ',');
+        const canGN  = tokeniseField(candidateRow[COL.generic_name], ',');
+        if (!setsOverlap(srcGN, canGN)) return false;
+
+        /* ── strength: token overlap (split on '/') ── */
+        const srcST  = tokeniseField(sourceRow[COL.strength],    '/');
+        const canST  = tokeniseField(candidateRow[COL.strength], '/');
+        if (!setsOverlap(srcST, canST)) return false;
+
+        return true;
+    }
+
+    /* =============================================
        14. FETCH ALTERNATIVES (per matched item)
        ─────────────────────────────────────────────
-       Finds therapeutically equivalent products by
-       matching ALL 4 fields EXACTLY:
-         generic_name  — same active ingredient
-         dosage_form   — same form (tablet, syrup…)
-         strength      — same dose (500mg, 10mg…)
-         release_type  — same release (immediate, ER…)
+       STRATEGY — two-phase approach:
+
+       Phase A — Broad Supabase fetch:
+         We can no longer use strict .eq() on all 4
+         fields because generic_name and strength can
+         be multi-value strings (e.g. "A, B" / "Xmg/Ymg").
+         Instead we fetch a BROAD candidate pool using
+         only dosage_form and release_type (which are
+         single-value fields and safe for exact DB
+         filtering), keeping the result set manageable.
+
+       Phase B — Client-side smart filter:
+         isTherapeuticAlternative() applies the full
+         token-overlap logic on generic_name and
+         strength to trim the broad pool down to only
+         genuine therapeutic equivalents.
 
        Excludes:
-       • The original product (by exact product_name)
        • Any product already shown in pharmacy cards
-         (passed in via excludeNames Set)
-       Only returns in-stock items (quantity > 0).
+         (passed in via excludeNames Set).
+       • Only in-stock items (quantity > 0).
        ============================================= */
     async function fetchAlternatives(row, excludeNames) {
         const gn = row[COL.generic_name];
@@ -408,12 +546,14 @@
         if (!gn || !df || !st || !rt) return [];
 
         try {
+            /* ── Phase A: broad DB fetch filtered only on single-value fields ── */
             const { data, error } = await supabaseClient
                 .from('Pharmacy Data')
                 .select([
                     COL.product_name,
                     COL.brand,
                     COL.category,
+                    COL.generic_name,
                     COL.strength,
                     COL.dosage_form,
                     COL.release_type,
@@ -422,19 +562,21 @@
                     COL.quantity,
                     COL.prescription,
                 ].join(', '))
-                .eq(COL.generic_name, gn)
-                .eq(COL.dosage_form,  df)
-                .eq(COL.strength,     st)
-                .eq(COL.release_type, rt)
+                .eq(COL.dosage_form,  df)   // safe — single-value field
+                .eq(COL.release_type, rt)   // safe — single-value field
                 .gt(COL.quantity, 0)
-                .limit(20);
+                .limit(200);               // wider net needed for token matching
 
             if (error) throw error;
 
-            // Exclude any product already shown in pharmacy cards (case-insensitive)
-            return (data || []).filter(alt => {
-                const name = (alt[COL.product_name] || '').toLowerCase().trim();
-                return !excludeNames.has(name);
+            /* ── Phase B: smart client-side filter ── */
+            return (data || []).filter(candidate => {
+                // Skip products already shown in the pharmacy card
+                const name = (candidate[COL.product_name] || '').toLowerCase().trim();
+                if (excludeNames.has(name)) return false;
+
+                // Apply full smart token-overlap matching
+                return isTherapeuticAlternative(row, candidate);
             });
 
         } catch (err) {
