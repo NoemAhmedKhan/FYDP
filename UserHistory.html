@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-    <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="UserHistory.css">
 </head>
 <body>
@@ -52,16 +52,20 @@
                 </a>
             </nav>
 
+            <!-- User Profile Footer -->
             <div class="sidebar__user">
                 <div class="user-avatar">
-                    <img src="Images/ProfileAvatar.jpg" alt="Michael Chen"
+                    <img src="Images/ProfileAvatar.jpg" alt="User"
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <div class="user-avatar__fallback" style="display:none">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
                 </div>
                 <div class="user-meta">
-                    <span class="user-name">John Doe</span>
-                    <span class="user-email">john.doe@medtrac...</span>
+                    <span class="user-name" id="sidebarUserName">Loading...</span>
+                    <span class="user-email" id="sidebarUserEmail"></span>
                 </div>
-                <a href="Login.html" class="user-logout" title="Log out">
+                <a href="#" class="user-logout" id="logoutBtn" title="Log out">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 </a>
             </div>
@@ -72,7 +76,7 @@
     <!-- ===================== MAIN ===================== -->
     <main class="main">
 
-        <!-- Topbar -->
+        <!-- Topbar — date filter removed per requirements -->
         <header class="topbar">
             <button class="topbar__hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">
                 <i class="fa-solid fa-bars"></i>
@@ -85,34 +89,30 @@
                     <span class="breadcrumb__active">History</span>
                 </nav>
             </div>
-            <div class="topbar__actions">
-                <button class="date-filter" id="dateFilter">
-                    <i class="fa-regular fa-calendar"></i>
-                    <span>Last 30 Days</span>
-                    <i class="fa-solid fa-chevron-down"></i>
-                </button>
-            </div>
+            <!-- Date filter intentionally removed -->
         </header>
 
-        <!-- ── Most Frequent Card ── -->
+        <!-- Most Frequent Card — populated by JS -->
         <section class="most-frequent">
             <div class="most-frequent__body">
                 <span class="most-frequent__label">Most Frequent</span>
-                <h2 class="most-frequent__name">Paracetamol 100mg</h2>
+                <h2 class="most-frequent__name" id="mostFrequentName">
+                    <span class="skeleton-text">Loading…</span>
+                </h2>
             </div>
             <div class="most-frequent__icon">
                 <i class="fa-solid fa-kit-medical"></i>
             </div>
         </section>
 
-        <!-- ── Content Grid ── -->
+        <!-- Content Grid -->
         <div class="content-grid">
 
-            <!-- Left: Search History Panel -->
+            <!-- Left: Search History Panel — "View All" removed per requirements -->
             <section class="history-panel">
                 <div class="panel__header">
                     <h2 class="panel__title">Search History</h2>
-                    <a href="#" class="panel__link panel__link--green">View All</a>
+                    <!-- "View All" link removed -->
                 </div>
 
                 <div class="history-table__head">
@@ -121,92 +121,35 @@
                     <span>Date</span>
                 </div>
 
-                <ul class="history-table__body">
-
-                    <li class="history-row">
+                <!-- Rows injected by JS -->
+                <ul class="history-table__body" id="historyTableBody">
+                    <li class="history-row history-row--empty">
                         <div class="history-row__query">
                             <div class="med-icon med-icon--indigo">
-                                <i class="fa-solid fa-kit-medical"></i>
+                                <i class="fa-solid fa-spinner fa-spin"></i>
                             </div>
                             <div class="med-info">
-                                <span class="med-info__name">Serc 8mg</span>
-                                <span class="med-info__sub">Vertigo</span>
+                                <span class="med-info__name">Loading history…</span>
                             </div>
                         </div>
-                        <span class="history-row__category">Search</span>
-                        <span class="history-row__date">Oct 24, 2023</span>
                     </li>
-
-                    <li class="history-row">
-                        <div class="history-row__query">
-                            <div class="med-icon med-icon--red">
-                                <i class="fa-solid fa-pills"></i>
-                            </div>
-                            <div class="med-info">
-                                <span class="med-info__name">Zeegap 75mg</span>
-                                <span class="med-info__sub">Neuropathic Pain</span>
-                            </div>
-                        </div>
-                        <span class="history-row__category">Search</span>
-                        <span class="history-row__date">Oct 22, 2023</span>
-                    </li>
-
-                    <li class="history-row">
-                        <div class="history-row__query">
-                            <div class="med-icon med-icon--amber">
-                                <i class="fa-solid fa-eye"></i>
-                            </div>
-                            <div class="med-info">
-                                <span class="med-info__name">Polyfax eye ointment 6g</span>
-                                <span class="med-info__sub">Antibiotic</span>
-                            </div>
-                        </div>
-                        <span class="history-row__category">Prescription</span>
-                        <span class="history-row__date">Oct 19, 2023</span>
-                    </li>
-
-                    <li class="history-row">
-                        <div class="history-row__query">
-                            <div class="med-icon med-icon--cyan">
-                                <i class="fa-solid fa-droplet"></i>
-                            </div>
-                            <div class="med-info">
-                                <span class="med-info__name">Hylo eye drops</span>
-                                <span class="med-info__sub">Dry Eye Relief</span>
-                            </div>
-                        </div>
-                        <span class="history-row__category">Search</span>
-                        <span class="history-row__date">Oct 15, 2023</span>
-                    </li>
-
-                    <li class="history-row">
-                        <div class="history-row__query">
-                            <div class="med-icon med-icon--pink">
-                                <i class="fa-solid fa-pump-soap"></i>
-                            </div>
-                            <div class="med-info">
-                                <span class="med-info__name">Conaz lotion 60ml</span>
-                                <span class="med-info__sub">Antifungal</span>
-                            </div>
-                        </div>
-                        <span class="history-row__category">Search</span>
-                        <span class="history-row__date">Oct 10, 2023</span>
-                    </li>
-
                 </ul>
+
+                <!-- Pagination slider injected by JS -->
+                <div id="paginationSlider"></div>
             </section>
 
             <!-- Right: Last Search + Prescription Vault -->
             <aside class="right-col">
 
-                <!-- Last Search -->
+                <!-- Last Search — populated by JS -->
                 <div class="info-card">
                     <div class="info-card__icon">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                     </div>
                     <div class="info-card__body">
                         <span class="info-card__label">Last Search</span>
-                        <span class="info-card__value">Arinac Forte 60mg</span>
+                        <span class="info-card__value" id="lastSearchValue">Loading…</span>
                     </div>
                 </div>
 
@@ -233,6 +176,9 @@
 
     </main>
 
+    <!-- ===================== SCRIPTS ===================== -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
     <script src="UserHistory.js"></script>
 </body>
 </html>
