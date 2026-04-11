@@ -179,48 +179,16 @@
                     <a href="UserHistory.html" class="panel__link panel__link--green">View History</a>
                 </div>
 
-                <ul class="search-list">
-
-                    <li class="search-item">
+                <ul class="search-list" id="recentSearchList">
+                    <!-- Injected by UserDashboard.js from user_search_history -->
+                    <li class="search-item search-item--loading">
                         <div class="search-item__icon">
-                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <i class="fa-solid fa-spinner fa-spin"></i>
                         </div>
                         <div class="search-item__info">
-                            <span class="search-item__name">Paracetamol 500mg</span>
-                            <span class="search-item__meta">Downtown Area &bull; 2 hours ago</span>
+                            <span class="search-item__name" style="color:var(--gray-mid)">Loading…</span>
                         </div>
-                        <a href="UserPharmacySearch.html" class="search-item__arrow" aria-label="Search again">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </a>
                     </li>
-
-                    <li class="search-item">
-                        <div class="search-item__icon">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </div>
-                        <div class="search-item__info">
-                            <span class="search-item__name">Amoxicillin 250mg</span>
-                            <span class="search-item__meta">Midtown &bull; Yesterday</span>
-                        </div>
-                        <a href="UserPharmacySearch.html" class="search-item__arrow" aria-label="Search again">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </a>
-                    </li>
-
-                    <li class="search-item">
-                        <div class="search-item__icon">
-                            <i class="fa-solid fa-magnifying-glass"></i>
-                        </div>
-                        <div class="search-item__info">
-                            <span class="search-item__name">Insulin Glargine</span>
-                            <span class="search-item__meta">West End &bull; 2 days ago</span>
-                        </div>
-                        <a href="UserPharmacySearch.html" class="search-item__arrow" aria-label="Search again">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </a>
-                    </li>
-
-         
                 </ul>
             </div>
 
