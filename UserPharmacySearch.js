@@ -1,41 +1,19 @@
 /* =============================================
-   MediFinder — UserPharmacySearch.js  v4.0
+   MediFinder — UserPharmacySearch.js  v4.2
    ─────────────────────────────────────────────
-   CHANGES IN v3.0:
-   A. Smart word-boundary search.
-   B. Two-phase search UX (dropdown → cards).
-   C. Price parsing for "Rs. X,XXX.XX" format.
-   D. Alternatives deduplication.
-   E. Safety message text updated.
-   F. COL map updated with all dataset columns.
-
-   CHANGES IN v4.0:
-   G. Smart multi-value alternatives engine:
-      • New tokeniseField() splits generic_name on
-        ',' and strength on '/' into individual token
-        Sets, then strips noise words ("and","or",
-        "with") from every token so "And Zinc Oxide"
-        normalises to "Zinc Oxide".
-      • New setsOverlap() checks if any token from
-        source and candidate share at least one match,
-        enabling partial-ingredient/partial-strength
-        alternatives to be correctly surfaced.
-      • New isTherapeuticAlternative() applies exact
-        normalised match on dosage_form + release_type
-        (single-value fields) and token-overlap match
-        on generic_name + strength (multi-value fields).
-      • fetchAlternatives() now uses a two-phase fetch:
-        Phase A — broad Supabase query filtered only on
-          the safe single-value fields (dosage_form,
-          release_type) with a limit of 200.
-        Phase B — client-side smart filter via
-          isTherapeuticAlternative() for final results.
-      This correctly handles cases like:
-        A: generic="Metronidazole, Chlorhexidine"
-           strength="100mg/65mg"
-        B: generic="Metronidazole"
-           strength="65mg"
-        → B is now correctly shown as an alternative.
+   CHANGES IN v4.2 (reverts v4.1 JSONB approach):
+   H. logSearch() rebuilt on multi-row relational
+      model — one row per search, max 20 per user.
+      • INSERT uses DB default now() for server-
+        side timestamp (no client clock dependency).
+      • Pruning done via Postgres RPC function
+        prune_search_history(p_user_id) which runs
+        a single atomic DELETE keeping only the 20
+        most-recent rows. No race condition, no
+        extra COUNT round-trip.
+      • maybeSingle() used for category lookup so
+        zero-row results return null cleanly instead
+        of throwing a PGRST116 error.
    ============================================= */
 
 (function () {
@@ -336,17 +314,146 @@
     }
 
     /* =============================================
+       12-A. LOG SEARCH TO user_search_history
+       ─────────────────────────────────────────────
+       Called fire-and-forget from selectProduct().
+       Never awaited — cannot block or break the UI.
+
+       STORAGE MODEL — multi-row, max 20 per user:
+         TABLE: user_search_history
+           id            uuid        PK  gen_random_uuid()
+           user_id       uuid        FK  auth.users(id) NOT NULL
+           product_name  text        NOT NULL
+           category      text        nullable
+           searched_at   timestamptz NOT NULL  default now()
+
+         INDEX: (user_id, searched_at DESC)
+           → makes ORDER BY + LIMIT queries O(log n)
+             instead of full table scans
+
+       WRITE FLOW — 2 sequential DB calls:
+
+         Step 1 — INSERT new row.
+           searched_at is set by the DB server (now())
+           so timestamps are always correct regardless
+           of the user's device clock.
+
+         Step 2 — Call Postgres RPC prune_search_history.
+           The function runs inside the DB atomically:
+             DELETE rows for this user where searched_at
+             is NOT in the 20 most-recent (by searched_at
+             DESC). Uses a single subquery — no race
+             condition possible because it operates on
+             the committed state after the INSERT above.
+
+       WHY RPC FOR PRUNING:
+         Doing COUNT + DELETE from JS requires 2 extra
+         round-trips and has a race window if the user
+         searches from two tabs simultaneously.
+         The RPC prunes in one atomic server-side call
+         with no extra JS round-trip overhead.
+
+       POSTGRES FUNCTION TO CREATE (run once in Supabase
+       SQL editor):
+
+         CREATE OR REPLACE FUNCTION prune_search_history(p_user_id uuid)
+         RETURNS void
+         LANGUAGE sql
+         SECURITY DEFINER
+         AS $$
+           DELETE FROM user_search_history
+           WHERE  user_id = p_user_id
+           AND    id NOT IN (
+             SELECT id
+             FROM   user_search_history
+             WHERE  user_id = p_user_id
+             ORDER  BY searched_at DESC
+             LIMIT  20
+           );
+         $$;
+
+       SECURITY DEFINER means the function runs with
+       table-owner privileges so it can delete rows
+       even when RLS is ON — users cannot call it
+       for other user_ids because the function only
+       ever prunes the p_user_id passed by the JS,
+       and auth.uid() = user_id RLS still gates
+       the INSERT in Step 1.
+       ============================================= */
+    const SEARCH_HISTORY_MAX = 20;
+
+    async function logSearch(productName) {
+        try {
+            /* ── 0. Must be authenticated ── */
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) return;
+            const userId = session.user.id;
+
+            /* ── 1. Resolve category from Pharmacy Data ──
+               Runs parallel to nothing — we need it for
+               the INSERT, so it must finish first.
+               Wrapped in its own try so a category miss
+               never aborts the whole log operation.     */
+            let category = null;
+            try {
+                const { data: catRow } = await supabaseClient
+                    .from('Pharmacy Data')
+                    .select('category')
+                    .ilike('product_name', productName)
+                    .limit(1)
+                    .maybeSingle();          // returns null instead of error when 0 rows
+                category = catRow?.category ?? null;
+            } catch (_) { /* non-critical — category stays null */ }
+
+            /* ── 2. INSERT new search row ──
+               searched_at is intentionally omitted —
+               the DB default now() sets it server-side
+               so the timestamp is always the authoritative
+               server clock, never the user's device clock. */
+            const { error: insertErr } = await supabaseClient
+                .from('user_search_history')
+                .insert({
+                    user_id:      userId,
+                    product_name: productName,
+                    category:     category,
+                    // searched_at: DB default now() ← do NOT set from JS
+                });
+
+            if (insertErr) throw insertErr;
+
+            /* ── 3. Prune atomically via RPC ──
+               Deletes any rows beyond the 20 most-recent
+               for this user in a single server-side SQL
+               statement. No race condition, no extra
+               round-trip for a COUNT query.             */
+            const { error: pruneErr } = await supabaseClient
+                .rpc('prune_search_history', { p_user_id: userId });
+
+            // Prune failure is non-critical — log grows slightly
+            // but correctness of the INSERT is not affected.
+            if (pruneErr) console.warn('History prune warning:', pruneErr.message);
+
+        } catch (err) {
+            // Must never surface to the user — fail silently
+            console.warn('Search log error:', err.message);
+        }
+    }
+
+    /* =============================================
        12. SELECT PRODUCT (Phase 1 → Phase 2)
        ─────────────────────────────────────────────
        Called when user clicks a suggestion.
        • Puts exact product name into search bar
        • Clears suggestion dropdown
+       • Logs search to user_search_history (async,
+         fire-and-forget — does not block UI)
        • Triggers Phase 2: fetch pharmacy cards for
          this exact product name only
        ============================================= */
     function selectProduct(productName) {
         searchInput.value = productName;
         clearSuggestions();
+        logSearch(productName);          // ← fire-and-forget, no await
         searchByExactProduct(productName);
     }
 
@@ -1070,7 +1177,30 @@
     sidebarOverlay && sidebarOverlay.addEventListener('click', closeSidebar);
     document.addEventListener('keydown', e => e.key === 'Escape' && closeSidebar());
 
+    /* =============================================
+       27. AUTO-SEARCH FROM URL PARAM
+       ─────────────────────────────────────────────
+       When the page is opened with ?q=ProductName
+       (e.g. from clicking a Dashboard recent search),
+       automatically populate the search bar and
+       trigger Phase 2 without user interaction.
+
+       Runs after initPage() so auth guard has fired.
+       ============================================= */
+    function autoSearchFromUrl() {
+        const params      = new URLSearchParams(window.location.search);
+        const queryParam  = params.get('q');
+        if (queryParam && queryParam.trim()) {
+            const productName = queryParam.trim();
+            searchInput.value = productName;
+            // Fire immediately — auth is already checked by initPage()
+            searchByExactProduct(productName);
+        }
+    }
+
     /* ─── INIT ─── */
     initPage();
+    autoSearchFromUrl();
 
 })();
+
