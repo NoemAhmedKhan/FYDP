@@ -209,25 +209,8 @@ ul     { list-style: none; }
 .breadcrumb__link:hover { color: var(--green); }
 .breadcrumb__active { color: var(--green); font-weight: var(--fw-m); }
 
-/* Date filter button */
-.topbar__actions { display: flex; align-items: flex-start; padding-top: 2px; }
-.date-filter {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 16px;
-    border: 1.5px solid var(--gray-light);
-    border-radius: var(--r-md);
-    background: var(--white-pure);
-    font-size: 13px;
-    font-weight: var(--fw-m);
-    color: var(--dark);
-    white-space: nowrap;
-    transition: var(--t);
-}
-.date-filter:hover  { border-color: var(--green); color: var(--green); }
-.date-filter i:first-child { color: var(--gray-mid); }
-.date-filter .fa-chevron-down { font-size: 10px; color: var(--gray-mid); }
+/* Date filter button — removed from UI, rule kept commented for reference */
+/* .date-filter { ... } */
 
 /* =============================================
    MOST FREQUENT CARD
@@ -552,3 +535,112 @@ ul     { list-style: none; }
     .most-frequent { padding: 20px; }
     .most-frequent__name { font-size: 18px; }
 }
+
+/* =============================================
+   EXTENDED MED ICON PALETTE
+   ─────────────────────────────────────────────
+   Additional colours used by JS icon rotation
+   (globalIndex % 8) so every row in the history
+   table gets a distinct colour across pages.
+   ============================================= */
+:root {
+    --green-icon:   #208B3A;
+    --green-icon-bg:#f0fdf4;
+    --purple:       #8b5cf6;
+    --purple-bg:    #f5f3ff;
+    --teal:         #14b8a6;
+    --teal-bg:      #f0fdfa;
+}
+
+.med-icon--green  { background: var(--green-icon-bg); color: var(--green-icon); }
+.med-icon--purple { background: var(--purple-bg);     color: var(--purple); }
+.med-icon--teal   { background: var(--teal-bg);       color: var(--teal); }
+
+/* =============================================
+   EMPTY / LOADING ROW STATE
+   ============================================= */
+.history-row--empty {
+    grid-template-columns: 1fr;
+    padding: 24px 4px;
+    border-bottom: none;
+}
+.history-row--empty:hover { background: none; }
+
+/* Skeleton shimmer for "Loading…" text */
+.skeleton-text {
+    display: inline-block;
+    color: var(--gray-mid);
+    font-weight: var(--fw-r);
+    font-size: 20px;
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: .35; }
+}
+
+/* =============================================
+   PAGINATION SLIDER
+   ─────────────────────────────────────────────
+   Sits below the history table body.
+   Layout: [←]  Page N of M  [→]
+   Matches the Supabase table page-slider style
+   shown in the pageslider.png reference.
+   ============================================= */
+#paginationSlider {
+    margin-top: 8px;
+}
+
+.page-slider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 16px 4px 4px;
+    border-top: 1.5px solid var(--gray-light);
+}
+
+.page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-md);
+    border: 1.5px solid var(--gray-light);
+    background: var(--white-pure);
+    color: var(--dark);
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--t);
+    flex-shrink: 0;
+}
+.page-btn:hover:not(:disabled) {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-bg);
+}
+.page-btn:disabled {
+    opacity: .38;
+    cursor: not-allowed;
+}
+
+.page-info {
+    font-size: 13px;
+    color: var(--gray);
+    white-space: nowrap;
+    min-width: 120px;
+    text-align: center;
+}
+.page-info strong {
+    color: var(--dark);
+    font-weight: var(--fw-b);
+}
+
+/* Mobile — compact slider */
+@media (max-width: 480px) {
+    .page-slider { gap: 10px; padding: 14px 4px 4px; }
+    .page-btn    { width: 30px; height: 30px; }
+    .page-info   { font-size: 12px; min-width: 100px; }
+}
+
