@@ -66,10 +66,11 @@
        CARD HELPERS
        ============================================================ */
     function fmtTime(t) {
-        if (!t) return '--:--';
+        if (!t) return '--:-- --';
         const [h, m] = t.split(':');
-        const hr = +h;
-        return `${hr % 12 || 12}:${m} ${hr < 12 ? 'AM' : 'PM'}`;
+        const hr   = +h;
+        const ampm = hr < 12 ? 'AM' : 'PM';
+        return `${hr % 12 || 12}:${m} ${ampm}`;
     }
     function freqLabel(r) {
         if ((r.reminder_type === 'Weekly' || r.reminder_type === 'Specific Days') && r.active_days?.length)
@@ -80,11 +81,13 @@
     const COLOR_CLASSES = ['reminder-card__visual--blue', 'reminder-card__visual--amber', 'reminder-card__visual--purple'];
 
     function buildDueCard(r, idx) {
-        const timeStr = fmtTime(r.times?.[0]?.time || '');
-        const [hrMin] = timeStr.split(' ');
-        const now     = new Date();
-        const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+        const timeStr   = fmtTime(r.times?.[0]?.time || '');
+        const timeParts = timeStr.split(' ');
+        const hrMin     = timeParts[0];
+        const ampm      = timeParts[1] || '';
+        const now       = new Date();
+        const dayName   = now.toLocaleDateString('en-US', { weekday: 'long' });
+        const dateStr   = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
 
         const el = document.createElement('article');
         el.className = 'reminder-card';
@@ -110,7 +113,7 @@
                     </div>
                     <div class="detail-cell detail-cell--time">
                         <span class="detail-cell__day">${dayName}</span>
-                        <span class="detail-cell__time">${hrMin}</span>
+                        <span class="detail-cell__time">${hrMin} <span class="detail-cell__ampm">${ampm}</span></span>
                         <span class="detail-cell__date">${dateStr}</span>
                     </div>
                 </div>
