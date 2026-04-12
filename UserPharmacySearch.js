@@ -1185,15 +1185,21 @@
        automatically populate the search bar and
        trigger Phase 2 without user interaction.
 
-       Runs after initPage() so auth guard has fired.
+       IMPORTANT: also calls logSearch() so the
+       re-search is recorded in user_search_history
+       exactly like a manual suggestion click would.
+       Without this, Dashboard re-searches were
+       executing but never being saved to the DB,
+       so they never appeared in History or updated
+       the "Last Search" / "Most Frequent" widgets.
        ============================================= */
     function autoSearchFromUrl() {
-        const params      = new URLSearchParams(window.location.search);
-        const queryParam  = params.get('q');
+        const params     = new URLSearchParams(window.location.search);
+        const queryParam = params.get('q');
         if (queryParam && queryParam.trim()) {
             const productName = queryParam.trim();
             searchInput.value = productName;
-            // Fire immediately — auth is already checked by initPage()
+            logSearch(productName);          // ← record it just like selectProduct() does
             searchByExactProduct(productName);
         }
     }
