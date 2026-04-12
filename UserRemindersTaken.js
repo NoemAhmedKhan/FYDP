@@ -45,19 +45,43 @@
         img.src = url || 'Images/ProfileAvatar.jpg';
     }
 
-    function fmtTime(t) {
-        if (!t) return '--:--';
-        const [h, m] = t.split(':');
-        const hr = +h;
-        return `${hr % 12 || 12}:${m} ${hr < 12 ? 'AM' : 'PM'}`;
+    /* ============================================================
+       SERVER TIME FETCH
+       ─────────────────────────────────────────────────────────
+       Fetches the current server timestamp via Supabase RPC so
+       the "Marked by MM/YYYY" label is always authoritative —
+       never dependent on the user's potentially wrong device
+       clock. Falls back to device time only if the RPC fails.
+       ============================================================ */
+    async function fetchServerMonthYear() {
+        try {
+            const { data, error } = await db.rpc('get_server_time');
+            if (error || !data) throw error;
+            const d = new Date(data);
+            return d.toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' });
+        } catch (_) {
+            /* Fallback to device time — acceptable on RPC failure */
+            const d = new Date();
+            return d.toLocaleDateString('en-US', { month: '2-digit', year: 'numeric' });
+        }
     }
 
-    function buildTakenCard(r) {
+    function fmtTime(t) {
+        if (!t) return '--:-- --';
+        const [h, m] = t.split(':');
+        const hr = +h;
+        const ampm = hr < 12 ? 'AM' : 'PM';
+        return `${hr % 12 || 12}:${m} ${ampm}`;
+    }
+
+    function buildTakenCard(r, markedMonthYear) {
         const timeStr = fmtTime(r.times?.[0]?.time || '');
-        const [hrMin] = timeStr.split(' ');
-        const now     = new Date();
-        const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+        const timeParts = timeStr.split(' ');
+        const hrMin     = timeParts[0];
+        const ampm      = timeParts[1] || '';
+        const now       = new Date();
+        const dayName   = now.toLocaleDateString('en-US', { weekday: 'long' });
+        const dateStr   = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
 
         const el = document.createElement('article');
         el.className = 'reminder-card reminder-card--taken';
@@ -74,7 +98,7 @@
                     </div>
                     <div class="card-time-col">
                         <span class="time-day">${dayName}</span>
-                        <span class="time-value">${hrMin}</span>
+                        <span class="time-value">${hrMin} <span class="time-ampm">${ampm}</span></span>
                         <span class="time-date">${dateStr}</span>
                     </div>
                 </div>
@@ -94,7 +118,7 @@
                 </div>
                 <div class="taken-status-row">
                     <span class="taken-dot"></span>
-                    <span class="taken-label">Marked as taken today</span>
+                    <span class="taken-label">Marked by ${markedMonthYear}</span>
                 </div>
             </div>`;
         return el;
@@ -108,10 +132,11 @@
         const user = session.user;
         const list = document.getElementById('reminderList');
 
-        /* Parallel fetch */
-        const [profileResult, remindersResult] = await Promise.all([
+        /* Parallel fetch — profile, reminders, and server time simultaneously */
+        const [profileResult, remindersResult, markedMonthYear] = await Promise.all([
             db.from('users').select('first_name,last_name,profile_img').eq('id', user.id).single(),
-            db.from('reminders').select('*').eq('user_id', user.id).eq('status', 'taken').order('created_at', { ascending: false })
+            db.from('reminders').select('*').eq('user_id', user.id).eq('status', 'taken').order('created_at', { ascending: false }),
+            fetchServerMonthYear()
         ]);
 
         /* Sidebar */
@@ -135,7 +160,7 @@
                 <p style="font-size:16px;font-weight:500;">No taken reminders yet</p></div>`;
             return;
         }
-        reminders.forEach(r => list.appendChild(buildTakenCard(r)));
+        reminders.forEach(r => list.appendChild(buildTakenCard(r, markedMonthYear)));
     }
 
     init();
