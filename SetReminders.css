@@ -864,3 +864,155 @@ input, select { font-family: inherit; }
 @media (max-width: 360px) {
     .toggle-btn { flex: 1 1 100%; }
 }
+
+/* ============================
+   HIDE TIMES FOOTER
+   (Add Another Time removed)
+   ============================ */
+.times-footer { display: none !important; }
+
+/* ============================
+   CUSTOM AM/PM SCROLL-DRUM PICKER
+   Replaces native <input type="time">
+   3 columns: Hour : Minute  AM/PM
+   ============================ */
+
+.custom-time-picker {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+    background: var(--white-pure);
+    border: 1.5px solid var(--gray-lt);
+    border-radius: var(--r-md);
+    padding: 4px 6px;
+    height: 38px;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* The colon separator between hour and minute drums */
+.tp-sep {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1;
+    flex-shrink: 0;
+    padding: 0 1px;
+}
+
+/* Each scrollable drum column */
+.tp-drum {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.tp-drum__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    max-height: 30px;          /* show 1 row at a time inside the picker bar */
+    overflow: hidden;           /* clipped — picker is a fixed-height bar */
+    gap: 0;
+
+    /* On hover expand to show all items as a dropdown */
+    /* Achieved by toggling .tp-drum--open via JS on click */
+}
+
+/* Drum items */
+.tp-drum__item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 30px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--gray);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    transition: background .12s ease, color .12s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tp-drum__item:hover {
+    background: var(--green-bg);
+    color: var(--green);
+}
+
+.tp-drum__item--active {
+    background: var(--green);
+    color: white;
+    font-weight: 700;
+}
+
+/* AM/PM drum — slightly wider */
+.tp-drum:last-child .tp-drum__item {
+    width: 40px;
+    font-size: 12px;
+    letter-spacing: .3px;
+}
+
+/* ── EXPANDED STATE ──
+   When user clicks the picker it expands into a
+   dropdown panel above the time-row showing all options.
+   Implemented by .custom-time-picker--open on the wrapper.
+   ── */
+.custom-time-picker--open {
+    position: absolute;
+    z-index: 600;
+    height: auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,.18);
+    background: var(--white-pure);
+    border-color: var(--green);
+}
+
+.custom-time-picker--open .tp-sep {
+    display: none;
+}
+
+.custom-time-picker--open {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.custom-time-picker--open .tp-drum__list {
+    max-height: 220px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-lt) transparent;
+}
+
+.custom-time-picker--open .tp-drum__list::-webkit-scrollbar { width: 4px; }
+.custom-time-picker--open .tp-drum__list::-webkit-scrollbar-thumb {
+    background: var(--gray-lt);
+    border-radius: var(--r-pill);
+}
+
+/* time-row needs relative positioning for the open picker */
+.time-row { position: relative; }
+
+/* ── AM/PM inline label in time display (cards) ── */
+.time-ampm {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-md);
+    margin-left: 2px;
+}
+
+.detail-cell__ampm {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray-md);
+    margin-left: 1px;
+}
+
