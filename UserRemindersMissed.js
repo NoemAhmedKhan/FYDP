@@ -46,18 +46,21 @@
     }
 
     function fmtTime(t) {
-        if (!t) return '--:--';
+        if (!t) return '--:-- --';
         const [h, m] = t.split(':');
-        const hr = +h;
-        return `${hr % 12 || 12}:${m} ${hr < 12 ? 'AM' : 'PM'}`;
+        const hr   = +h;
+        const ampm = hr < 12 ? 'AM' : 'PM';
+        return `${hr % 12 || 12}:${m} ${ampm}`;
     }
 
     function buildMissedCard(r) {
-        const timeStr = fmtTime(r.times?.[0]?.time || '');
-        const [hrMin] = timeStr.split(' ');
-        const now     = new Date();
-        const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
-        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const timeStr   = fmtTime(r.times?.[0]?.time || '');
+        const timeParts = timeStr.split(' ');
+        const hrMin     = timeParts[0];
+        const ampm      = timeParts[1] || '';
+        const now       = new Date();
+        const dayName   = now.toLocaleDateString('en-US', { weekday: 'long' });
+        const dateStr   = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
         const el = document.createElement('article');
         el.className = 'reminder-card reminder-card--missed';
@@ -70,11 +73,11 @@
                 <div class="card-top-row">
                     <div class="card-name-col">
                         <h3 class="reminder-card__name">${r.med_name}</h3>
-                        <span class="missed-time-label">Missed at ${hrMin}</span>
+                        <span class="missed-time-label">Missed at ${hrMin} ${ampm}</span>
                     </div>
                     <div class="card-time-col">
                         <span class="time-day">${dayName}</span>
-                        <span class="time-value time-value--missed">${hrMin}</span>
+                        <span class="time-value time-value--missed">${hrMin} <span class="time-ampm">${ampm}</span></span>
                         <span class="time-date">${dateStr}</span>
                     </div>
                 </div>
