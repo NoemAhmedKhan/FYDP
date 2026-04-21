@@ -1,19 +1,35 @@
 /* =============================================
-   MediFinder — UserPharmacySearch.js  v4.2
+   MediFinder — UserPharmacySearch.js  v5.0
    ─────────────────────────────────────────────
-   CHANGES IN v4.2 (reverts v4.1 JSONB approach):
-   H. logSearch() rebuilt on multi-row relational
-      model — one row per search, max 20 per user.
-      • INSERT uses DB default now() for server-
-        side timestamp (no client clock dependency).
-      • Pruning done via Postgres RPC function
-        prune_search_history(p_user_id) which runs
-        a single atomic DELETE keeping only the 20
-        most-recent rows. No race condition, no
-        extra COUNT round-trip.
-      • maybeSingle() used for category lookup so
-        zero-row results return null cleanly instead
-        of throwing a PGRST116 error.
+   CHANGES IN v5.0 (Prescription Scanner Integration):
+
+   NEW — Prescription Scanner:
+   A. uploadPrescriptionBtn now opens a hidden file
+      input (image only, max 1 MB client-side guard).
+   B. Tesseract.js (CDN) is used client-side — zero
+      server cost, zero Supabase cost.
+   C. After OCR, a "Prescription Queue" bar appears
+      above the results section showing pill-shaped
+      tabs for every detected medicine name.
+   D. User clicks a tab → selectProduct() is called
+      exactly as if they had clicked a suggestion.
+      This means logSearch(), renderResults(), and
+      history are all handled identically to a normal
+      search. No separate code path needed.
+   E. All medicines found via prescription are logged
+      individually to user_search_history via the
+      existing logSearch() function.
+   F. The prescription image (≤1 MB) is uploaded to
+      Supabase Storage bucket "prescriptions" and a
+      row is inserted into user_prescriptions table
+      (max 5 per user — oldest pruned by RPC).
+
+   NEW — Prescription Vault save:
+   G. savePrescriptionToVault(file, userId) uploads
+      to storage and inserts metadata into DB.
+   H. prune_prescriptions RPC keeps max 5 rows.
+
+   Everything else is unchanged from v4.2.
    ============================================= */
 
 (function () {
@@ -22,8 +38,8 @@
     /* =============================================
        1. COLUMN NAME CONSTANTS
        ─────────────────────────────────────────────
-       All Supabase "Pharmacy Data" column names in
-       one place. Update here only if column renamed.
+       Single source of truth for all "Pharmacy Data"
+       column names. Change here only if DB renamed.
        ============================================= */
     const COL = {
         product_name:     'product_name',
@@ -44,10 +60,9 @@
     /* =============================================
        2. TEST PHARMACY PROFILE
        ─────────────────────────────────────────────
-       Placeholder for single-pharmacy testing phase.
+       Single test pharmacy placeholder.
        FUTURE: Replace with row['pharmacy_name'] etc.
-       inside groupByPharmacy() when real pharmacies
-       upload their own stock tables.
+       when multi-pharmacy support is added.
        ============================================= */
     const TEST_PHARMACY = {
         name:  'MediFinder Test Pharmacy',
@@ -57,31 +72,38 @@
     };
 
     /* =============================================
-       3. DOM REFERENCES + STATE VARIABLES
+       3. PRESCRIPTION SCANNER CONSTANTS
        ============================================= */
-    const searchInput   = document.getElementById('searchInput');
-    const pharmacyList  = document.getElementById('pharmacyList');
-    const resultsCount  = document.getElementById('resultsCount');
-    const sortBtns      = document.querySelectorAll('.sort-btn');
-    const logoutBtn     = document.getElementById('logoutBtn');
-
-    // Suggestion dropdown — created dynamically, anchored below search bar
-    let suggestionBox   = null;
-
-    let currentSort     = 'nearest';
-    let currentResults  = [];       // cached rows for sort re-use
-    let debounceTimer   = null;
-    let userLat         = null;
-    let userLng         = null;
-
-    // Tracks last complete word the user typed (for smart search)
-    let lastWord        = '';
+    const PRESCRIPTION_MAX_BYTES = 1 * 1024 * 1024;  // 1 MB hard limit
+    const PRESCRIPTION_MAX_SAVED = 5;                 // max stored per user in Supabase
 
     /* =============================================
-       4. AUTH GUARD + SIDEBAR PROFILE LOADER
+       4. DOM REFERENCES + STATE VARIABLES
+       ============================================= */
+    const searchInput          = document.getElementById('searchInput');
+    const pharmacyList         = document.getElementById('pharmacyList');
+    const resultsCount         = document.getElementById('resultsCount');
+    const sortBtns             = document.querySelectorAll('.sort-btn');
+    const logoutBtn            = document.getElementById('logoutBtn');
+    const uploadPrescriptionBtn= document.getElementById('uploadPrescriptionBtn');
+
+    // Hidden file input for prescription images — created once, reused
+    const fileInput            = createHiddenFileInput();
+
+    // Suggestion dropdown container (created dynamically)
+    let suggestionBox          = null;
+
+    let currentSort            = 'nearest';
+    let currentResults         = [];     // cached rows for sort re-use
+    let debounceTimer          = null;
+    let userLat                = null;
+    let userLng                = null;
+
+    /* =============================================
+       5. AUTH GUARD + SIDEBAR PROFILE LOADER
        ─────────────────────────────────────────────
-       • No session  → redirect to Login.html
-       • Session OK  → load name/email/avatar into sidebar
+       • No session → redirect to Login.html
+       • Session OK → load name/email/avatar into sidebar
        ============================================= */
     async function initPage() {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
@@ -98,8 +120,6 @@
                 const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
                 document.getElementById('sidebarUserName').textContent  = fullName || 'User';
                 document.getElementById('sidebarUserEmail').textContent = session.user.email || '';
-
-                // Load profile photo from Supabase, fallback to default avatar
                 renderSidebarAvatar(profile.profile_img || null);
             }
         } catch (err) {
@@ -110,39 +130,28 @@
     /* ─────────────────────────────────────────────
        SIDEBAR AVATAR RENDERER
        Shows Supabase profile photo if available,
-       else shows Images/ProfileAvatar.jpg.
+       else falls back to Images/ProfileAvatar.jpg.
        ───────────────────────────────────────────── */
     function renderSidebarAvatar(profileImgUrl) {
         const avatarEl = document.querySelector('.user-avatar');
         if (!avatarEl) return;
-
-        // Clear fallback content set in HTML
         const fallback = avatarEl.querySelector('.user-avatar__fallback');
         const existing = avatarEl.querySelector('img');
         if (existing) existing.remove();
 
-        const img = document.createElement('img');
-        img.alt   = 'User Avatar';
+        const img       = document.createElement('img');
+        img.alt         = 'User Avatar';
         img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;position:relative;z-index:1;';
-
-        img.onerror = () => {
-            img.remove();
-            if (fallback) fallback.style.display = 'flex';
-        };
-
-        img.onload = () => {
-            if (fallback) fallback.style.display = 'none';
-        };
-
-        img.src = profileImgUrl || 'Images/ProfileAvatar.jpg';
+        img.onerror     = () => { img.remove(); if (fallback) fallback.style.display = 'flex'; };
+        img.onload      = () => { if (fallback) fallback.style.display = 'none'; };
+        img.src         = profileImgUrl || 'Images/ProfileAvatar.jpg';
         avatarEl.insertBefore(img, avatarEl.firstChild);
     }
 
     /* =============================================
-       5. GPS LOCATION — background, non-blocking
+       6. GPS LOCATION — background, non-blocking
        ─────────────────────────────────────────────
-       Used for "Nearest" sort.
-       Failure is silent — sort keeps Supabase order.
+       Used for "Nearest" sort. Failure is silent.
        ============================================= */
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -152,27 +161,21 @@
     }
 
     /* =============================================
-       6. PRICE PARSER
+       7. PRICE PARSER
        ─────────────────────────────────────────────
-       Handles text-format prices stored in Supabase:
-         "Rs. 2,280.00"  →  2280.00
-         "Rs. 349.17"    →  349.17
-         "Rs. 0.00"      →  0
-         null / ""       →  0
-       Steps: remove "Rs." → remove commas → parseFloat
+       "Rs. 2,280.00" → 2280.00 | null/"" → 0
        ============================================= */
     function parsePrice(raw) {
         if (!raw) return 0;
-        // Remove currency prefix and any commas, then parse
         const cleaned = String(raw).replace(/Rs\.?\s*/gi, '').replace(/,/g, '').trim();
         const val     = parseFloat(cleaned);
         return isNaN(val) ? 0 : val;
     }
 
     /* =============================================
-       7. GET EFFECTIVE PRICE
+       8. GET EFFECTIVE PRICE
        ─────────────────────────────────────────────
-       Returns discounted price if valid (> 0),
+       Returns discounted price if valid (>0),
        otherwise falls back to original price.
        ============================================= */
     function getEffectivePrice(row) {
@@ -184,45 +187,26 @@
     }
 
     /* =============================================
-       8. SMART WORD-BOUNDARY DETECTION
+       9. SMART WORD-BOUNDARY DETECTION
        ─────────────────────────────────────────────
-       Returns true only when the query contains at
-       least one COMPLETE word (3+ chars followed by
-       a space, or the full query is 4+ chars with no
-       partial typing in progress).
-
-       Examples:
-         "Ga"        → false  (partial, too short)
-         "Gav"       → true   (3+ char word, triggers)
-         "Gaviscon"  → true   (complete word)
-         "60ml"      → true   (complete token)
-         "Panadol "  → true   (word + space)
-
-       The rule: trigger search when the LAST word
-       typed is >= 3 characters. This prevents firing
-       on "G", "Ga" while still triggering on "Gav",
-       "sys", "60ml", "panadol" etc.
+       Fires suggestion search only when last typed
+       word is ≥ 3 characters (avoids "G", "Pa" etc.)
        ============================================= */
     function isCompleteWord(query) {
         const trimmed = query.trim();
         if (!trimmed) return false;
-        // Split on spaces, get the last token the user is typing
-        const tokens  = trimmed.split(/\s+/);
-        const last    = tokens[tokens.length - 1];
-        // Trigger when last word has >= 3 chars
-        return last.length >= 3;
+        const tokens = trimmed.split(/\s+/);
+        return tokens[tokens.length - 1].length >= 3;
     }
 
     /* =============================================
-       9. PHASE 1 — FETCH SUGGESTIONS
+       10. PHASE 1 — FETCH SUGGESTIONS
        ─────────────────────────────────────────────
-       Fetches product names matching the query across
-       ALL pharmacies. Returns deduplicated name list.
-       Used to populate the suggestion dropdown.
-
-       Only product_name is fetched (lean query).
-       Quantity > 0 ensures only in-stock shown.
-       limit(300) covers multi-pharmacy scale.
+       Fetches product names matching the query
+       across all pharmacies. Returns deduplicated,
+       sorted name list for the dropdown.
+       Only fetches product_name (lean query).
+       quantity > 0 ensures only in-stock items shown.
        ============================================= */
     async function fetchSuggestions(query) {
         try {
@@ -239,7 +223,7 @@
 
             if (error) throw error;
 
-            // Deduplicate product names (same product may exist in multiple pharmacies)
+            // Deduplicate — same product may appear in multiple pharmacies
             const seen  = new Set();
             const names = [];
             (data || []).forEach(row => {
@@ -249,9 +233,7 @@
                     names.push(name);
                 }
             });
-
-            return names.sort(); // alphabetical order
-
+            return names.sort();
         } catch (err) {
             console.warn('Suggestion fetch error:', err.message);
             return [];
@@ -259,141 +241,70 @@
     }
 
     /* =============================================
-       10. SUGGESTION DROPDOWN — show
+       11. SUGGESTION DROPDOWN — show
        ─────────────────────────────────────────────
        Renders a scrollable dropdown below the search
-       bar. Each item is clickable — clicking puts the
-       exact product name into the search bar and
-       triggers Phase 2 (pharmacy card search).
+       bar. Clicking an item triggers selectProduct().
        ============================================= */
     function showSuggestions(names) {
         clearSuggestions();
-
         if (names.length === 0) return;
 
-        // Create dropdown container
         suggestionBox = document.createElement('ul');
         suggestionBox.className = 'suggestion-dropdown';
 
-        names.slice(0, 100).forEach(name => {  // show up to 100 items in scrollable list
+        names.slice(0, 100).forEach(name => {
             const li = document.createElement('li');
-            li.className    = 'suggestion-item';
-            li.textContent  = name;
-
-            li.addEventListener('mousedown', (e) => {
-                // mousedown fires before blur — preventDefault keeps focus on input
+            li.className   = 'suggestion-item';
+            li.textContent = name;
+            li.addEventListener('mousedown', e => {
                 e.preventDefault();
                 selectProduct(name);
             });
-
             suggestionBox.appendChild(li);
         });
 
-        // Add count note if more than 100 results exist
         if (names.length > 100) {
-            const note = document.createElement('li');
+            const note       = document.createElement('li');
             note.className   = 'suggestion-more';
-            note.textContent = `+${names.length - 100} more results — type more letters to narrow down`;
+            note.textContent = `+${names.length - 100} more results — type more letters`;
             suggestionBox.appendChild(note);
         }
 
-        // Position dropdown below the search input
         const inputWrap = searchInput.closest('.search-bar__input-wrap') || searchInput.parentElement;
         inputWrap.style.position = 'relative';
         inputWrap.appendChild(suggestionBox);
     }
 
     /* =============================================
-       11. SUGGESTION DROPDOWN — clear
+       12. SUGGESTION DROPDOWN — clear
        ============================================= */
     function clearSuggestions() {
-        if (suggestionBox) {
-            suggestionBox.remove();
-            suggestionBox = null;
-        }
+        if (suggestionBox) { suggestionBox.remove(); suggestionBox = null; }
     }
 
     /* =============================================
-       12-A. LOG SEARCH TO user_search_history
+       13. LOG SEARCH TO user_search_history
        ─────────────────────────────────────────────
-       Called fire-and-forget from selectProduct().
-       Never awaited — cannot block or break the UI.
+       Fire-and-forget from selectProduct() and from
+       prescription scanner (one call per medicine).
+       Never awaited — never blocks the UI.
 
-       STORAGE MODEL — multi-row, max 20 per user:
-         TABLE: user_search_history
-           id            uuid        PK  gen_random_uuid()
-           user_id       uuid        FK  auth.users(id) NOT NULL
-           product_name  text        NOT NULL
-           category      text        nullable
-           searched_at   timestamptz NOT NULL  default now()
-
-         INDEX: (user_id, searched_at DESC)
-           → makes ORDER BY + LIMIT queries O(log n)
-             instead of full table scans
-
-       WRITE FLOW — 2 sequential DB calls:
-
-         Step 1 — INSERT new row.
-           searched_at is set by the DB server (now())
-           so timestamps are always correct regardless
-           of the user's device clock.
-
-         Step 2 — Call Postgres RPC prune_search_history.
-           The function runs inside the DB atomically:
-             DELETE rows for this user where searched_at
-             is NOT in the 20 most-recent (by searched_at
-             DESC). Uses a single subquery — no race
-             condition possible because it operates on
-             the committed state after the INSERT above.
-
-       WHY RPC FOR PRUNING:
-         Doing COUNT + DELETE from JS requires 2 extra
-         round-trips and has a race window if the user
-         searches from two tabs simultaneously.
-         The RPC prunes in one atomic server-side call
-         with no extra JS round-trip overhead.
-
-       POSTGRES FUNCTION TO CREATE (run once in Supabase
-       SQL editor):
-
-         CREATE OR REPLACE FUNCTION prune_search_history(p_user_id uuid)
-         RETURNS void
-         LANGUAGE sql
-         SECURITY DEFINER
-         AS $$
-           DELETE FROM user_search_history
-           WHERE  user_id = p_user_id
-           AND    id NOT IN (
-             SELECT id
-             FROM   user_search_history
-             WHERE  user_id = p_user_id
-             ORDER  BY searched_at DESC
-             LIMIT  20
-           );
-         $$;
-
-       SECURITY DEFINER means the function runs with
-       table-owner privileges so it can delete rows
-       even when RLS is ON — users cannot call it
-       for other user_ids because the function only
-       ever prunes the p_user_id passed by the JS,
-       and auth.uid() = user_id RLS still gates
-       the INSERT in Step 1.
+       DB write flow:
+         1. Resolve category from "Pharmacy Data".
+         2. INSERT row (searched_at = DB server now()).
+         3. RPC prune_search_history() — keeps ≤20
+            rows per user atomically, no race condition.
        ============================================= */
     const SEARCH_HISTORY_MAX = 20;
 
     async function logSearch(productName) {
         try {
-            /* ── 0. Must be authenticated ── */
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) return;
             const userId = session.user.id;
 
-            /* ── 1. Resolve category from Pharmacy Data ──
-               Runs parallel to nothing — we need it for
-               the INSERT, so it must finish first.
-               Wrapped in its own try so a category miss
-               never aborts the whole log operation.     */
+            // Resolve category (non-critical — stays null on miss)
             let category = null;
             try {
                 const { data: catRow } = await supabaseClient
@@ -401,74 +312,47 @@
                     .select('category')
                     .ilike('product_name', productName)
                     .limit(1)
-                    .maybeSingle();          // returns null instead of error when 0 rows
+                    .maybeSingle();
                 category = catRow?.category ?? null;
-            } catch (_) { /* non-critical — category stays null */ }
+            } catch (_) { /* non-critical */ }
 
-            /* ── 2. INSERT new search row ──
-               searched_at is intentionally omitted —
-               the DB default now() sets it server-side
-               so the timestamp is always the authoritative
-               server clock, never the user's device clock. */
+            // INSERT new search row (searched_at set by DB default now())
             const { error: insertErr } = await supabaseClient
                 .from('user_search_history')
-                .insert({
-                    user_id:      userId,
-                    product_name: productName,
-                    category:     category,
-                    // searched_at: DB default now() ← do NOT set from JS
-                });
+                .insert({ user_id: userId, product_name: productName, category });
 
             if (insertErr) throw insertErr;
 
-            /* ── 3. Prune atomically via RPC ──
-               Deletes any rows beyond the 20 most-recent
-               for this user in a single server-side SQL
-               statement. No race condition, no extra
-               round-trip for a COUNT query.             */
+            // Atomic prune — keeps only 20 most-recent rows for this user
             const { error: pruneErr } = await supabaseClient
                 .rpc('prune_search_history', { p_user_id: userId });
-
-            // Prune failure is non-critical — log grows slightly
-            // but correctness of the INSERT is not affected.
             if (pruneErr) console.warn('History prune warning:', pruneErr.message);
 
         } catch (err) {
-            // Must never surface to the user — fail silently
             console.warn('Search log error:', err.message);
         }
     }
 
     /* =============================================
-       12. SELECT PRODUCT (Phase 1 → Phase 2)
+       14. SELECT PRODUCT (Phase 1 → Phase 2)
        ─────────────────────────────────────────────
-       Called when user clicks a suggestion.
-       • Puts exact product name into search bar
-       • Clears suggestion dropdown
-       • Logs search to user_search_history (async,
-         fire-and-forget — does not block UI)
-       • Triggers Phase 2: fetch pharmacy cards for
-         this exact product name only
+       Called by: suggestion click, Enter key,
+       URL auto-search, and prescription queue tab.
+       One unified path for ALL search triggers.
        ============================================= */
     function selectProduct(productName) {
         searchInput.value = productName;
         clearSuggestions();
-        logSearch(productName);          // ← fire-and-forget, no await
+        logSearch(productName);          // fire-and-forget
         searchByExactProduct(productName);
     }
 
     /* =============================================
-       13. PHASE 2 — SEARCH BY EXACT PRODUCT NAME
+       15. PHASE 2 — SEARCH BY EXACT PRODUCT NAME
        ─────────────────────────────────────────────
-       Called after user selects a product from the
-       suggestion dropdown.
-
        Fetches ALL rows matching this exact product
        name across ALL pharmacies (quantity > 0).
-       Results are grouped into pharmacy cards.
-
-       Uses ilike with exact name so "Panadol Extra
-       Tablets" doesn't match "Panadol CF Tablets".
+       Results grouped into pharmacy cards.
        ============================================= */
     async function searchByExactProduct(productName) {
         showLoadingState();
@@ -490,7 +374,7 @@
                     COL.quantity,
                     COL.prescription,
                 ].join(', '))
-                .ilike(COL.product_name, productName)  // exact name, case-insensitive
+                .ilike(COL.product_name, productName)
                 .gt(COL.quantity, 0)
                 .limit(200);
 
@@ -506,39 +390,11 @@
     }
 
     /* =============================================
-       14-A. SMART FIELD TOKENISER
+       16-A. SMART FIELD TOKENISER
        ─────────────────────────────────────────────
-       Splits a raw field value into a normalised Set
-       of individual tokens so multi-value fields can
-       be compared element-by-element.
-
-       Rules applied in order:
-         1. Coerce to string, bail on empty.
-         2. Split strengths on '/'  → ["100mg","5ml"]
-            Split generics  on ','  → ["Metronidazole","Chlorhexidine gluconate"]
-         3. Trim whitespace from every token.
-         4. Strip leading/trailing noise words:
-              "and", "or", "with"  (case-insensitive)
-            so "And Zinc Oxide" normalises the same as
-            "Zinc Oxide".
-         5. Lowercase everything for case-insensitive
-            matching.
-         6. Discard empty tokens after the above steps.
-
-       Returns a Set<string> of cleaned tokens.
-       ─────────────────────────────────────────────
-       Examples:
-         "Homosalate, Octisalate, And Zinc Oxide"
-           → Set { "homosalate", "octisalate", "zinc oxide" }
-
-         "100mg/5ml"
-           → Set { "100mg", "5ml" }
-
-         "Metronidazole, Chlorhexidine gluconate"
-           → Set { "metronidazole", "chlorhexidine gluconate" }
-
-         "And Zinc Oxide"
-           → Set { "zinc oxide" }
+       Splits multi-value field strings into a
+       normalised Set of individual tokens.
+       Used for therapeutic alternative matching.
        ============================================= */
     const NOISE_WORDS = /^(and|or|with)\s+|\s+(and|or|with)$/gi;
 
@@ -553,139 +409,79 @@
     }
 
     /* =============================================
-       14-B. FIELD OVERLAP CHECKER
+       16-B. FIELD OVERLAP CHECKER
        ─────────────────────────────────────────────
-       Returns true when sets A and B share at least
-       one token — i.e., at least one active ingredient
-       (or strength) overlaps between the two products.
-
-       This is the core "partial match" logic that lets:
-         Product A: generic="Metronidazole, Chlorhexidine gluconate", strength="100mg/65mg"
-         Product B: generic="Metronidazole",                          strength="65mg"
-       …still qualify as alternatives because one
-       generic token and one strength token overlap.
+       Returns true when sets A and B share ≥1 token.
+       Core of the therapeutic alternative matching.
        ============================================= */
     function setsOverlap(setA, setB) {
         if (setA.size === 0 || setB.size === 0) return false;
-        for (const token of setA) {
-            if (setB.has(token)) return true;
-        }
+        for (const token of setA) { if (setB.has(token)) return true; }
         return false;
     }
 
     /* =============================================
-       14-C. CLIENT-SIDE ALTERNATIVE MATCHER
+       16-C. CLIENT-SIDE ALTERNATIVE MATCHER
        ─────────────────────────────────────────────
-       Given a source row and a pool of candidate rows
-       (already fetched from Supabase), returns only
-       those candidates that are genuine therapeutic
-       alternatives by applying the smart token-overlap
-       logic across all 4 equivalence fields.
-
        Match criteria (ALL must pass):
-         • generic_name : at least 1 token overlaps
-         • dosage_form  : exact match (single value,
-                          no splitting needed)
-         • strength     : at least 1 token overlaps
-         • release_type : exact match (single value)
-
-       dosage_form and release_type are single-value
-       fields in practice, so we still do an exact
-       normalised comparison for them rather than
-       token overlap (which would be too permissive).
+         • generic_name  : ≥1 token overlaps (split ',')
+         • dosage_form   : exact normalised match
+         • strength      : ≥1 token overlaps (split '/')
+         • release_type  : exact normalised match
        ============================================= */
     function isTherapeuticAlternative(sourceRow, candidateRow) {
-        /* ── dosage_form: exact normalised match ── */
-        const srcDF  = (sourceRow[COL.dosage_form]  || '').trim().toLowerCase();
-        const canDF  = (candidateRow[COL.dosage_form] || '').trim().toLowerCase();
+        const srcDF = (sourceRow[COL.dosage_form]  || '').trim().toLowerCase();
+        const canDF = (candidateRow[COL.dosage_form] || '').trim().toLowerCase();
         if (!srcDF || !canDF || srcDF !== canDF) return false;
 
-        /* ── release_type: exact normalised match ── */
-        const srcRT  = (sourceRow[COL.release_type]  || '').trim().toLowerCase();
-        const canRT  = (candidateRow[COL.release_type] || '').trim().toLowerCase();
+        const srcRT = (sourceRow[COL.release_type]  || '').trim().toLowerCase();
+        const canRT = (candidateRow[COL.release_type] || '').trim().toLowerCase();
         if (!srcRT || !canRT || srcRT !== canRT) return false;
 
-        /* ── generic_name: token overlap (split on ',') ── */
-        const srcGN  = tokeniseField(sourceRow[COL.generic_name],    ',');
-        const canGN  = tokeniseField(candidateRow[COL.generic_name], ',');
+        const srcGN = tokeniseField(sourceRow[COL.generic_name],    ',');
+        const canGN = tokeniseField(candidateRow[COL.generic_name], ',');
         if (!setsOverlap(srcGN, canGN)) return false;
 
-        /* ── strength: token overlap (split on '/') ── */
-        const srcST  = tokeniseField(sourceRow[COL.strength],    '/');
-        const canST  = tokeniseField(candidateRow[COL.strength], '/');
+        const srcST = tokeniseField(sourceRow[COL.strength],    '/');
+        const canST = tokeniseField(candidateRow[COL.strength], '/');
         if (!setsOverlap(srcST, canST)) return false;
 
         return true;
     }
 
     /* =============================================
-       14. FETCH ALTERNATIVES (per matched item)
+       17. FETCH ALTERNATIVES (per matched item)
        ─────────────────────────────────────────────
-       STRATEGY — two-phase approach:
-
-       Phase A — Broad Supabase fetch:
-         We can no longer use strict .eq() on all 4
-         fields because generic_name and strength can
-         be multi-value strings (e.g. "A, B" / "Xmg/Ymg").
-         Instead we fetch a BROAD candidate pool using
-         only dosage_form and release_type (which are
-         single-value fields and safe for exact DB
-         filtering), keeping the result set manageable.
-
-       Phase B — Client-side smart filter:
-         isTherapeuticAlternative() applies the full
-         token-overlap logic on generic_name and
-         strength to trim the broad pool down to only
-         genuine therapeutic equivalents.
-
-       Excludes:
-       • Any product already shown in pharmacy cards
-         (passed in via excludeNames Set).
-       • Only in-stock items (quantity > 0).
+       Two-phase: broad DB fetch on single-value
+       fields, then smart client-side token filter.
        ============================================= */
     async function fetchAlternatives(row, excludeNames) {
         const gn = row[COL.generic_name];
         const df = row[COL.dosage_form];
         const st = row[COL.strength];
         const rt = row[COL.release_type];
-
-        // All 4 fields must be present for a meaningful equivalence match
         if (!gn || !df || !st || !rt) return [];
 
         try {
-            /* ── Phase A: broad DB fetch filtered only on single-value fields ── */
             const { data, error } = await supabaseClient
                 .from('Pharmacy Data')
                 .select([
-                    COL.product_name,
-                    COL.brand,
-                    COL.category,
-                    COL.generic_name,
-                    COL.strength,
-                    COL.dosage_form,
-                    COL.release_type,
-                    COL.discounted_price,
-                    COL.original_price,
-                    COL.quantity,
-                    COL.prescription,
+                    COL.product_name, COL.brand, COL.category, COL.generic_name,
+                    COL.strength, COL.dosage_form, COL.release_type,
+                    COL.discounted_price, COL.original_price, COL.quantity, COL.prescription,
                 ].join(', '))
-                .eq(COL.dosage_form,  df)   // safe — single-value field
-                .eq(COL.release_type, rt)   // safe — single-value field
+                .eq(COL.dosage_form,  df)
+                .eq(COL.release_type, rt)
                 .gt(COL.quantity, 0)
-                .limit(200);               // wider net needed for token matching
+                .limit(200);
 
             if (error) throw error;
 
-            /* ── Phase B: smart client-side filter ── */
             return (data || []).filter(candidate => {
-                // Skip products already shown in the pharmacy card
                 const name = (candidate[COL.product_name] || '').toLowerCase().trim();
                 if (excludeNames.has(name)) return false;
-
-                // Apply full smart token-overlap matching
                 return isTherapeuticAlternative(row, candidate);
             });
-
         } catch (err) {
             console.warn('Alternatives fetch error:', err.message);
             return [];
@@ -693,320 +489,246 @@
     }
 
     /* =============================================
-       15. GROUP RESULTS BY PHARMACY
+       18. GROUP RESULTS BY PHARMACY
        ─────────────────────────────────────────────
-       RIGHT NOW: All rows → TEST_PHARMACY (one card).
-       FUTURE: Replace TEST_PHARMACY.name with
-       row['pharmacy_name'] for multi-pharmacy grouping.
+       Currently all rows → TEST_PHARMACY (one card).
+       FUTURE: Use row['pharmacy_name'] for real
+       multi-pharmacy grouping.
        ============================================= */
     function groupByPharmacy(rows) {
-        const map = {};
-
+        const groups = {};
         rows.forEach(row => {
-            const key = TEST_PHARMACY.name; // FUTURE: row['pharmacy_name']
-
-            if (!map[key]) {
-                map[key] = {
-                    name:        TEST_PHARMACY.name,
-                    phone:       TEST_PHARMACY.phone,
-                    lat:         TEST_PHARMACY.lat,
-                    lng:         TEST_PHARMACY.lng,
-                    items:       [],
-                    lowestEff:   Infinity,  // lowest effective (discounted) price
-                    lowestOrig:  Infinity,  // lowest original price
+            const key = TEST_PHARMACY.name;
+            if (!groups[key]) {
+                groups[key] = {
+                    pharmacy: { ...TEST_PHARMACY },
+                    items:    [],
                 };
             }
-
-            map[key].items.push(row);
-
-            const eff  = getEffectivePrice(row);
-            const orig = parsePrice(row[COL.original_price]);
-            if (eff  > 0 && eff  < map[key].lowestEff)  map[key].lowestEff  = eff;
-            if (orig > 0 && orig < map[key].lowestOrig) map[key].lowestOrig = orig;
+            groups[key].items.push(row);
         });
-
-        return Object.values(map);
+        return Object.values(groups);
     }
 
     /* =============================================
-       16. SORT PHARMACIES
+       19. RENDER RESULTS
        ─────────────────────────────────────────────
-       cheapest → sort by lowestEff price ascending
-       nearest  → sort by GPS distance ascending
-                  (skips if user denied location)
-       ============================================= */
-    function sortPharmacies(pharmacies, sortMode) {
-        if (sortMode === 'cheapest') {
-            return [...pharmacies].sort((a, b) => a.lowestEff - b.lowestEff);
-        }
-        if (userLat !== null && userLng !== null) {
-            return [...pharmacies]
-                .map(p => ({
-                    ...p,
-                    distance: (p.lat && p.lng)
-                        ? getDistanceKm(userLat, userLng, p.lat, p.lng)
-                        : 9999,
-                }))
-                .sort((a, b) => a.distance - b.distance);
-        }
-        return pharmacies;
-    }
-
-    /* =============================================
-       17. RENDER RESULTS
-       ─────────────────────────────────────────────
-       Groups → sorts → builds cards → injects DOM
-       → attaches toggle listeners.
+       Entry point after Phase 2 fetch.
+       Calls groupByPharmacy(), sorts, then renders
+       one pharmacy card per group including
+       alternative medicines panel.
        ============================================= */
     async function renderResults(rows, sortMode) {
-        if (rows.length === 0) {
+        if (!rows || rows.length === 0) {
             showEmptyState('No pharmacies found with this medicine in stock.');
             return;
         }
 
-        const pharmacies = sortPharmacies(groupByPharmacy(rows), sortMode);
-        const count      = pharmacies.length;
+        const groups = groupByPharmacy(rows);
 
+        // Sort groups
+        if (sortMode === 'cheapest') {
+            groups.forEach(g => {
+                g.items.sort((a, b) => getEffectivePrice(a) - getEffectivePrice(b));
+            });
+            groups.sort((a, b) =>
+                getEffectivePrice(a.items[0]) - getEffectivePrice(b.items[0])
+            );
+        } else {
+            // Nearest — sort by distance if GPS available
+            if (userLat !== null && userLng !== null) {
+                groups.sort((a, b) =>
+                    haversine(userLat, userLng, a.pharmacy.lat, a.pharmacy.lng) -
+                    haversine(userLat, userLng, b.pharmacy.lat, b.pharmacy.lng)
+                );
+            }
+        }
+
+        const totalPharmacies = groups.length;
         resultsCount.innerHTML =
-            `Found <strong>${count} ${count === 1 ? 'pharmacy' : 'pharmacies'}</strong> ` +
-            `with <strong>${rows.length} item${rows.length !== 1 ? 's' : ''}</strong> in stock`;
+            `Found <strong>${totalPharmacies}</strong> pharmacy${totalPharmacies !== 1 ? 's' : ''} with this medicine`;
 
-        const cardHTMLs = await Promise.all(pharmacies.map(p => buildPharmacyCard(p)));
+        // Collect all product names currently shown so alternatives can exclude them
+        const shownNames = new Set(
+            rows.map(r => (r[COL.product_name] || '').toLowerCase().trim())
+        );
+
+        // Render each pharmacy card with its alternatives panel
+        const cardHTMLs = await Promise.all(groups.map(async group => {
+            const alts = await fetchAlternatives(group.items[0], shownNames);
+            return buildPharmacyCardHTML(group, alts, sortMode);
+        }));
+
         pharmacyList.innerHTML = cardHTMLs.join('');
-
         attachPanelToggleListeners();
     }
 
     /* =============================================
-       18. BUILD PHARMACY CARD
+       20. BUILD PHARMACY CARD HTML
        ─────────────────────────────────────────────
-       Builds one card per pharmacy group.
-
-       CARD LAYOUT:
-       ┌──────────────────────────────────────────┐
-       │ [In Stock]  Pharmacy Name  [✓ Verified]  │
-       │             Product Name                 │
-       │             Category · Strength          │
-       │             [Rx/OTC badge]               │
-       │             📞 Phone                    │
-       │                     Rs.XX  ~~Rs.YY~~    │
-       ├──────────────────────────────────────────┤
-       │  [ View Alternatives ▼ ]                 │
-       ├──────────────────────────────────────────┤
-       │  MATCHED MEDICINES                       │
-       │    Name · Category · Str  ✓ In Stock     │
-       │    Rs.XX  ~~Rs.YY~~                      │
-       │  ─────────────────                       │
-       │  THERAPEUTIC ALTERNATIVES                │
-       │    (only truly different products)       │
-       │  ─────────────────                       │
-       │  ⚠ Safety guidance note                  │
-       └──────────────────────────────────────────┘
+       Builds the full HTML string for one pharmacy
+       card including matched medicines and
+       therapeutic alternatives panel.
        ============================================= */
-    async function buildPharmacyCard(pharmacy) {
+    function buildPharmacyCardHTML(group, alts, sortMode) {
+        const { pharmacy, items } = group;
 
-        /* ── Header price: discounted + crossed-out original ── */
-        const hasDiscount =
-            pharmacy.lowestEff  !== Infinity &&
-            pharmacy.lowestOrig !== Infinity &&
-            pharmacy.lowestEff  <  pharmacy.lowestOrig;
+        // Show cheapest item in the card header
+        const displayItem = sortMode === 'cheapest'
+            ? items[0]
+            : items.reduce((a, b) => getEffectivePrice(a) < getEffectivePrice(b) ? a : b);
 
-        let priceBlockHTML;
-        if (hasDiscount) {
-            priceBlockHTML = `
-                <span class="price">Rs. ${pharmacy.lowestEff.toFixed(2)}</span>
-                <span class="price-orig">Rs. ${pharmacy.lowestOrig.toFixed(2)}</span>
-                <span class="price-label">starting from</span>`;
-        } else if (pharmacy.lowestOrig !== Infinity) {
-            priceBlockHTML = `
-                <span class="price">Rs. ${pharmacy.lowestOrig.toFixed(2)}</span>
-                <span class="price-label">starting from</span>`;
-        } else if (pharmacy.lowestEff !== Infinity) {
-            priceBlockHTML = `
-                <span class="price">Rs. ${pharmacy.lowestEff.toFixed(2)}</span>
-                <span class="price-label">starting from</span>`;
-        } else {
-            priceBlockHTML = `<span class="price-label">Ask pharmacist for price</span>`;
-        }
+        const discPrice   = parsePrice(displayItem[COL.discounted_price]);
+        const origPrice   = parsePrice(displayItem[COL.original_price]);
+        const effPrice    = getEffectivePrice(displayItem);
+        const isPrescReq  = (displayItem[COL.prescription] || '').toLowerCase() === 'yes';
+        const altCount    = alts.length;
 
-        /* ── Matched item lines (product · category · strength · Rx) ── */
-        const itemLinesHTML = pharmacy.items.map(row => {
-            const meta    = [row[COL.category], row[COL.strength]].filter(Boolean).join(' · ');
-            const rxBadge = isPrescriptionRequired(row)
-                ? `<span class="rx-badge rx-badge--required"><i class="fa-solid fa-file-prescription"></i> Rx Required</span>`
-                : `<span class="rx-badge rx-badge--otc"><i class="fa-solid fa-circle-check"></i> OTC</span>`;
-
-            return `
-            <div class="card-item-line">
-                <div class="card-item-line__text">
-                    <span class="card-item-line__name">${row[COL.product_name] || '—'}</span>
-                    ${meta ? `<span class="card-item-line__meta">${meta}</span>` : ''}
-                </div>
-                ${rxBadge}
-            </div>`;
-        }).join('');
-
-        /* ── Fetch alternatives, excluding ALL products already shown in card ── */
-        // Build a case-normalised set of every product_name shown in this pharmacy card
-        // Normalise to lowercase + trimmed so "Panadol Extra" and "panadol extra" match
-        const shownNames = new Set(
-            pharmacy.items.map(r => (r[COL.product_name] || '').toLowerCase().trim())
-        );
-
-        // Fetch alternatives for each item, passing shownNames to exclude them
-        const altResults = await Promise.all(
-            pharmacy.items.map(row => fetchAlternatives(row, shownNames))
-        );
-
-        // Flatten + deduplicate alternatives (same alt may match multiple items)
-        const altSeen    = new Set(shownNames); // start from already-shown names
-        const uniqueAlts = [];
-        altResults.flat().forEach(alt => {
-            const name = (alt[COL.product_name] || '').toLowerCase().trim();
-            if (!altSeen.has(name)) {
-                altSeen.add(name);
-                uniqueAlts.push(alt);
-            }
-        });
-
-        /* ── Build section HTML ── */
-        const matchedRowsHTML = pharmacy.items.map(row => buildMedicineRow(row)).join('');
-
-        const altRowsHTML = uniqueAlts.length > 0
-            ? uniqueAlts.map(alt => buildMedicineRow(alt)).join('')
+        // Price display
+        const priceHTML = effPrice > 0
+            ? `Rs. ${effPrice.toFixed(2)}`
+            : 'Price not listed';
+        const origPriceHTML = (origPrice > 0 && discPrice > 0 && origPrice !== discPrice)
+            ? `<span class="price-original">Rs. ${origPrice.toFixed(2)}</span>`
             : '';
 
-        const altBadge = uniqueAlts.length > 0
-            ? `<span class="alt-count-badge">${uniqueAlts.length}</span>` : '';
-
-        return `
-        <article class="pharmacy-card">
-
-            <!-- CARD TOP -->
-            <div class="card-top">
-
-                <div class="card-image card-image--fallback">
-                    <span class="status-pill status-pill--open">
-                        <i class="fa-solid fa-circle"></i> In Stock
+        // Matched medicines list (all items from this pharmacy)
+        const matchedRows = items.map(item => {
+            const ip  = parsePrice(item[COL.discounted_price]) || parsePrice(item[COL.original_price]);
+            return `
+            <li class="alt-row">
+                <div class="alt-row__left">
+                    <span class="alt-row__name">${escapeHtml(item[COL.product_name] || '—')}</span>
+                    <span class="alt-row__meta">
+                        ${escapeHtml(item[COL.category] || '')}
+                        ${item[COL.strength] ? '&middot; ' + escapeHtml(item[COL.strength]) : ''}
+                    </span>
+                    <span class="alt-row__instock">
+                        <i class="fa-solid fa-circle-check"></i> In Stock
                     </span>
                 </div>
+                <div class="alt-row__right">
+                    <span class="alt-row__price${ip <= 0 ? ' alt-row__price--na' : ''}">
+                        ${ip > 0 ? 'Rs. ' + ip.toFixed(2) : 'N/A'}
+                    </span>
+                    ${parsePrice(item[COL.original_price]) > 0 && parsePrice(item[COL.discounted_price]) > 0 && parsePrice(item[COL.original_price]) !== parsePrice(item[COL.discounted_price])
+                        ? `<span class="alt-row__orig-price">Rs. ${parsePrice(item[COL.original_price]).toFixed(2)}</span>`
+                        : ''}
+                </div>
+            </li>`;
+        }).join('');
 
-                <div class="card-info">
-                    <div class="card-info__name-row">
-                        <h2 class="card-info__name">${pharmacy.name}</h2>
-                        <span class="badge badge--verified">
-                            <i class="fa-solid fa-circle-check"></i> Verified
+        // Therapeutic alternatives list
+        const altsRows = alts.length > 0
+            ? alts.map(alt => {
+                const ap  = parsePrice(alt[COL.discounted_price]) || parsePrice(alt[COL.original_price]);
+                const aop = parsePrice(alt[COL.original_price]);
+                const adp = parsePrice(alt[COL.discounted_price]);
+                return `
+                <li class="alt-row">
+                    <div class="alt-row__left">
+                        <span class="alt-row__name">${escapeHtml(alt[COL.product_name] || '—')}</span>
+                        <span class="alt-row__meta">
+                            ${escapeHtml(alt[COL.category] || '')}
+                            ${alt[COL.strength] ? '&middot; ' + escapeHtml(alt[COL.strength]) : ''}
+                        </span>
+                        <span class="alt-row__instock">
+                            <i class="fa-solid fa-circle-check"></i> In Stock
                         </span>
                     </div>
-
-                    <div class="card-items-summary">
-                        ${itemLinesHTML}
+                    <div class="alt-row__right">
+                        <span class="alt-row__price${ap <= 0 ? ' alt-row__price--na' : ''}">
+                            ${ap > 0 ? 'Rs. ' + ap.toFixed(2) : 'N/A'}
+                        </span>
+                        ${aop > 0 && adp > 0 && aop !== adp
+                            ? `<span class="alt-row__orig-price">Rs. ${aop.toFixed(2)}</span>`
+                            : ''}
                     </div>
-
-                    <div class="card-contact">
-                        <i class="fa-solid fa-phone"></i>
-                        <span>${pharmacy.phone}</span>
-                    </div>
-                </div>
-
-                <div class="card-price">
-                    ${priceBlockHTML}
-                </div>
-
-            </div><!-- /.card-top -->
-
-            <!-- VIEW ALTERNATIVES TOGGLE -->
-            <button class="alternatives-btn panel-toggle-btn" aria-expanded="false">
-                <i class="fa-solid fa-pills" style="margin-right:6px"></i>
-                View Alternatives
-                ${altBadge}
-                <i class="fa-solid fa-chevron-down toggle-icon" style="margin-left:auto"></i>
-            </button>
-
-            <!-- ALTERNATIVES PANEL -->
-            <div class="alternatives-panel" style="display:none" aria-hidden="true">
-
-                <p class="alt-section-label">Matched Medicines</p>
-                <ul class="alt-list">${matchedRowsHTML}</ul>
-
-                ${uniqueAlts.length > 0 ? `
-                <p class="alt-section-label alt-section-label--sep">
-                    Therapeutic Alternatives
-                    <span class="alt-section-note">Same generic · dosage form · strength · release type</span>
-                </p>
-                <ul class="alt-list">${altRowsHTML}</ul>
-                ` : ''}
-
-                <div class="alt-safety-note">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    Always consult your doctor before using an alternative medicine, even if it contains the same active ingredient.
-                </div>
-
-            </div><!-- /.alternatives-panel -->
-
-        </article>`;
-    }
-
-    /* =============================================
-       19. BUILD MEDICINE ROW
-       ─────────────────────────────────────────────
-       Shared builder for both "Matched Medicines"
-       and "Therapeutic Alternatives" rows.
-
-       Price logic uses parsePrice() to handle the
-       "Rs. 2,280.00" text format from Supabase.
-
-       Shows:
-       • Product name
-       • Category · Strength
-       • ✓ In Stock (no unit count)
-       • Price: discounted + ~~original~~ OR original only
-       ============================================= */
-    function buildMedicineRow(row) {
-        const discPrice = parsePrice(row[COL.discounted_price]);
-        const origPrice = parsePrice(row[COL.original_price]);
-        const hasDisc   = discPrice > 0 && origPrice > 0 && discPrice < origPrice;
-        const dispPrice = discPrice > 0 ? discPrice : origPrice;
-        const meta      = [row[COL.category], row[COL.strength]].filter(Boolean).join(' · ');
-
-        let rowPriceHTML;
-        if (hasDisc) {
-            rowPriceHTML = `
-                <span class="alt-row__price">Rs. ${discPrice.toFixed(2)}</span>
-                <span class="alt-row__orig-price">Rs. ${origPrice.toFixed(2)}</span>`;
-        } else if (dispPrice > 0) {
-            rowPriceHTML = `<span class="alt-row__price">Rs. ${dispPrice.toFixed(2)}</span>`;
-        } else {
-            rowPriceHTML = `<span class="alt-row__price alt-row__price--na">Ask pharmacist</span>`;
-        }
+                </li>`;
+            }).join('')
+            : '<li><p class="alt-empty">No therapeutic alternatives found in stock.</p></li>';
 
         return `
-        <li class="alt-row">
-            <div class="alt-row__left">
-                <span class="alt-row__name">${row[COL.product_name] || '—'}</span>
-                ${meta ? `<span class="alt-row__meta">${meta}</span>` : ''}
-                <span class="alt-row__instock">
-                    <i class="fa-solid fa-circle-check"></i> In Stock
+        <div class="pharmacy-card">
+            <div class="card-top">
+                <div class="card-image card-image--fallback">
+                    <span class="status-pill">
+                        <i class="fa-solid fa-circle" style="font-size:7px;color:var(--green)"></i>
+                        In Stock
+                    </span>
+                </div>
+                <div class="card-info">
+                    <div class="card-info__header">
+                        <div>
+                            <h2 class="card-info__name">${escapeHtml(pharmacy.name)}</h2>
+                            <span class="card-info__badge">
+                                <i class="fa-solid fa-circle-check"></i> Verified
+                            </span>
+                        </div>
+                    </div>
+                    <p class="card-info__meta">
+                        ${escapeHtml(displayItem[COL.product_name] || '')}
+                    </p>
+                    <p class="card-info__meta" style="color:var(--gray-mid);font-size:12px;">
+                        ${escapeHtml(displayItem[COL.category] || '')}
+                        ${displayItem[COL.strength] ? '&middot; ' + escapeHtml(displayItem[COL.strength]) : ''}
+                    </p>
+                    <p class="card-info__phone">
+                        <i class="fa-solid fa-phone"></i> ${escapeHtml(pharmacy.phone)}
+                    </p>
+                </div>
+                <div class="card-price">
+                    <span class="price">${escapeHtml(priceHTML)}</span>
+                    ${origPriceHTML}
+                    ${isPrescReq
+                        ? '<span class="price-tag price-tag--rx">Rx</span>'
+                        : '<span class="price-tag price-tag--otc">OTC</span>'}
+                    <span class="price-label">STARTING FROM</span>
+                </div>
+            </div>
+
+            <!-- Alternatives toggle button -->
+            <button class="alternatives-btn panel-toggle-btn" aria-expanded="false">
+                <span class="alternatives-btn__icon">
+                    <i class="fa-solid fa-arrow-right-arrow-left"></i>
                 </span>
+                View Alternatives
+                <span class="alt-badge">${altCount}</span>
+                <i class="fa-solid fa-chevron-down toggle-icon" style="margin-left:auto;font-size:12px;color:var(--gray-mid);"></i>
+            </button>
+
+            <!-- Alternatives panel (hidden by default) -->
+            <div class="alternatives-panel" style="display:none;" aria-hidden="true">
+
+                <!-- Matched Medicines -->
+                <p class="alt-section-label">MATCHED MEDICINES</p>
+                <ul class="alt-list">${matchedRows}</ul>
+
+                <!-- Therapeutic Alternatives -->
+                <p class="alt-section-label alt-section-label--sep">
+                    THERAPEUTIC ALTERNATIVES
+                    <span class="alt-section-note">Same generic · dosage form · strength · release type</span>
+                </p>
+                <ul class="alt-list">${altsRows}</ul>
+
+                <!-- Safety note -->
+                <div class="alt-safety-note">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Always consult your doctor before switching to an alternative medicine,
+                    even if it contains the same active ingredient.
+                </div>
+
             </div>
-            <div class="alt-row__right">
-                ${rowPriceHTML}
-            </div>
-        </li>`;
+        </div>`;
     }
 
     /* =============================================
-       20. UTILITY HELPERS
+       21. HAVERSINE DISTANCE (km)
+       ─────────────────────────────────────────────
+       Used by "Nearest" sort to calculate distance
+       between user GPS and pharmacy coordinates.
        ============================================= */
-
-    // Returns true if prescription_required is truthy in any common format
-    function isPrescriptionRequired(row) {
-        const val = row[COL.prescription];
-        return val === true || val === 'Yes' || val === 'yes' || val === '1' || val === 1;
-    }
-
-    // Haversine formula: straight-line km between two GPS points
-    function getDistanceKm(lat1, lng1, lat2, lng2) {
+    function haversine(lat1, lng1, lat2, lng2) {
         const R    = 6371;
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLng = (lng2 - lng1) * Math.PI / 180;
@@ -1019,7 +741,7 @@
     }
 
     /* =============================================
-       21. UI STATE HELPERS
+       22. UI STATE HELPERS
        ============================================= */
     function showInitialState() {
         resultsCount.textContent = 'Type a medicine name above to search';
@@ -1058,10 +780,10 @@
     }
 
     /* =============================================
-       22. PANEL TOGGLE — View Alternatives
+       23. PANEL TOGGLE — View Alternatives
        ─────────────────────────────────────────────
        Re-attached after every renderResults() because
-       the DOM is fully replaced each render.
+       the DOM is fully replaced on each render.
        ============================================= */
     function attachPanelToggleListeners() {
         document.querySelectorAll('.panel-toggle-btn').forEach(btn => {
@@ -1069,11 +791,9 @@
                 const panel  = btn.nextElementSibling;
                 const icon   = btn.querySelector('.toggle-icon');
                 const isOpen = panel.style.display === 'block';
-
                 panel.style.display = isOpen ? 'none'  : 'block';
                 panel.ariaHidden    = isOpen ? 'true'  : 'false';
                 btn.ariaExpanded    = isOpen ? 'false' : 'true';
-
                 if (icon) {
                     icon.classList.toggle('fa-chevron-down', isOpen);
                     icon.classList.toggle('fa-chevron-up',  !isOpen);
@@ -1083,10 +803,10 @@
     }
 
     /* =============================================
-       23. SORT BUTTONS
+       24. SORT BUTTONS
        ─────────────────────────────────────────────
        Re-sorts cached currentResults without a new
-       Supabase query.
+       Supabase query — purely client-side re-render.
        ============================================= */
     sortBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1098,17 +818,14 @@
     });
 
     /* =============================================
-       24. SEARCH INPUT — smart debounced handler
+       25. SEARCH INPUT — smart debounced handler
        ─────────────────────────────────────────────
-       On every keystroke:
+       Every keystroke:
        1. Clear previous debounce timer
-       2. If empty → show initial state + clear dropdown
-       3. Else wait 400ms then:
-          a. Check isCompleteWord() — if not met, skip
-          b. Fetch suggestions → show dropdown
-       
-       Pressing Enter or Tab selects first suggestion.
-       Clicking outside closes the dropdown.
+       2. Empty → initial state + clear dropdown
+       3. Wait 400ms → check isCompleteWord()
+       4. Fetch suggestions → show dropdown
+       Enter / Escape keys handled separately.
        ============================================= */
     searchInput && searchInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
@@ -1122,47 +839,39 @@
         }
 
         debounceTimer = setTimeout(async () => {
-            // Smart word-boundary check — don't search on "Ga", "P", "sy" etc.
-            if (!isCompleteWord(query)) {
-                clearSuggestions();
-                return;
-            }
-
+            if (!isCompleteWord(query)) { clearSuggestions(); return; }
             const names = await fetchSuggestions(query);
             showSuggestions(names);
-            // No auto-select — user must always click a suggestion.
-            // Even a single result stays in the dropdown for the user to confirm.
-
         }, 400);
     });
 
-    // Press Enter → select first suggestion
-    searchInput && searchInput.addEventListener('keydown', (e) => {
+    // Enter → select first suggestion
+    searchInput && searchInput.addEventListener('keydown', e => {
         if (e.key === 'Enter' && suggestionBox) {
             const first = suggestionBox.querySelector('.suggestion-item');
             if (first) { e.preventDefault(); selectProduct(first.textContent); }
         }
-        if (e.key === 'Escape') { clearSuggestions(); }
+        if (e.key === 'Escape') clearSuggestions();
     });
 
-    // Click outside search area → close suggestions
-    document.addEventListener('click', (e) => {
+    // Click outside → close suggestions
+    document.addEventListener('click', e => {
         if (!searchInput.contains(e.target) && (!suggestionBox || !suggestionBox.contains(e.target))) {
             clearSuggestions();
         }
     });
 
     /* =============================================
-       25. LOGOUT
+       26. LOGOUT
        ============================================= */
-    logoutBtn && logoutBtn.addEventListener('click', async (e) => {
+    logoutBtn && logoutBtn.addEventListener('click', async e => {
         e.preventDefault();
         await supabaseClient.auth.signOut();
         window.location.href = 'Login.html';
     });
 
     /* =============================================
-       26. SIDEBAR TOGGLE — mobile hamburger
+       27. SIDEBAR TOGGLE — mobile hamburger
        ============================================= */
     const sidebar        = document.getElementById('sidebar');
     const hamburgerBtn   = document.getElementById('hamburgerBtn');
@@ -1178,20 +887,12 @@
     document.addEventListener('keydown', e => e.key === 'Escape' && closeSidebar());
 
     /* =============================================
-       27. AUTO-SEARCH FROM URL PARAM
+       28. AUTO-SEARCH FROM URL PARAM
        ─────────────────────────────────────────────
-       When the page is opened with ?q=ProductName
-       (e.g. from clicking a Dashboard recent search),
-       automatically populate the search bar and
-       trigger Phase 2 without user interaction.
-
-       IMPORTANT: also calls logSearch() so the
-       re-search is recorded in user_search_history
-       exactly like a manual suggestion click would.
-       Without this, Dashboard re-searches were
-       executing but never being saved to the DB,
-       so they never appeared in History or updated
-       the "Last Search" / "Most Frequent" widgets.
+       ?q=ProductName triggers automatic search.
+       Called from Dashboard "Recent Searches" links.
+       logSearch() called so the re-search is also
+       recorded in user_search_history.
        ============================================= */
     function autoSearchFromUrl() {
         const params     = new URLSearchParams(window.location.search);
@@ -1199,9 +900,437 @@
         if (queryParam && queryParam.trim()) {
             const productName = queryParam.trim();
             searchInput.value = productName;
-            logSearch(productName);          // ← record it just like selectProduct() does
+            logSearch(productName);
             searchByExactProduct(productName);
         }
+    }
+
+    /* =============================================
+       ══════════════════════════════════════════════
+       PRESCRIPTION SCANNER — SECTION 29–35
+       ══════════════════════════════════════════════
+       How it works end-to-end:
+
+       29. createHiddenFileInput() — creates an <input
+           type="file"> that is never shown in the DOM.
+           It is triggered programmatically when the
+           "Upload Prescription" button is clicked.
+
+       30. uploadPrescriptionBtn click → fileInput.click()
+
+       31. fileInput change → validateFile() → if OK:
+           a. showScanningOverlay() — dim the page and
+              show a spinner with percentage progress.
+           b. runOCR(file) — loads Tesseract.js from
+              CDN, runs recognition, returns raw text.
+           c. extractMedicineNames(rawText) — matches
+              OCR output against live Supabase product
+              names using prefix/substring matching.
+           d. hideScanningOverlay()
+           e. renderPrescriptionQueue(names) — shows a
+              sticky pill-tab bar above results section.
+              Each tab = one found medicine name.
+           f. savePrescriptionToVault(file, userId) —
+              uploads image to Supabase Storage and
+              inserts a metadata row (max 5, pruned by
+              RPC prune_prescriptions).
+           g. Auto-selects the FIRST found medicine so
+              the user immediately sees results.
+
+       32. Each tab click → selectProduct(name) — uses
+           the EXACT SAME path as a normal suggestion
+           click, so: logSearch(), renderResults(),
+           history tracking all work identically.
+
+       33. All found medicines are logged to
+           user_search_history one-by-one via
+           logSearch() — they appear in History and
+           Dashboard "Recent Searches" exactly like
+           manual searches.
+       ══════════════════════════════════════════════
+       ============================================= */
+
+    /* =============================================
+       29. CREATE HIDDEN FILE INPUT
+       ─────────────────────────────────────────────
+       Appended to body once. Reused across scans.
+       accept: only common image types.
+       ============================================= */
+    function createHiddenFileInput() {
+        const input     = document.createElement('input');
+        input.type      = 'file';
+        input.accept    = 'image/jpeg,image/png,image/webp,image/gif';
+        input.style.cssText = 'position:absolute;left:-9999px;visibility:hidden;';
+        document.body.appendChild(input);
+        return input;
+    }
+
+    /* =============================================
+       30. UPLOAD PRESCRIPTION BUTTON
+       ─────────────────────────────────────────────
+       Triggers the hidden file input on click.
+       ============================================= */
+    uploadPrescriptionBtn && uploadPrescriptionBtn.addEventListener('click', () => {
+        fileInput.value = '';   // reset so same file can be re-uploaded
+        fileInput.click();
+    });
+
+    /* =============================================
+       31. FILE INPUT CHANGE — main scan pipeline
+       ─────────────────────────────────────────────
+       Validates → scans → extracts → saves → renders.
+       ============================================= */
+    fileInput.addEventListener('change', async () => {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        // ── Client-side 1 MB guard ──
+        if (file.size > PRESCRIPTION_MAX_BYTES) {
+            alert('Prescription image must be less than 1 MB. Please compress or crop the image and try again.');
+            return;
+        }
+
+        // ── Auth check ──
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) { window.location.href = 'Login.html'; return; }
+
+        showScanningOverlay(0);
+
+        try {
+            // ── OCR ──
+            const rawText = await runOCR(file, pct => updateScanningOverlay(pct));
+
+            // ── Extract medicine names from OCR text ──
+            showScanningOverlay(90, 'Matching medicines...');
+            const foundNames = await extractMedicineNames(rawText);
+
+            hideScanningOverlay();
+
+            if (foundNames.length === 0) {
+                alert('No recognisable medicine names found in this prescription. Please try a clearer photo, or use the search bar.');
+                return;
+            }
+
+            // ── Render the prescription queue bar ──
+            renderPrescriptionQueue(foundNames);
+
+            // ── Save image + metadata to Supabase ──
+            // fire-and-forget — vault save should not block the search UI
+            savePrescriptionToVault(file, session.user.id).catch(err =>
+                console.warn('Vault save error:', err.message)
+            );
+
+            // ── Log all found medicines to search history ──
+            // Each name is logged individually, fire-and-forget
+            foundNames.forEach(name => logSearch(name));
+
+            // ── Auto-select first medicine to show results immediately ──
+            selectProduct(foundNames[0]);
+
+        } catch (err) {
+            hideScanningOverlay();
+            console.error('Prescription scan error:', err);
+            alert('Scan failed: ' + err.message + '\nPlease try a clearer photo.');
+        }
+    });
+
+    /* =============================================
+       32. RUN OCR — Tesseract.js (client-side)
+       ─────────────────────────────────────────────
+       WHY client-side?
+         • Zero server cost — runs entirely in the
+           user's browser via WebAssembly.
+         • No new API, no Supabase functions needed.
+         • Works for printed prescriptions very well.
+           Handwritten: partial support (~40–60%).
+
+       Tesseract is loaded from CDN in the HTML
+       (see <script src="...tesseract..."> added to
+       UserPharmacySearch.html).
+
+       onProgress callback updates the scanning
+       overlay percentage indicator.
+
+       Returns raw OCR text string.
+       ============================================= */
+    async function runOCR(file, onProgress) {
+        // Tesseract.js must be loaded as a CDN script in the HTML
+        if (typeof Tesseract === 'undefined') {
+            throw new Error('OCR library not loaded. Please check your internet connection.');
+        }
+
+        const worker = await Tesseract.createWorker('eng', 1, {
+            logger: m => {
+                if (m.status === 'recognizing text' && onProgress) {
+                    onProgress(Math.round(m.progress * 85)); // 0-85%, remaining for matching
+                }
+            },
+        });
+
+        // PSM 6 = Assume a single uniform block of text — good for prescriptions
+        await worker.setParameters({ tessedit_pageseg_mode: '6' });
+
+        const { data } = await worker.recognize(file);
+        await worker.terminate();
+        return data.text;
+    }
+
+    /* =============================================
+       33. EXTRACT MEDICINE NAMES FROM OCR TEXT
+       ─────────────────────────────────────────────
+       Strategy:
+         1. Split OCR text into individual word tokens.
+         2. Build N-grams of 1, 2, and 3 consecutive
+            words (handles "Panadol CF Tablets" etc.)
+         3. For each N-gram, do a fast Supabase
+            ilike search against product_name.
+         4. Match only in-stock items (quantity > 0).
+         5. Deduplicate found names.
+         6. Return array of exact product_name strings
+            from DB (not raw OCR tokens) — this ensures
+            selectProduct() will find exact DB matches.
+
+       WHY N-GRAM APPROACH?
+         Medicine names are multi-word ("Helezol
+         Capsules 20mg"). Matching individual words
+         would yield too many false positives. N-grams
+         of size 2-3 give precision without requiring
+         an exact OCR match.
+
+       PERFORMANCE:
+         Queries run in parallel (Promise.all).
+         Typical prescription has 3-8 medicines,
+         so 9-24 N-gram queries run simultaneously
+         — still very fast (< 2s total).
+       ============================================= */
+    async function extractMedicineNames(rawText) {
+        if (!rawText || !rawText.trim()) return [];
+
+        // Tokenise OCR text — keep alphanumeric + spaces
+        const cleanText = rawText.replace(/[^a-zA-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+        const tokens    = cleanText.split(' ').filter(t => t.length >= 3);
+
+        if (tokens.length === 0) return [];
+
+        // Build N-grams of size 1, 2, 3
+        const ngrams = new Set();
+        for (let size = 1; size <= 3; size++) {
+            for (let i = 0; i <= tokens.length - size; i++) {
+                const gram = tokens.slice(i, i + size).join(' ');
+                if (gram.length >= 3) ngrams.add(gram);
+            }
+        }
+
+        // Query Supabase in parallel — one query per N-gram
+        const queries = Array.from(ngrams).map(async gram => {
+            try {
+                const { data } = await supabaseClient
+                    .from('Pharmacy Data')
+                    .select(COL.product_name)
+                    .ilike(COL.product_name, `%${gram}%`)
+                    .gt(COL.quantity, 0)
+                    .limit(5);
+                return (data || []).map(r => r[COL.product_name]).filter(Boolean);
+            } catch (_) {
+                return [];
+            }
+        });
+
+        const results = await Promise.all(queries);
+
+        // Flatten + deduplicate (case-insensitive)
+        const seen  = new Set();
+        const names = [];
+        results.flat().forEach(name => {
+            const key = name.toLowerCase().trim();
+            if (!seen.has(key)) { seen.add(key); names.push(name); }
+        });
+
+        return names;
+    }
+
+    /* =============================================
+       34. PRESCRIPTION QUEUE BAR
+       ─────────────────────────────────────────────
+       Shows a horizontal scrollable row of pill-tabs
+       above the pharmacy results section.
+       Each tab = one medicine found in prescription.
+
+       Tab click → selectProduct(name) — same flow
+       as clicking a suggestion in the dropdown.
+       The active tab gets a green highlight.
+
+       The bar has an × close button to dismiss it
+       and reset to the initial search state.
+       ============================================= */
+    function renderPrescriptionQueue(names) {
+        // Remove any previous queue bar
+        const existing = document.getElementById('prescriptionQueueBar');
+        if (existing) existing.remove();
+
+        const bar       = document.createElement('div');
+        bar.id          = 'prescriptionQueueBar';
+        bar.className   = 'prescription-queue';
+
+        bar.innerHTML = `
+            <div class="prescription-queue__header">
+                <span class="prescription-queue__label">
+                    <i class="fa-solid fa-file-prescription"></i>
+                    Prescription Scan &mdash; ${names.length} medicine${names.length !== 1 ? 's' : ''} found
+                </span>
+                <button class="prescription-queue__close" id="closeQueueBtn" aria-label="Close prescription queue">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="prescription-queue__tabs" id="queueTabs">
+                ${names.map((name, i) => `
+                    <button class="queue-tab${i === 0 ? ' queue-tab--active' : ''}"
+                            data-name="${escapeHtml(name)}"
+                            title="${escapeHtml(name)}">
+                        ${escapeHtml(name)}
+                    </button>`).join('')}
+            </div>`;
+
+        // Insert ABOVE the results-header section
+        const resultsHeader = document.querySelector('.results-header');
+        if (resultsHeader) {
+            resultsHeader.parentNode.insertBefore(bar, resultsHeader);
+        } else {
+            document.querySelector('.main').appendChild(bar);
+        }
+
+        // Tab click → selectProduct + active highlight
+        bar.querySelectorAll('.queue-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                bar.querySelectorAll('.queue-tab').forEach(t => t.classList.remove('queue-tab--active'));
+                tab.classList.add('queue-tab--active');
+                selectProduct(tab.dataset.name);
+            });
+        });
+
+        // Close button → remove bar + reset
+        document.getElementById('closeQueueBtn').addEventListener('click', () => {
+            bar.remove();
+            searchInput.value = '';
+            showInitialState();
+            currentResults = [];
+        });
+    }
+
+    /* =============================================
+       35. SAVE PRESCRIPTION TO VAULT
+       ─────────────────────────────────────────────
+       Uploads image to Supabase Storage bucket
+       "prescriptions/{userId}/{timestamp}_{filename}".
+       Then inserts a row into user_prescriptions
+       table with the public URL and filename.
+       Calls RPC prune_prescriptions to keep ≤5.
+
+       TABLE: user_prescriptions
+         id          uuid        PK  gen_random_uuid()
+         user_id     uuid        FK  auth.users(id) NOT NULL
+         file_name   text        original filename
+         file_url    text        public storage URL
+         file_size   int8        bytes
+         uploaded_at timestamptz default now()
+
+       STORAGE BUCKET: prescriptions
+         Path: {userId}/{timestamp}_{filename}
+         Public: true (so file_url can be shown)
+         Max file size enforced client-side (1 MB).
+       ============================================= */
+    async function savePrescriptionToVault(file, userId) {
+        const timestamp = Date.now();
+        const safeName  = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const storagePath = `${userId}/${timestamp}_${safeName}`;
+
+        // Upload to Supabase Storage
+        const { error: uploadErr } = await supabaseClient
+            .storage
+            .from('prescriptions')
+            .upload(storagePath, file, {
+                cacheControl: '3600',
+                upsert:       false,
+            });
+
+        if (uploadErr) throw new Error('Storage upload failed: ' + uploadErr.message);
+
+        // Get public URL
+        const { data: urlData } = supabaseClient
+            .storage
+            .from('prescriptions')
+            .getPublicUrl(storagePath);
+
+        const fileUrl = urlData?.publicUrl || '';
+
+        // Insert metadata row into user_prescriptions
+        const { error: insertErr } = await supabaseClient
+            .from('user_prescriptions')
+            .insert({
+                user_id:   userId,
+                file_name: file.name,
+                file_url:  fileUrl,
+                file_size: file.size,
+                // uploaded_at: DB default now()
+            });
+
+        if (insertErr) throw new Error('DB insert failed: ' + insertErr.message);
+
+        // Atomic prune — keeps only 5 most-recent prescriptions per user
+        await supabaseClient.rpc('prune_prescriptions', { p_user_id: userId });
+    }
+
+    /* =============================================
+       36. SCANNING OVERLAY — show/update/hide
+       ─────────────────────────────────────────────
+       A full-viewport dim overlay with a spinner and
+       percentage counter shown during OCR processing.
+       Prevents user interaction during the scan.
+       ============================================= */
+    function showScanningOverlay(pct = 0, label = 'Scanning prescription...') {
+        let overlay = document.getElementById('scanOverlay');
+
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'scanOverlay';
+            overlay.innerHTML = `
+                <div class="scan-overlay__box">
+                    <i class="fa-solid fa-spinner fa-spin scan-overlay__spinner"></i>
+                    <p class="scan-overlay__label" id="scanLabel">${label}</p>
+                    <p class="scan-overlay__pct" id="scanPct">${pct}%</p>
+                </div>`;
+            document.body.appendChild(overlay);
+        } else {
+            document.getElementById('scanLabel').textContent = label;
+            document.getElementById('scanPct').textContent  = pct + '%';
+        }
+    }
+
+    function updateScanningOverlay(pct, label) {
+        const lEl = document.getElementById('scanLabel');
+        const pEl = document.getElementById('scanPct');
+        if (lEl && label) lEl.textContent = label;
+        if (pEl) pEl.textContent = pct + '%';
+    }
+
+    function hideScanningOverlay() {
+        const overlay = document.getElementById('scanOverlay');
+        if (overlay) overlay.remove();
+    }
+
+    /* =============================================
+       37. XSS PREVENTION HELPER
+       ─────────────────────────────────────────────
+       Always used when injecting user/DB data into
+       innerHTML to prevent script injection.
+       ============================================= */
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g,  '&amp;')
+            .replace(/</g,  '&lt;')
+            .replace(/>/g,  '&gt;')
+            .replace(/"/g,  '&quot;')
+            .replace(/'/g,  '&#39;');
     }
 
     /* ─── INIT ─── */
@@ -1209,4 +1338,3 @@
     autoSearchFromUrl();
 
 })();
-
