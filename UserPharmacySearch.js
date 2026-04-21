@@ -1589,5 +1589,5 @@
     /* ─── INIT ─── */
     initPage();
     autoSearchFromUrl();
-
+   
 })();
