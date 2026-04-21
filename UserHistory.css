@@ -578,8 +578,55 @@ ul     { list-style: none; }
     font-size: 14px;
     transition: var(--t);
     flex-shrink: 0;
+    border: none;
+    cursor: pointer;
 }
 .rx-modal__close:hover { background: #fef2f2; color: var(--red); }
+
+/* ── Modal action buttons group (download + close) ── */
+.rx-modal__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Download icon button in modal header */
+.rx-modal__download-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--green-bg);
+    border: 1px solid var(--green-border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green);
+    font-size: 13px;
+    transition: var(--t);
+    flex-shrink: 0;
+    text-decoration: none;
+}
+.rx-modal__download-btn:hover {
+    background: var(--green);
+    color: white;
+    border-color: var(--green);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Download link inside no-preview fallback body */
+.rx-modal__download-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: var(--green);
+    color: white;
+    border-radius: var(--r-md);
+    font-size: 14px;
+    font-weight: var(--fw-m);
+    transition: var(--t);
+    text-decoration: none;
+}
+.rx-modal__download-link:hover { background: var(--green-light); }
 
 .rx-modal__body {
     overflow-y: auto;
