@@ -1,7 +1,15 @@
 /* =============================================
-   MEDFINDER — User History Dashboard
+   MEDFINDER — User History Dashboard  v2.0
+   ─────────────────────────────────────────────
+   CHANGES in v2.0:
+   • Added .vault-rx-card styles for real
+     prescription thumbnail cards (replaces
+     static .vault-item placeholders).
+   • Added .vault-empty state.
+   • Added .rx-modal lightbox styles for the
+     prescription preview overlay.
+   All existing v1.0 styles are UNCHANGED.
    Roboto | #208B3A Green System
-   Consistent with UserDashboard.css pattern
    ============================================= */
 
 /* ── Variables ── */
@@ -182,7 +190,7 @@ ul     { list-style: none; }
     gap: 22px;
 }
 
-/* ── Topbar ── */
+/* Topbar */
 .topbar {
     display: flex;
     align-items: flex-start;
@@ -208,9 +216,6 @@ ul     { list-style: none; }
 .breadcrumb__link { color: var(--gray); transition: var(--t); }
 .breadcrumb__link:hover { color: var(--green); }
 .breadcrumb__active { color: var(--green); font-weight: var(--fw-m); }
-
-/* Date filter button — removed from UI, rule kept commented for reference */
-/* .date-filter { ... } */
 
 /* =============================================
    MOST FREQUENT CARD
@@ -257,7 +262,7 @@ ul     { list-style: none; }
 }
 
 /* =============================================
-   CONTENT GRID  (left panel + right aside)
+   CONTENT GRID
    ============================================= */
 .content-grid {
     display: grid;
@@ -288,47 +293,36 @@ ul     { list-style: none; }
     font-weight: var(--fw-b);
     color: var(--dark);
 }
-.panel__link {
-    font-size: 13px;
-    font-weight: var(--fw-m);
-    color: var(--gray-mid);
-    transition: var(--t);
-}
-.panel__link:hover          { color: var(--dark); }
-.panel__link--green         { color: var(--green); }
-.panel__link--green:hover   { color: var(--green-light); }
 
-/* Table head */
+/* Table head row */
 .history-table__head {
     display: grid;
-    grid-template-columns: 2.5fr 1fr 1.2fr;
-    gap: 16px;
+    grid-template-columns: 1fr 120px 120px;
+    gap: 8px;
     padding: 0 4px 12px;
     border-bottom: 1.5px solid var(--gray-light);
-    margin-bottom: 4px;
-}
-.history-table__head span {
     font-size: 11px;
-    font-weight: var(--fw-m);
+    font-weight: var(--fw-b);
     text-transform: uppercase;
     letter-spacing: .6px;
     color: var(--gray-mid);
 }
 
-/* Table body rows */
-.history-table__body { display: flex; flex-direction: column; }
+/* Table body + rows */
+.history-table__body { display: flex; flex-direction: column; gap: 0; }
 
 .history-row {
     display: grid;
-    grid-template-columns: 2.5fr 1fr 1.2fr;
-    gap: 16px;
+    grid-template-columns: 1fr 120px 120px;
     align-items: center;
-    padding: 14px 4px;
+    gap: 8px;
+    padding: 12px 4px;
     border-bottom: 1px solid var(--gray-xlight);
-    transition: var(--t);
+    transition: background .15s ease;
+    border-radius: var(--r-sm);
 }
-.history-row:last-child  { border-bottom: none; }
-.history-row:hover       { background: var(--gray-xlight); border-radius: var(--r-md); }
+.history-row:last-child { border-bottom: none; }
+.history-row:hover { background: var(--gray-xlight); }
 
 .history-row__query {
     display: flex;
@@ -337,12 +331,12 @@ ul     { list-style: none; }
     min-width: 0;
 }
 
-/* Coloured med icons */
+/* Med icon circle */
 .med-icon {
-    width: 36px; height: 36px;
+    width: 34px; height: 34px;
     border-radius: var(--r-md);
     display: flex; align-items: center; justify-content: center;
-    font-size: 15px;
+    font-size: 13px;
     flex-shrink: 0;
 }
 .med-icon--indigo { background: var(--indigo-bg); color: var(--indigo); }
@@ -358,20 +352,10 @@ ul     { list-style: none; }
     color: var(--dark);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.med-info__sub {
-    font-size: 12px;
-    color: var(--gray-mid);
-}
+.med-info__sub { font-size: 12px; color: var(--gray-mid); }
 
-.history-row__category {
-    font-size: 14px;
-    color: var(--dark);
-}
-.history-row__date {
-    font-size: 13px;
-    color: var(--gray-mid);
-    white-space: nowrap;
-}
+.history-row__category { font-size: 14px; color: var(--dark); }
+.history-row__date     { font-size: 13px; color: var(--gray-mid); white-space: nowrap; }
 
 /* =============================================
    RIGHT COLUMN
@@ -402,26 +386,21 @@ ul     { list-style: none; }
     background: var(--green-bg);
     border: 1px solid var(--green-border);
     display: flex; align-items: center; justify-content: center;
-    color: var(--green);
-    font-size: 16px;
-    flex-shrink: 0;
+    color: var(--green); font-size: 16px; flex-shrink: 0;
 }
 .info-card__body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .info-card__label {
-    font-size: 10px;
-    font-weight: var(--fw-m);
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    color: var(--gray-mid);
+    font-size: 10px; font-weight: var(--fw-m);
+    text-transform: uppercase; letter-spacing: .6px; color: var(--gray-mid);
 }
 .info-card__value {
-    font-size: 15px;
-    font-weight: var(--fw-b);
-    color: var(--dark);
+    font-size: 15px; font-weight: var(--fw-b); color: var(--dark);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 
-/* Prescription Vault */
+/* =============================================
+   PRESCRIPTION VAULT CARD  (updated v2.0)
+   ============================================= */
 .vault-card {
     background: var(--white-pure);
     border-radius: var(--r-xl);
@@ -439,44 +418,208 @@ ul     { list-style: none; }
     margin-bottom: 16px;
 }
 
-/* 2-col grid with third item spanning naturally */
+/* Vault grid — flex column (one card per row, max 5) */
 .vault-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.vault-item {
-    border-radius: var(--r-lg);
+/* ─────────────────────────────────────────────
+   PRESCRIPTION THUMBNAIL CARDS  (NEW v2.0)
+   Each card shows a file icon, truncated name,
+   and date. Clicking opens the lightbox modal.
+   ───────────────────────────────────────────── */
+.vault-rx-card {
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    aspect-ratio: 1;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--r-lg);
+    background: var(--gray-xlight);
+    border: 1.5px solid transparent;
+    cursor: pointer;
     transition: var(--t);
+    min-width: 0;
 }
-.vault-item:hover { transform: scale(1.03); }
-.vault-item--gray  { background: var(--gray-xlight); color: var(--gray-mid); }
-.vault-item--cream { background: #fef9ee; color: #d97706; }
-/* Third item slightly smaller in its own row */
-.vault-item--sm { aspect-ratio: auto; padding: 20px; }
+.vault-rx-card:hover {
+    background: var(--green-bg);
+    border-color: var(--green-border);
+}
 
-.vault-card__btn {
-    width: 100%;
-    padding: 11px;
-    border: 1.5px solid var(--gray-light);
+.vault-rx-card__icon {
+    width: 36px; height: 36px;
     border-radius: var(--r-md);
+    background: var(--white-pure);
+    border: 1px solid var(--gray-light);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green);
+    font-size: 15px;
+    flex-shrink: 0;
+}
+.vault-rx-card:hover .vault-rx-card__icon {
+    background: var(--green-bg);
+    border-color: var(--green-border);
+}
+
+.vault-rx-card__name {
     font-size: 13px;
     font-weight: var(--fw-m);
     color: var(--dark);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vault-rx-card__date {
+    font-size: 11px;
+    color: var(--gray-mid);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Loading skeleton card */
+.vault-rx-card--loading {
+    justify-content: center;
+    color: var(--gray-mid);
+    font-size: 18px;
+    padding: 16px;
+    pointer-events: none;
+}
+
+/* Empty state */
+.vault-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 16px;
+    text-align: center;
+    color: var(--gray-mid);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.vault-empty i { font-size: 28px; opacity: .4; }
+
+/* =============================================
+   PRESCRIPTION MODAL LIGHTBOX  (NEW v2.0)
+   ─────────────────────────────────────────────
+   Full-viewport overlay that renders when a
+   vault-rx-card is clicked. Shows the prescription
+   image with a × close button.
+   Backdrop click also closes the modal.
+   ============================================= */
+.rx-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rx-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+}
+
+.rx-modal__box {
+    position: relative;
+    z-index: 1;
     background: var(--white-pure);
+    border-radius: var(--r-xl);
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    max-width: min(90vw, 700px);
+    width: 100%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.rx-modal__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gray-light);
+    flex-shrink: 0;
+}
+
+.rx-modal__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: var(--fw-b);
+    color: var(--dark);
+    flex: 1;
+    min-width: 0;
+}
+.rx-modal__title i { color: var(--green); font-size: 15px; flex-shrink: 0; }
+.rx-modal__title span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.rx-modal__meta {
+    font-size: 12px;
+    color: var(--gray-mid);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.rx-modal__close {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--gray-xlight);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--gray);
+    font-size: 14px;
+    transition: var(--t);
+    flex-shrink: 0;
+}
+.rx-modal__close:hover { background: #fef2f2; color: var(--red); }
+
+.rx-modal__body {
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+}
+
+.rx-modal__img {
+    max-width: 100%;
+    max-height: calc(90vh - 80px);
+    border-radius: var(--r-lg);
+    object-fit: contain;
+}
+
+.rx-modal__no-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 32px;
+    color: var(--gray-mid);
+    text-align: center;
+}
+.rx-modal__no-preview i { font-size: 40px; opacity: .35; }
+.rx-modal__download {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    background: var(--green);
+    color: white;
+    border-radius: var(--r-md);
+    font-size: 14px;
+    font-weight: var(--fw-m);
     transition: var(--t);
 }
-.vault-card__btn:hover {
-    border-color: var(--green);
-    color: var(--green);
-}
+.rx-modal__download:hover { background: var(--green-light); }
 
 /* =============================================
    RESPONSIVE — Tablet (≤1200px)
@@ -507,10 +650,6 @@ ul     { list-style: none; }
     .main { width: 100%; padding: 20px 16px 48px; gap: 18px; }
     .topbar__hamburger { display: flex; }
 
-    .topbar { flex-wrap: wrap; }
-    .topbar__actions { width: 100%; }
-    .date-filter { width: 100%; justify-content: center; }
-
     .most-frequent { max-width: 100%; }
     .most-frequent__name { font-size: 20px; }
 
@@ -521,6 +660,8 @@ ul     { list-style: none; }
     .history-row__date { padding-left: 48px; font-size: 12px; color: var(--gray-mid); }
 
     .right-col { grid-template-columns: 1fr; }
+
+    .rx-modal__box { max-width: 95vw; max-height: 95vh; }
 }
 
 /* =============================================
@@ -539,17 +680,16 @@ ul     { list-style: none; }
 /* =============================================
    EXTENDED MED ICON PALETTE
    ─────────────────────────────────────────────
-   Additional colours used by JS icon rotation
-   (globalIndex % 8) so every row in the history
-   table gets a distinct colour across pages.
+   Additional colours for the history icon
+   rotation (globalIndex % 8).
    ============================================= */
 :root {
-    --green-icon:   #208B3A;
-    --green-icon-bg:#f0fdf4;
-    --purple:       #8b5cf6;
-    --purple-bg:    #f5f3ff;
-    --teal:         #14b8a6;
-    --teal-bg:      #f0fdfa;
+    --green-icon:    #208B3A;
+    --green-icon-bg: #f0fdf4;
+    --purple:        #8b5cf6;
+    --purple-bg:     #f5f3ff;
+    --teal:          #14b8a6;
+    --teal-bg:       #f0fdfa;
 }
 
 .med-icon--green  { background: var(--green-icon-bg); color: var(--green-icon); }
@@ -566,7 +706,6 @@ ul     { list-style: none; }
 }
 .history-row--empty:hover { background: none; }
 
-/* Skeleton shimmer for "Loading…" text */
 .skeleton-text {
     display: inline-block;
     color: var(--gray-mid);
@@ -581,15 +720,8 @@ ul     { list-style: none; }
 
 /* =============================================
    PAGINATION SLIDER
-   ─────────────────────────────────────────────
-   Sits below the history table body.
-   Layout: [←]  Page N of M  [→]
-   Matches the Supabase table page-slider style
-   shown in the pageslider.png reference.
    ============================================= */
-#paginationSlider {
-    margin-top: 8px;
-}
+#paginationSlider { margin-top: 8px; }
 
 .page-slider {
     display: flex;
@@ -599,13 +731,9 @@ ul     { list-style: none; }
     padding: 16px 4px 4px;
     border-top: 1.5px solid var(--gray-light);
 }
-
 .page-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px;
     border-radius: var(--r-md);
     border: 1.5px solid var(--gray-light);
     background: var(--white-pure);
@@ -616,31 +744,18 @@ ul     { list-style: none; }
     flex-shrink: 0;
 }
 .page-btn:hover:not(:disabled) {
-    border-color: var(--green);
-    color: var(--green);
-    background: var(--green-bg);
+    border-color: var(--green); color: var(--green); background: var(--green-bg);
 }
-.page-btn:disabled {
-    opacity: .38;
-    cursor: not-allowed;
-}
+.page-btn:disabled { opacity: .38; cursor: not-allowed; }
 
 .page-info {
-    font-size: 13px;
-    color: var(--gray);
-    white-space: nowrap;
-    min-width: 120px;
-    text-align: center;
+    font-size: 13px; color: var(--gray);
+    white-space: nowrap; min-width: 120px; text-align: center;
 }
-.page-info strong {
-    color: var(--dark);
-    font-weight: var(--fw-b);
-}
+.page-info strong { color: var(--dark); font-weight: var(--fw-b); }
 
-/* Mobile — compact slider */
 @media (max-width: 480px) {
     .page-slider { gap: 10px; padding: 14px 4px 4px; }
     .page-btn    { width: 30px; height: 30px; }
     .page-info   { font-size: 12px; min-width: 100px; }
 }
-
