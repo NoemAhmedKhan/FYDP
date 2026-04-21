@@ -64,11 +64,9 @@
                     </div>
                 </div>
                 <div class="user-meta">
-                    <!-- ✅ CHANGE: id added so JS can update name/email from Supabase session -->
                     <span class="user-name" id="sidebarUserName">Loading...</span>
                     <span class="user-email" id="sidebarUserEmail"></span>
                 </div>
-                <!-- ✅ CHANGE: id added so JS can handle logout properly -->
                 <a href="#" class="user-logout" id="logoutBtn" title="Log out">
                     <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 </a>
@@ -95,7 +93,6 @@
         </header>
 
         <!-- Search Bar -->
-        <!-- ✅ CHANGE: Added id="searchInput", removed hardcoded value, added autocomplete="off" -->
         <section class="search-section">
             <div class="search-bar">
                 <div class="search-bar__input-wrap">
@@ -110,6 +107,7 @@
                         autocomplete="off"
                     >
                 </div>
+                <!-- Upload Prescription button — triggers hidden file input in JS -->
                 <button class="upload-btn" id="uploadPrescriptionBtn">
                     <i class="fa-solid fa-camera"></i>
                     <span>Upload Prescription</span>
@@ -118,13 +116,11 @@
         </section>
 
         <!-- Results Header -->
-        <!-- ✅ CHANGE: Added id="resultsCount" so JS can update the count text dynamically -->
         <section class="results-header">
             <p class="results-count" id="resultsCount">
                 Type a medicine name above to search
             </p>
             <div class="sort-group">
-                <!-- ✅ CHANGE: Added data-sort attributes so JS knows which sort was clicked -->
                 <button class="sort-btn sort-btn--active" data-sort="nearest">
                     <i class="fa-solid fa-location-dot"></i> Nearest
                 </button>
@@ -135,11 +131,8 @@
         </section>
 
         <!-- ===================== PHARMACY CARDS ===================== -->
-        <!-- ✅ CHANGE: Added id="pharmacyList". All hardcoded cards removed.
-             Cards are now rendered dynamically by UserPharmacySearch.js
-             based on real Supabase data. -->
+        <!-- Cards injected dynamically by UserPharmacySearch.js -->
         <section class="pharmacy-list" id="pharmacyList">
-            <!-- Cards injected here by JavaScript -->
             <div class="empty-state" id="initialState">
                 <i class="fa-solid fa-pills"></i>
                 <p>Search for a medicine to see available pharmacies</p>
@@ -149,10 +142,19 @@
     </main>
 
     <!-- ===================== SCRIPTS ===================== -->
-    <!-- ✅ CHANGE: Added Supabase CDN + supabase.js (was completely missing before!)
-         Without these two lines, the search would never work. -->
+    <!-- Supabase client library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
+
+    <!--
+        Tesseract.js — client-side OCR library (WebAssembly-based).
+        Loaded from CDN so no npm/build step is needed.
+        Used by the prescription scanner in UserPharmacySearch.js.
+        ~2 MB download; cached by the browser after first load.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <!-- Main pharmacy search + prescription scanner logic -->
     <script src="UserPharmacySearch.js"></script>
 
 </body>
