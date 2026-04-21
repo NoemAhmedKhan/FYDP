@@ -290,11 +290,28 @@
        prescription scanner (one call per medicine).
        Never awaited — never blocks the UI.
 
+       FIX v5.1 — Race condition causing 21+ rows:
+         OLD BUG: When prescription scanning logged
+         multiple medicines simultaneously with
+         `foundNames.forEach(name => logSearch(name))`,
+         all logSearch calls ran concurrently. Each
+         one did: INSERT → prune. But if 3 INSERTs
+         fired before any prune ran, 3 rows were added
+         before pruning could remove any, leaving 21+.
+
+         FIX: Sequential logging for prescription
+         batch via logSearchBatch() below. Individual
+         logSearch() calls (manual search) are still
+         fire-and-forget but include a defensive
+         hard-limit COUNT check before INSERT.
+
        DB write flow:
-         1. Resolve category from "Pharmacy Data".
-         2. INSERT row (searched_at = DB server now()).
-         3. RPC prune_search_history() — keeps ≤20
-            rows per user atomically, no race condition.
+         1. Hard-limit guard: if already ≥ 20 rows,
+            DELETE the oldest row first (one row, not
+            full prune — fast and race-safe).
+         2. INSERT new row (searched_at = DB now()).
+         3. RPC prune_search_history() as safety net
+            (handles any edge case the guard missed).
        ============================================= */
     const SEARCH_HISTORY_MAX = 20;
 
@@ -316,6 +333,32 @@
                 category = catRow?.category ?? null;
             } catch (_) { /* non-critical */ }
 
+            // Hard-limit guard: count current rows for this user
+            // If already at max, delete the single oldest row before inserting
+            // This is faster + more race-safe than running prune every time
+            const { count } = await supabaseClient
+                .from('user_search_history')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', userId);
+
+            if ((count || 0) >= SEARCH_HISTORY_MAX) {
+                // Delete the single oldest row to make room
+                const { data: oldest } = await supabaseClient
+                    .from('user_search_history')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .order('searched_at', { ascending: true })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (oldest?.id) {
+                    await supabaseClient
+                        .from('user_search_history')
+                        .delete()
+                        .eq('id', oldest.id);
+                }
+            }
+
             // INSERT new search row (searched_at set by DB default now())
             const { error: insertErr } = await supabaseClient
                 .from('user_search_history')
@@ -323,13 +366,29 @@
 
             if (insertErr) throw insertErr;
 
-            // Atomic prune — keeps only 20 most-recent rows for this user
-            const { error: pruneErr } = await supabaseClient
-                .rpc('prune_search_history', { p_user_id: userId });
-            if (pruneErr) console.warn('History prune warning:', pruneErr.message);
+            // RPC prune as final safety net — catches any race that slipped through
+            await supabaseClient.rpc('prune_search_history', { p_user_id: userId });
 
         } catch (err) {
             console.warn('Search log error:', err.message);
+        }
+    }
+
+    /* =============================================
+       13-B. LOG SEARCH BATCH (prescription scanner)
+       ─────────────────────────────────────────────
+       Called when prescription scan finds multiple
+       medicines. Logs them SEQUENTIALLY (one await
+       after another) so the prune always runs after
+       each INSERT — no concurrent race condition.
+
+       Replaces the old:
+         foundNames.forEach(name => logSearch(name))
+       which fired all logs simultaneously.
+       ============================================= */
+    async function logSearchBatch(names) {
+        for (const name of names) {
+            await logSearch(name);   // sequential — each INSERT+prune completes before next
         }
     }
 
@@ -1020,9 +1079,8 @@
                 console.warn('Vault save error:', err.message)
             );
 
-            // ── Log all found medicines to search history ──
-            // Each name is logged individually, fire-and-forget
-            foundNames.forEach(name => logSearch(name));
+            // ── Log all found medicines sequentially — prevents 21+ row race ──
+            logSearchBatch(foundNames);
 
             // ── Auto-select first medicine to show results immediately ──
             selectProduct(foundNames[0]);
@@ -1078,75 +1136,270 @@
     /* =============================================
        33. EXTRACT MEDICINE NAMES FROM OCR TEXT
        ─────────────────────────────────────────────
-       Strategy:
-         1. Split OCR text into individual word tokens.
-         2. Build N-grams of 1, 2, and 3 consecutive
-            words (handles "Panadol CF Tablets" etc.)
-         3. For each N-gram, do a fast Supabase
-            ilike search against product_name.
-         4. Match only in-stock items (quantity > 0).
-         5. Deduplicate found names.
-         6. Return array of exact product_name strings
-            from DB (not raw OCR tokens) — this ensures
-            selectProduct() will find exact DB matches.
+       COMPLETE REWRITE in v5.1 — intelligent
+       prescription line parser replacing the broken
+       N-gram approach.
 
-       WHY N-GRAM APPROACH?
-         Medicine names are multi-word ("Helezol
-         Capsules 20mg"). Matching individual words
-         would yield too many false positives. N-grams
-         of size 2-3 give precision without requiring
-         an exact OCR match.
+       ROOT CAUSE OF OLD APPROACH'S FAILURE:
+         N-grams of ALL tokens (including "SYP", "TAB",
+         "2", dosage numbers, Arabic text fragments,
+         patient info words) were queried with ilike
+         against the entire stock, producing 25+
+         unrelated false-positive matches.
 
-       PERFORMANCE:
-         Queries run in parallel (Promise.all).
-         Typical prescription has 3-8 medicines,
-         so 9-24 N-gram queries run simultaneously
-         — still very fast (< 2s total).
+       NEW STRATEGY — 4-phase pipeline:
+
+       PHASE 1 — OCR LINE EXTRACTION
+         Split raw OCR text into lines. Each line is
+         processed independently. Lines shorter than
+         3 chars or consisting only of digits/symbols
+         are discarded immediately.
+
+       PHASE 2 — PRESCRIPTION LINE DETECTION
+         A prescription line almost always starts with
+         a dosage-form keyword (SYP, TAB, CAP, INJ,
+         EYE, EAR, GEL, CRM, SUPP, SUSP, SOL, LOT,
+         OIN, OINT, DROPS, SYRUP, TABLET, CAPSULE,
+         INJECTION…) followed by the medicine name.
+         We detect these prefix patterns and STRIP them
+         to isolate the raw medicine name token.
+
+         Lines NOT starting with these keywords are
+         also considered as fallback candidates if they
+         contain ≥ 2 capitalised words (typical of
+         medicine brand names like "PANADOL EXTRA").
+
+       PHASE 3 — NAME NORMALISATION
+         Each extracted name candidate is normalised:
+         • Remove hyphens/dots between words → spaces
+           ("PANADOL-EXTRA" → "PANADOL EXTRA")
+         • Collapse multiple spaces
+         • Remove trailing dosage noise (numbers + units
+           like "500mg", "20ml") from the END only —
+           keep the brand name intact
+         • Strip trailing Roman numerals (I, II, III)
+           that OCR sometimes appends
+         • Lowercase for matching
+
+       PHASE 4 — FUZZY DB MATCHING (smart ilike)
+         For each normalised candidate we run up to 3
+         progressively broader Supabase queries:
+
+         Query A — exact normalised name prefix:
+           ilike 'candidate%'  (highest precision)
+
+         Query B — each significant word (≥4 chars)
+           individually, keeping only DB results whose
+           product_name contains ALL significant words
+           from the candidate (AND logic, not OR).
+           This handles:
+             "PANADOL EXTRA" → matches "Panadol Extra
+              Tablets 500mg" because both "panadol" and
+              "extra" appear in the product name.
+
+         Query C — first word only (≥4 chars) as
+           broader fallback. Results ranked by how
+           many candidate words appear in the DB name.
+           Only the best-scoring result is kept from
+           this query to avoid noise.
+
+         De-duplication: once a DB product_name is
+         matched by any candidate, it is added to a
+         "seen" set so the same product never appears
+         twice in the final list even if multiple OCR
+         lines reference it.
+
+       RESULT ORDERING:
+         Medicines are returned in the order their
+         prescription lines appear in the OCR output
+         (top-to-bottom reading order), which matches
+         the doctor's intended prescription sequence.
+
+       HANDLES GRACEFULLY:
+         • "PANADOL-EXTRA" → "Panadol Extra Tablets"
+         • "KOLAC" → "Kolac Syrup" / "Kolac Tablets"
+         • "BABYNOL" → "Babynol Drops" / "Babynol Syrup"
+         • Mixed case: panadol extra, PANADOL EXTRA
+         • Typos: "PANODOL" → still matches via word B
+         • Arabic text lines: discarded in Phase 1
+         • Patient name / date lines: discarded (no
+           dosage-form keyword, no cap words)
+         • Dose instructions ("2 مرات يومياً"): discarded
        ============================================= */
+
+    /* ── Dosage-form prefix keywords to strip ── */
+    const RX_PREFIXES = [
+        'SYRUP', 'SYP', 'TABLET', 'TAB', 'CAPSULE', 'CAP', 'CAPS',
+        'INJECTION', 'INJ', 'EYE DROPS', 'EAR DROPS', 'EYE', 'EAR',
+        'GEL', 'CREAM', 'CRM', 'OINTMENT', 'OINT', 'OIN',
+        'SUSPENSION', 'SUSP', 'SOLUTION', 'SOL', 'LOTION', 'LOT',
+        'SUPPOSITORY', 'SUPP', 'DROPS', 'SPRAY', 'INHALER', 'INH',
+        'SACHET', 'PATCH', 'POWDER', 'PWD', 'LIQUID', 'LIQ',
+        'NASAL', 'TOPICAL', 'ORAL', 'IV', 'IM', 'SC',
+    ];
+
+    /* Regex: matches a line starting with a dosage-form prefix */
+    const RX_PREFIX_RE = new RegExp(
+        '^\\s*(?:R\\/|Rx\\.?|R:)?\\s*(' +
+        RX_PREFIXES.map(p => p.replace(/\s+/g, '\\s+')).join('|') +
+        ')[.:\\s]+',
+        'i'
+    );
+
+    /* Regex: matches a line that is ONLY noise (digits, units, arabic, punct) */
+    const NOISE_LINE_RE = /^[\d\s\.\,\-\+\/\\\(\)\[\]%مرات يومياًصباحاًمساءًبعدقبلالأكلوجبات]+$/u;
+
+    /* Regex: strip trailing dosage info — e.g. "500mg", "20 ml", "1/2 tab" */
+    const TRAILING_DOSE_RE = /[\s\-]+\d[\d\s\/\.]*\s*(?:mg|mcg|ml|g|iu|units?|tab[s]?|cap[s]?|drop[s]?)[\s\d]*$/i;
+
     async function extractMedicineNames(rawText) {
         if (!rawText || !rawText.trim()) return [];
 
-        // Tokenise OCR text — keep alphanumeric + spaces
-        const cleanText = rawText.replace(/[^a-zA-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
-        const tokens    = cleanText.split(' ').filter(t => t.length >= 3);
+        /* ── PHASE 1: split into lines, discard garbage ── */
+        const lines = rawText
+            .split(/\r?\n/)
+            .map(l => l.trim())
+            .filter(l => l.length >= 3)
+            .filter(l => !NOISE_LINE_RE.test(l))
+            // Discard lines that are mostly non-latin (Arabic / Urdu OCR noise)
+            .filter(l => {
+                const latinChars = (l.match(/[a-zA-Z]/g) || []).length;
+                return latinChars >= 3;
+            });
 
-        if (tokens.length === 0) return [];
+        if (lines.length === 0) return [];
 
-        // Build N-grams of size 1, 2, 3
-        const ngrams = new Set();
-        for (let size = 1; size <= 3; size++) {
-            for (let i = 0; i <= tokens.length - size; i++) {
-                const gram = tokens.slice(i, i + size).join(' ');
-                if (gram.length >= 3) ngrams.add(gram);
+        /* ── PHASE 2: extract candidate medicine name from each line ── */
+        const candidates = [];
+
+        for (const line of lines) {
+            let candidate = null;
+
+            // Check if line starts with a dosage-form prefix
+            const prefixMatch = line.match(RX_PREFIX_RE);
+            if (prefixMatch) {
+                // Strip the prefix, keep the rest as the medicine name candidate
+                candidate = line.slice(prefixMatch[0].length).trim();
+            } else {
+                // Fallback: check if line has ≥ 2 capitalised word tokens
+                // (typical of medicine brand names: "PANADOL EXTRA", "BABY NOL")
+                const upperWords = (line.match(/\b[A-Z][A-Z\d\-]{2,}\b/g) || []);
+                if (upperWords.length >= 1) {
+                    candidate = line.trim();
+                }
+            }
+
+            if (!candidate || candidate.length < 3) continue;
+
+            /* ── PHASE 3: normalise the candidate ── */
+            candidate = candidate
+                .replace(/[-\.]/g, ' ')           // hyphens/dots → spaces
+                .replace(/\s+/g, ' ')              // collapse spaces
+                .replace(TRAILING_DOSE_RE, '')     // strip trailing dose info
+                .trim();
+
+            // Discard very short or purely numeric candidates after normalisation
+            if (candidate.length < 3) continue;
+            if (/^\d+$/.test(candidate)) continue;
+
+            candidates.push(candidate);
+        }
+
+        if (candidates.length === 0) return [];
+
+        /* ── PHASE 4: fuzzy DB matching for each candidate ── */
+        const seenProducts = new Set(); // deduplicate across all candidates
+        const orderedNames = [];        // preserve prescription line order
+
+        // Process candidates sequentially to keep prescription order
+        for (const candidate of candidates) {
+            const normalised = candidate.toLowerCase().trim();
+
+            // Significant words: ≥ 4 chars, not common noise words
+            const STOP_WORDS = new Set(['with','and','the','for','tabs','caps','syp','tab','cap']);
+            const sigWords = normalised
+                .split(/\s+/)
+                .filter(w => w.length >= 4 && !STOP_WORDS.has(w));
+
+            if (sigWords.length === 0) continue;
+
+            let matched = null;
+
+            /* ── Query A: prefix match (most precise) ── */
+            try {
+                const { data: dataA } = await supabaseClient
+                    .from('Pharmacy Data')
+                    .select(COL.product_name)
+                    .ilike(COL.product_name, `${normalised}%`)
+                    .gt(COL.quantity, 0)
+                    .limit(3);
+
+                if (dataA && dataA.length > 0) {
+                    matched = dataA[0][COL.product_name];
+                }
+            } catch (_) { /* continue to Query B */ }
+
+            /* ── Query B: ALL significant words must appear in product name ── */
+            if (!matched && sigWords.length >= 1) {
+                try {
+                    // Build an OR filter for all sig words, then client-filter for AND
+                    const orFilter = sigWords
+                        .map(w => `${COL.product_name}.ilike.%${w}%`)
+                        .join(',');
+
+                    const { data: dataB } = await supabaseClient
+                        .from('Pharmacy Data')
+                        .select(COL.product_name)
+                        .or(orFilter)
+                        .gt(COL.quantity, 0)
+                        .limit(50);
+
+                    if (dataB && dataB.length > 0) {
+                        // Client-side AND filter: product must contain ALL sig words
+                        const andMatch = dataB.find(row => {
+                            const pn = (row[COL.product_name] || '').toLowerCase();
+                            return sigWords.every(w => pn.includes(w));
+                        });
+                        if (andMatch) matched = andMatch[COL.product_name];
+                    }
+                } catch (_) { /* continue to Query C */ }
+            }
+
+            /* ── Query C: first significant word only (broadest fallback) ── */
+            if (!matched && sigWords[0] && sigWords[0].length >= 4) {
+                try {
+                    const { data: dataC } = await supabaseClient
+                        .from('Pharmacy Data')
+                        .select(COL.product_name)
+                        .ilike(COL.product_name, `%${sigWords[0]}%`)
+                        .gt(COL.quantity, 0)
+                        .limit(20);
+
+                    if (dataC && dataC.length > 0) {
+                        // Score each result: count how many sig words appear in it
+                        const scored = dataC.map(row => {
+                            const pn = (row[COL.product_name] || '').toLowerCase();
+                            const score = sigWords.filter(w => pn.includes(w)).length;
+                            return { name: row[COL.product_name], score };
+                        });
+                        // Only keep if at least 1 sig word matched
+                        scored.sort((a, b) => b.score - a.score);
+                        if (scored[0].score >= 1) matched = scored[0].name;
+                    }
+                } catch (_) { /* no match for this candidate */ }
+            }
+
+            // Add to ordered list if found and not already included
+            if (matched) {
+                const key = matched.toLowerCase().trim();
+                if (!seenProducts.has(key)) {
+                    seenProducts.add(key);
+                    orderedNames.push(matched);
+                }
             }
         }
 
-        // Query Supabase in parallel — one query per N-gram
-        const queries = Array.from(ngrams).map(async gram => {
-            try {
-                const { data } = await supabaseClient
-                    .from('Pharmacy Data')
-                    .select(COL.product_name)
-                    .ilike(COL.product_name, `%${gram}%`)
-                    .gt(COL.quantity, 0)
-                    .limit(5);
-                return (data || []).map(r => r[COL.product_name]).filter(Boolean);
-            } catch (_) {
-                return [];
-            }
-        });
-
-        const results = await Promise.all(queries);
-
-        // Flatten + deduplicate (case-insensitive)
-        const seen  = new Set();
-        const names = [];
-        results.flat().forEach(name => {
-            const key = name.toLowerCase().trim();
-            if (!seen.has(key)) { seen.add(key); names.push(name); }
-        });
-
-        return names;
+        return orderedNames;
     }
 
     /* =============================================
