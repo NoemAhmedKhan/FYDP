@@ -1589,4 +1589,5 @@
     /* ─── INIT ─── */
     initPage();
     autoSearchFromUrl();
+
 })();
