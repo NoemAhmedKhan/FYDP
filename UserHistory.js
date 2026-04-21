@@ -1,18 +1,19 @@
 /* =============================================
-   MediFinder — UserHistory.js  v3.0
+   MediFinder — UserHistory.js  v4.0
    ─────────────────────────────────────────────
-   CHANGES IN v3.0 (reverts v2.0 JSONB approach):
-   • loadHistory() now queries multi-row relational
-     table: SELECT product_name, category,
-     searched_at ORDER BY searched_at DESC LIMIT 20.
-     Uses composite index (user_id, searched_at DESC)
-     for O(log n) reads — no full table scan.
-   • Field names match table columns directly —
-     no JSONB mapping/normalisation layer needed.
-   • renderLastSearch / renderMostFrequent /
-     renderTable unchanged — they already consumed
-     the { product_name, category, searched_at }
-     shape so zero changes needed there.
+   CHANGES IN v4.0:
+   A. Prescription Vault section now loads REAL
+      data from Supabase (user_prescriptions table,
+      max 5 rows). Previously it was static HTML.
+   B. Each prescription shows as a small clickable
+      card that opens the file URL in a lightbox
+      modal overlay (with a close × button).
+   C. "View All Files" button removed — the panel
+      now shows all stored prescriptions (≤ 5).
+   D. History panel "View All" link removed from
+      panel__header (requirements update).
+   E. All other v3.0 logic (paginated table, most
+      frequent, last search) is UNCHANGED.
    ============================================= */
 
 (function () {
@@ -21,8 +22,7 @@
     /* =============================================
        CONSTANTS
        ============================================= */
-    const PAGE_SIZE          = 8;   // rows shown per page
-    const SEARCH_HISTORY_MAX = 20;  // max rows stored per user (enforced by DB prune)
+    const PAGE_SIZE = 8;   // rows per page in history table
 
     /* =============================================
        DOM REFERENCES
@@ -45,12 +45,15 @@
 
     /* =============================================
        2. AUTH GUARD + PAGE INIT
+       ─────────────────────────────────────────────
+       No session → redirect to Login.html.
+       Session OK → load sidebar profile + data.
        ============================================= */
     async function initPage() {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
         if (error || !session) { window.location.href = 'Login.html'; return; }
 
-        /* Load sidebar profile */
+        // Load sidebar profile details
         try {
             const { data: profile } = await supabaseClient
                 .from('users')
@@ -60,8 +63,8 @@
 
             if (profile) {
                 const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-                const nameEl  = document.getElementById('sidebarUserName');
-                const emailEl = document.getElementById('sidebarUserEmail');
+                const nameEl   = document.getElementById('sidebarUserName');
+                const emailEl  = document.getElementById('sidebarUserEmail');
                 if (nameEl)  nameEl.textContent  = fullName || 'User';
                 if (emailEl) emailEl.textContent = session.user.email || '';
                 renderSidebarAvatar(profile.profile_img || null);
@@ -70,8 +73,11 @@
             console.warn('Profile load error:', err.message);
         }
 
-        /* Load all search history for this user */
-        loadHistory(session.user.id);
+        // Load history + prescription vault in parallel
+        await Promise.all([
+            loadHistory(session.user.id),
+            loadPrescriptionVault(session.user.id),
+        ]);
     }
 
     /* =============================================
@@ -80,37 +86,25 @@
     function renderSidebarAvatar(profileImgUrl) {
         const avatarEl = document.querySelector('.user-avatar');
         if (!avatarEl) return;
-
         const fallback = avatarEl.querySelector('.user-avatar__fallback');
         const existing = avatarEl.querySelector('img');
         if (existing) existing.remove();
 
-        const img = document.createElement('img');
-        img.alt   = 'User Avatar';
+        const img   = document.createElement('img');
+        img.alt     = 'User Avatar';
         img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;position:relative;z-index:1;';
-
         img.onerror = () => { img.remove(); if (fallback) fallback.style.display = 'flex'; };
         img.onload  = () => { if (fallback) fallback.style.display = 'none'; };
-
-        img.src = profileImgUrl || 'Images/ProfileAvatar.jpg';
+        img.src     = profileImgUrl || 'Images/ProfileAvatar.jpg';
         avatarEl.insertBefore(img, avatarEl.firstChild);
     }
 
     /* =============================================
-       4. LOAD HISTORY (main data fetch)
+       4. LOAD SEARCH HISTORY
        ─────────────────────────────────────────────
-       Fetches up to 20 rows for this user ordered
-       newest-first using the composite index on
-       (user_id, searched_at DESC) — O(log n), no
-       full table scan.
-
-       Fields returned match table columns directly:
-         product_name, category, searched_at
-
-       Derives from the result set:
-         • Last Search    — rows[0]  (newest-first)
-         • Most Frequent  — most-common product_name
-         • Paginated table — 8 rows per page
+       Fetches ≤20 rows for this user, newest-first.
+       Uses composite index (user_id, searched_at DESC).
+       Fields: product_name, category, searched_at
        ============================================= */
     async function loadHistory(userId) {
         try {
@@ -119,12 +113,11 @@
                 .select('product_name, category, searched_at')
                 .eq('user_id', userId)
                 .order('searched_at', { ascending: false })
-                .limit(SEARCH_HISTORY_MAX);
+                .limit(20);
 
             if (error) throw error;
 
             const rows = data || [];
-
             renderLastSearch(rows);
             renderMostFrequent(rows);
             renderTable(rows, 1);
@@ -136,10 +129,10 @@
     }
 
     /* =============================================
-       5. LAST SEARCH
+       5. LAST SEARCH — card (right column)
        ─────────────────────────────────────────────
-       rows are already newest-first, so rows[0]
-       is the most recent.
+       rows are newest-first so rows[0] is the most
+       recent search the user performed.
        ============================================= */
     function renderLastSearch(rows) {
         const el = document.getElementById('lastSearchValue');
@@ -148,21 +141,17 @@
     }
 
     /* =============================================
-       6. MOST FREQUENT
+       6. MOST FREQUENT — header card
        ─────────────────────────────────────────────
-       Count occurrences of each product_name across
-       all rows. The one with the highest count wins.
-       Ties broken by whichever appears first in the
-       frequency map (i.e., most recently searched).
+       Counts occurrences of each product_name.
+       Winner displayed in the "Most Frequent" banner.
+       Ties broken by order of first appearance.
        ============================================= */
     function renderMostFrequent(rows) {
         const el = document.getElementById('mostFrequentName');
         if (!el) return;
 
-        if (rows.length === 0) {
-            el.textContent = 'No data yet';
-            return;
-        }
+        if (rows.length === 0) { el.textContent = 'No data yet'; return; }
 
         const freq = {};
         rows.forEach(r => {
@@ -177,11 +166,11 @@
     }
 
     /* =============================================
-       7. RENDER TABLE (paginated)
+       7. RENDER TABLE (paginated — 8 rows/page)
        ─────────────────────────────────────────────
-       Slices rows for the requested page and injects
-       them into #historyTableBody. Renders the page
-       slider below the table.
+       Slices rows for the requested page, injects
+       them into #historyTableBody, then renders the
+       page-slider controls below the table.
        ============================================= */
     const ICON_PALETTE = [
         { cls: 'med-icon--indigo', icon: 'fa-kit-medical' },
@@ -208,7 +197,7 @@
         const start      = (safePage - 1) * PAGE_SIZE;
         const pageRows   = rows.slice(start, start + PAGE_SIZE);
 
-        /* ── Table rows ── */
+        // ── Table rows ──
         if (rows.length === 0) {
             bodyEl.innerHTML = `
                 <li class="history-row history-row--empty">
@@ -246,13 +235,10 @@
             }).join('');
         }
 
-        /* ── Page slider ── */
+        // ── Page slider ──
         if (!sliderEl) return;
 
-        if (totalPages <= 1) {
-            sliderEl.innerHTML = '';
-            return;
-        }
+        if (totalPages <= 1) { sliderEl.innerHTML = ''; return; }
 
         sliderEl.innerHTML = `
             <div class="page-slider">
@@ -269,16 +255,12 @@
                 </button>
             </div>`;
 
-        sliderEl.querySelector('.page-btn--prev').addEventListener('click', () => {
-            renderTable(rows, safePage - 1);
-        });
-        sliderEl.querySelector('.page-btn--next').addEventListener('click', () => {
-            renderTable(rows, safePage + 1);
-        });
+        sliderEl.querySelector('.page-btn--prev').addEventListener('click', () => renderTable(rows, safePage - 1));
+        sliderEl.querySelector('.page-btn--next').addEventListener('click', () => renderTable(rows, safePage + 1));
     }
 
     /* =============================================
-       8. ERROR STATE
+       8. TABLE ERROR STATE
        ============================================= */
     function renderTableError() {
         const bodyEl = document.getElementById('historyTableBody');
@@ -299,11 +281,160 @@
     }
 
     /* =============================================
-       9. LOGOUT
+       9. LOAD PRESCRIPTION VAULT  (NEW in v4.0)
+       ─────────────────────────────────────────────
+       Fetches the 5 most-recent prescriptions for
+       this user from the user_prescriptions table,
+       ordered newest-first.
+
+       Renders them as small clickable thumbnail
+       cards inside the .vault-grid element.
+
+       Each card:
+         • Shows a file icon (+ truncated filename)
+         • On click → opens the file URL in a
+           lightbox modal overlay
+         • Modal has a × close button
+
+       If no prescriptions exist, shows an empty
+       state prompt encouraging the user to upload.
+       ============================================= */
+    async function loadPrescriptionVault(userId) {
+        const vaultGrid = document.getElementById('vaultGrid');
+        if (!vaultGrid) return;
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('user_prescriptions')
+                .select('id, file_name, file_url, file_size, uploaded_at')
+                .eq('user_id', userId)
+                .order('uploaded_at', { ascending: false })
+                .limit(5);
+
+            if (error) throw error;
+
+            const prescriptions = data || [];
+
+            if (prescriptions.length === 0) {
+                // Empty state — no prescriptions stored yet
+                vaultGrid.innerHTML = `
+                    <div class="vault-empty">
+                        <i class="fa-solid fa-file-medical"></i>
+                        <p>No prescriptions yet.<br>Upload one from Pharmacy Search.</p>
+                    </div>`;
+                return;
+            }
+
+            // Render one card per prescription (max 5)
+            vaultGrid.innerHTML = prescriptions.map(rx => `
+                <div class="vault-rx-card"
+                     role="button"
+                     tabindex="0"
+                     title="View ${escapeHtml(rx.file_name)}"
+                     data-url="${escapeHtml(rx.file_url)}"
+                     data-name="${escapeHtml(rx.file_name)}"
+                     data-date="${escapeHtml(formatDate(rx.uploaded_at))}">
+                    <div class="vault-rx-card__icon">
+                        <i class="fa-solid fa-file-prescription"></i>
+                    </div>
+                    <span class="vault-rx-card__name">${escapeHtml(truncateFileName(rx.file_name, 14))}</span>
+                    <span class="vault-rx-card__date">${formatDate(rx.uploaded_at)}</span>
+                </div>`
+            ).join('');
+
+            // Attach click listeners to open lightbox
+            vaultGrid.querySelectorAll('.vault-rx-card').forEach(card => {
+                const openModal = () => openPrescriptionModal(
+                    card.dataset.url,
+                    card.dataset.name,
+                    card.dataset.date
+                );
+                card.addEventListener('click',   openModal);
+                card.addEventListener('keydown', e => { if (e.key === 'Enter') openModal(); });
+            });
+
+        } catch (err) {
+            console.warn('Vault load error:', err.message);
+            if (vaultGrid) {
+                vaultGrid.innerHTML = `
+                    <div class="vault-empty" style="color:var(--red)">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                        <p>Could not load prescriptions.</p>
+                    </div>`;
+            }
+        }
+    }
+
+    /* =============================================
+       10. PRESCRIPTION MODAL LIGHTBOX  (NEW v4.0)
+       ─────────────────────────────────────────────
+       Opens a modal overlay showing the prescription
+       image. Clicking the × button or backdrop closes
+       the modal. Keyboard Escape also closes it.
+
+       If the URL doesn't end with an image extension,
+       falls back to showing a "Preview not available"
+       message with a direct download link.
+       ============================================= */
+    function openPrescriptionModal(url, fileName, dateStr) {
+        // Remove any existing modal first
+        const existing = document.getElementById('rxModal');
+        if (existing) existing.remove();
+
+        const isImage = /\.(jpe?g|png|webp|gif)$/i.test(url);
+
+        const modal     = document.createElement('div');
+        modal.id        = 'rxModal';
+        modal.className = 'rx-modal';
+        modal.innerHTML = `
+            <div class="rx-modal__backdrop"></div>
+            <div class="rx-modal__box" role="dialog" aria-modal="true" aria-label="${escapeHtml(fileName)}">
+                <div class="rx-modal__header">
+                    <div class="rx-modal__title">
+                        <i class="fa-solid fa-file-prescription"></i>
+                        <span>${escapeHtml(fileName)}</span>
+                    </div>
+                    <div class="rx-modal__meta">${escapeHtml(dateStr)}</div>
+                    <button class="rx-modal__close" id="rxModalClose" aria-label="Close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="rx-modal__body">
+                    ${isImage
+                        ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(fileName)}" class="rx-modal__img">`
+                        : `<div class="rx-modal__no-preview">
+                                <i class="fa-solid fa-file-lines"></i>
+                                <p>Preview not available for this file type.</p>
+                                <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="rx-modal__download">
+                                    <i class="fa-solid fa-download"></i> Open File
+                                </a>
+                           </div>`
+                    }
+                </div>
+            </div>`;
+
+        document.body.appendChild(modal);
+        document.body.style.overflow = 'hidden';
+
+        // Close handlers
+        const close = () => {
+            modal.remove();
+            document.body.style.overflow = '';
+        };
+
+        document.getElementById('rxModalClose').addEventListener('click', close);
+        modal.querySelector('.rx-modal__backdrop').addEventListener('click', close);
+        document.addEventListener('keydown', function escClose(e) {
+            if (e.key === 'Escape') { close(); document.removeEventListener('keydown', escClose); }
+        });
+    }
+
+    /* =============================================
+       11. LOGOUT
        ============================================= */
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async (e) => {
+        logoutBtn.addEventListener('click', async e => {
             e.preventDefault();
             await supabaseClient.auth.signOut();
             window.location.href = 'Login.html';
@@ -311,20 +442,30 @@
     }
 
     /* =============================================
-       10. UTILITY HELPERS
+       12. UTILITY HELPERS
        ============================================= */
 
     /* Format ISO date → "Oct 24, 2024" */
     function formatDate(isoString) {
         if (!isoString) return '—';
         return new Date(isoString).toLocaleDateString('en-US', {
-            day:   'numeric',
-            month: 'short',
-            year:  'numeric',
+            day: 'numeric', month: 'short', year: 'numeric',
         });
     }
 
-    /* Prevent XSS */
+    /* Truncate long filenames to a readable length */
+    function truncateFileName(name, maxLen) {
+        if (!name || name.length <= maxLen) return name || '—';
+        const ext = name.lastIndexOf('.');
+        if (ext > 0) {
+            const base = name.slice(0, ext);
+            const extension = name.slice(ext);
+            return base.slice(0, maxLen - extension.length - 1) + '…' + extension;
+        }
+        return name.slice(0, maxLen) + '…';
+    }
+
+    /* Prevent XSS when injecting user/DB data into innerHTML */
     function escapeHtml(str) {
         return String(str)
             .replace(/&/g,  '&amp;')
