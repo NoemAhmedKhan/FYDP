@@ -366,15 +366,14 @@
     }
 
     /* =============================================
-       10. PRESCRIPTION MODAL LIGHTBOX  (NEW v4.0)
+       10. PRESCRIPTION MODAL LIGHTBOX  (v4.1)
        ─────────────────────────────────────────────
-       Opens a modal overlay showing the prescription
-       image. Clicking the × button or backdrop closes
-       the modal. Keyboard Escape also closes it.
+       Opens a modal showing the prescription image.
+       ADDED v4.1: Download icon button in the header
+       bar — clicking it triggers a browser download
+       of the prescription image file directly.
 
-       If the URL doesn't end with an image extension,
-       falls back to showing a "Preview not available"
-       message with a direct download link.
+       Close: × button, backdrop click, or Escape.
        ============================================= */
     function openPrescriptionModal(url, fileName, dateStr) {
         // Remove any existing modal first
@@ -395,9 +394,19 @@
                         <span>${escapeHtml(fileName)}</span>
                     </div>
                     <div class="rx-modal__meta">${escapeHtml(dateStr)}</div>
-                    <button class="rx-modal__close" id="rxModalClose" aria-label="Close">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <div class="rx-modal__actions">
+                        <!-- Download button — triggers native browser download -->
+                        <a href="${escapeHtml(url)}"
+                           download="${escapeHtml(fileName)}"
+                           class="rx-modal__download-btn"
+                           title="Download prescription"
+                           aria-label="Download prescription">
+                            <i class="fa-solid fa-download"></i>
+                        </a>
+                        <button class="rx-modal__close" id="rxModalClose" aria-label="Close">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="rx-modal__body">
                     ${isImage
@@ -405,8 +414,10 @@
                         : `<div class="rx-modal__no-preview">
                                 <i class="fa-solid fa-file-lines"></i>
                                 <p>Preview not available for this file type.</p>
-                                <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="rx-modal__download">
-                                    <i class="fa-solid fa-download"></i> Open File
+                                <a href="${escapeHtml(url)}"
+                                   download="${escapeHtml(fileName)}"
+                                   class="rx-modal__download-link">
+                                    <i class="fa-solid fa-download"></i> Download File
                                 </a>
                            </div>`
                     }
