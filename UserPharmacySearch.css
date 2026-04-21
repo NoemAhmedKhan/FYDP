@@ -498,11 +498,16 @@ ul { list-style:none; }
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding-bottom: 4px;
+    padding-bottom: 8px;       /* extra space for visible scrollbar */
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;   /* Firefox */
+    scrollbar-width: thin;                        /* Firefox — thin visible bar */
+    scrollbar-color: var(--green-border) transparent; /* Firefox — green thumb */
 }
-.prescription-queue__tabs::-webkit-scrollbar { display: none; }  /* Chrome/Safari */
+/* Webkit (Chrome/Safari/Edge) — styled thin scrollbar */
+.prescription-queue__tabs::-webkit-scrollbar        { height: 4px; display: block; }
+.prescription-queue__tabs::-webkit-scrollbar-track  { background: var(--gray-xlight); border-radius: 4px; }
+.prescription-queue__tabs::-webkit-scrollbar-thumb  { background: var(--green-border); border-radius: 4px; }
+.prescription-queue__tabs::-webkit-scrollbar-thumb:hover { background: var(--green); }
 
 /* Individual medicine pill-tabs */
 .queue-tab {
