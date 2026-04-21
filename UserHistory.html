@@ -76,7 +76,7 @@
     <!-- ===================== MAIN ===================== -->
     <main class="main">
 
-        <!-- Topbar — date filter removed per requirements -->
+        <!-- Topbar -->
         <header class="topbar">
             <button class="topbar__hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">
                 <i class="fa-solid fa-bars"></i>
@@ -89,10 +89,9 @@
                     <span class="breadcrumb__active">History</span>
                 </nav>
             </div>
-            <!-- Date filter intentionally removed -->
         </header>
 
-        <!-- Most Frequent Card — populated by JS -->
+        <!-- Most Frequent Card -->
         <section class="most-frequent">
             <div class="most-frequent__body">
                 <span class="most-frequent__label">Most Frequent</span>
@@ -108,11 +107,16 @@
         <!-- Content Grid -->
         <div class="content-grid">
 
-            <!-- Left: Search History Panel — "View All" removed per requirements -->
+            <!-- Left: Search History Panel -->
+            <!--
+                CHANGE v4.0: "View All" link removed from panel__header
+                as per requirements. The panel shows up to 20 searches
+                across paginated pages (8 per page).
+            -->
             <section class="history-panel">
                 <div class="panel__header">
                     <h2 class="panel__title">Search History</h2>
-                    <!-- "View All" link removed -->
+                    <!-- View All intentionally removed -->
                 </div>
 
                 <div class="history-table__head">
@@ -121,7 +125,7 @@
                     <span>Date</span>
                 </div>
 
-                <!-- Rows injected by JS -->
+                <!-- Rows injected by UserHistory.js -->
                 <ul class="history-table__body" id="historyTableBody">
                     <li class="history-row history-row--empty">
                         <div class="history-row__query">
@@ -142,7 +146,7 @@
             <!-- Right: Last Search + Prescription Vault -->
             <aside class="right-col">
 
-                <!-- Last Search — populated by JS -->
+                <!-- Last Search Card — populated by JS -->
                 <div class="info-card">
                     <div class="info-card__icon">
                         <i class="fa-solid fa-clock-rotate-left"></i>
@@ -153,21 +157,24 @@
                     </div>
                 </div>
 
-                <!-- Prescription Vault -->
+                <!--
+                    Prescription Vault Card
+                    CHANGE v4.0:
+                    • vault-grid now has id="vaultGrid" so JS can inject real data.
+                    • Static placeholder items removed.
+                    • "View All Files" button removed.
+                    • JS renders up to 5 clickable prescription cards here.
+                    • Each card opens a lightbox modal with the prescription image.
+                -->
                 <div class="vault-card">
                     <h3 class="vault-card__title">Prescription Vault</h3>
-                    <div class="vault-grid">
-                        <div class="vault-item vault-item--gray">
-                            <i class="fa-solid fa-file-prescription"></i>
-                        </div>
-                        <div class="vault-item vault-item--cream">
-                            <i class="fa-regular fa-file-lines"></i>
-                        </div>
-                        <div class="vault-item vault-item--gray vault-item--sm">
-                            <i class="fa-regular fa-file"></i>
+                    <!-- Real prescription cards injected by UserHistory.js -->
+                    <div class="vault-grid" id="vaultGrid">
+                        <!-- Loading skeleton -->
+                        <div class="vault-rx-card vault-rx-card--loading">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
                         </div>
                     </div>
-                    <button class="vault-card__btn">View All Files</button>
                 </div>
 
             </aside>
