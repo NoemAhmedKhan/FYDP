@@ -375,6 +375,64 @@
 
        Close: × button, backdrop click, or Escape.
        ============================================= */
+    /* =============================================
+       10-B. FORCE DOWNLOAD VIA BLOB
+       ─────────────────────────────────────────────
+       WHY: The HTML5 `download` attribute on <a>
+       only works for same-origin URLs. Supabase
+       Storage is on a different domain (*.supabase.co)
+       so the browser ignores `download` and just
+       navigates to the file instead of saving it.
+
+       FIX: Fetch the file as a blob, create a
+       temporary object URL (same-origin by definition),
+       then programmatically click an invisible <a>
+       with that blob URL + the filename set via
+       `download`. Revoke the object URL afterwards.
+
+       Shows a brief "Downloading…" state on the
+       button so the user knows something is happening.
+       ============================================= */
+    async function downloadPrescription(url, fileName, buttonEl) {
+        // Update button UI to show progress
+        const originalHTML = buttonEl ? buttonEl.innerHTML : '';
+        if (buttonEl) {
+            buttonEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            buttonEl.disabled  = true;
+            buttonEl.title     = 'Downloading…';
+        }
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+            const blob      = await response.blob();
+            const objectUrl = URL.createObjectURL(blob);
+
+            // Create invisible anchor, click it, then clean up
+            const anchor      = document.createElement('a');
+            anchor.href       = objectUrl;
+            anchor.download   = fileName || 'prescription';
+            anchor.style.cssText = 'position:fixed;left:-9999px;visibility:hidden;';
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+
+            // Revoke object URL after a short delay (let browser start download)
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+
+        } catch (err) {
+            console.error('Download failed:', err.message);
+            alert('Download failed. Please try again or open the image and save it manually.');
+        } finally {
+            if (buttonEl) {
+                buttonEl.innerHTML = originalHTML;
+                buttonEl.disabled  = false;
+                buttonEl.title     = 'Download prescription';
+            }
+        }
+    }
+
     function openPrescriptionModal(url, fileName, dateStr) {
         // Remove any existing modal first
         const existing = document.getElementById('rxModal');
@@ -385,6 +443,11 @@
         const modal     = document.createElement('div');
         modal.id        = 'rxModal';
         modal.className = 'rx-modal';
+
+        /* NOTE: The download button is a <button> (not <a>) —
+           its click handler calls downloadPrescription() which
+           uses the fetch→blob technique to force a true file
+           download even for cross-origin Supabase Storage URLs. */
         modal.innerHTML = `
             <div class="rx-modal__backdrop"></div>
             <div class="rx-modal__box" role="dialog" aria-modal="true" aria-label="${escapeHtml(fileName)}">
@@ -395,14 +458,13 @@
                     </div>
                     <div class="rx-modal__meta">${escapeHtml(dateStr)}</div>
                     <div class="rx-modal__actions">
-                        <!-- Download button — triggers native browser download -->
-                        <a href="${escapeHtml(url)}"
-                           download="${escapeHtml(fileName)}"
-                           class="rx-modal__download-btn"
-                           title="Download prescription"
-                           aria-label="Download prescription">
+                        <!-- Download button — uses blob technique for cross-origin download -->
+                        <button class="rx-modal__download-btn"
+                                id="rxDownloadBtn"
+                                title="Download prescription"
+                                aria-label="Download prescription">
                             <i class="fa-solid fa-download"></i>
-                        </a>
+                        </button>
                         <button class="rx-modal__close" id="rxModalClose" aria-label="Close">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
@@ -414,11 +476,9 @@
                         : `<div class="rx-modal__no-preview">
                                 <i class="fa-solid fa-file-lines"></i>
                                 <p>Preview not available for this file type.</p>
-                                <a href="${escapeHtml(url)}"
-                                   download="${escapeHtml(fileName)}"
-                                   class="rx-modal__download-link">
+                                <button class="rx-modal__download-link" id="rxDownloadLink">
                                     <i class="fa-solid fa-download"></i> Download File
-                                </a>
+                                </button>
                            </div>`
                     }
                 </div>
@@ -426,6 +486,13 @@
 
         document.body.appendChild(modal);
         document.body.style.overflow = 'hidden';
+
+        // Attach blob-download handler to the download button(s)
+        const dlBtn  = document.getElementById('rxDownloadBtn');
+        const dlLink = document.getElementById('rxDownloadLink');
+
+        if (dlBtn)  dlBtn.addEventListener('click',  () => downloadPrescription(url, fileName, dlBtn));
+        if (dlLink) dlLink.addEventListener('click', () => downloadPrescription(url, fileName, dlLink));
 
         // Close handlers
         const close = () => {
