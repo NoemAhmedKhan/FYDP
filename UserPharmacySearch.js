@@ -1532,7 +1532,6 @@
         // Atomic prune — keeps only 5 most-recent prescriptions per user
         await supabaseClient.rpc('prune_prescriptions', { p_user_id: userId });
     }
-
     /* =============================================
        36. SCANNING OVERLAY — show/update/hide
        ─────────────────────────────────────────────
@@ -1558,7 +1557,6 @@
             document.getElementById('scanPct').textContent  = pct + '%';
         }
     }
-
     function updateScanningOverlay(pct, label) {
         const lEl = document.getElementById('scanLabel');
         const pEl = document.getElementById('scanPct');
@@ -1589,5 +1587,4 @@
     /* ─── INIT ─── */
     initPage();
     autoSearchFromUrl();
-
 })();
