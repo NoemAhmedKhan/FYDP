@@ -572,13 +572,11 @@ ul { list-style:none; }
     font-size: 32px;
     color: var(--green);
 }
-
 .scan-overlay__label {
     font-size: 15px;
     font-weight: var(--fw-m);
     color: var(--dark);
 }
-
 .scan-overlay__pct {
     font-size: 28px;
     font-weight: var(--fw-b);
