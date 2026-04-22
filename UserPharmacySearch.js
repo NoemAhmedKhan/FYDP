@@ -1246,11 +1246,13 @@
         'i'
     );
 
-    /* Regex: matches a line that is ONLY noise (digits, units, arabic, punct) */
-    const NOISE_LINE_RE = /^[\d\s\.\,\-\+\/\\\(\)\[\]%مرات يومياًصباحاًمساءًبعدقبلالأكلوجبات]+$/u;
+    /* Regex: matches a line that is ONLY noise (digits, units, punctuation, arabic).
+       Uses Unicode code-point ranges for Arabic instead of inline Arabic chars
+       so the regex is valid in both normal and strict unicode regex modes. */
+    const NOISE_LINE_RE = /^[\d\s.,+/\\()[\]%\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF-]+$/;
 
     /* Regex: strip trailing dosage info — e.g. "500mg", "20 ml", "1/2 tab" */
-    const TRAILING_DOSE_RE = /[\s\-]+\d[\d\s\/\.]*\s*(?:mg|mcg|ml|g|iu|units?|tab[s]?|cap[s]?|drop[s]?)[\s\d]*$/i;
+    const TRAILING_DOSE_RE = /[\s-]+\d[\d\s/.]*\s*(?:mg|mcg|ml|g|iu|units?|tabs?|caps?|drops?)[\s\d]*$/i;
 
     async function extractMedicineNames(rawText) {
         if (!rawText || !rawText.trim()) return [];
