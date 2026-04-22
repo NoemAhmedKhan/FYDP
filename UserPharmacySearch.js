@@ -1134,100 +1134,42 @@
     }
 
     /* =============================================
+    /* =============================================
        33. EXTRACT MEDICINE NAMES FROM OCR TEXT
        ─────────────────────────────────────────────
-       COMPLETE REWRITE in v5.1 — intelligent
-       prescription line parser replacing the broken
-       N-gram approach.
+       4-phase intelligent prescription parser.
 
-       ROOT CAUSE OF OLD APPROACH'S FAILURE:
-         N-grams of ALL tokens (including "SYP", "TAB",
-         "2", dosage numbers, Arabic text fragments,
-         patient info words) were queried with ilike
-         against the entire stock, producing 25+
-         unrelated false-positive matches.
+       PHASE 1 — Line filtering
+         Split OCR into lines. Discard: pure digit/
+         punctuation/arabic lines, lines with fewer
+         than 3 Latin chars, known header lines
+         (Patient Name, Gender, Age, City etc.).
 
-       NEW STRATEGY — 4-phase pipeline:
+       PHASE 2 — Medicine line detection
+         Lines starting with a dosage-form keyword
+         (SYP, TAB, CAP, EYE, INJ, DROPS…) have
+         the prefix stripped to isolate the name.
+         Lines with ≥1 all-caps token are candidates.
 
-       PHASE 1 — OCR LINE EXTRACTION
-         Split raw OCR text into lines. Each line is
-         processed independently. Lines shorter than
-         3 chars or consisting only of digits/symbols
-         are discarded immediately.
+       PHASE 3 — Name normalisation
+         Hyphens/dots → spaces. Trailing Arabic/
+         non-Latin chars stripped. Trailing dose
+         units (500mg, 20ml) stripped from end.
 
-       PHASE 2 — PRESCRIPTION LINE DETECTION
-         A prescription line almost always starts with
-         a dosage-form keyword (SYP, TAB, CAP, INJ,
-         EYE, EAR, GEL, CRM, SUPP, SUSP, SOL, LOT,
-         OIN, OINT, DROPS, SYRUP, TABLET, CAPSULE,
-         INJECTION…) followed by the medicine name.
-         We detect these prefix patterns and STRIP them
-         to isolate the raw medicine name token.
+       PHASE 4 — 3-tier fuzzy DB matching
+         A: exact prefix ilike match (most precise)
+         B: ALL significant words must appear in
+            product_name (AND logic across words)
+         C: first word only, scored by word-overlap
+         Results returned in prescription line order.
 
-         Lines NOT starting with these keywords are
-         also considered as fallback candidates if they
-         contain ≥ 2 capitalised words (typical of
-         medicine brand names like "PANADOL EXTRA").
-
-       PHASE 3 — NAME NORMALISATION
-         Each extracted name candidate is normalised:
-         • Remove hyphens/dots between words → spaces
-           ("PANADOL-EXTRA" → "PANADOL EXTRA")
-         • Collapse multiple spaces
-         • Remove trailing dosage noise (numbers + units
-           like "500mg", "20ml") from the END only —
-           keep the brand name intact
-         • Strip trailing Roman numerals (I, II, III)
-           that OCR sometimes appends
-         • Lowercase for matching
-
-       PHASE 4 — FUZZY DB MATCHING (smart ilike)
-         For each normalised candidate we run up to 3
-         progressively broader Supabase queries:
-
-         Query A — exact normalised name prefix:
-           ilike 'candidate%'  (highest precision)
-
-         Query B — each significant word (≥4 chars)
-           individually, keeping only DB results whose
-           product_name contains ALL significant words
-           from the candidate (AND logic, not OR).
-           This handles:
-             "PANADOL EXTRA" → matches "Panadol Extra
-              Tablets 500mg" because both "panadol" and
-              "extra" appear in the product name.
-
-         Query C — first word only (≥4 chars) as
-           broader fallback. Results ranked by how
-           many candidate words appear in the DB name.
-           Only the best-scoring result is kept from
-           this query to avoid noise.
-
-         De-duplication: once a DB product_name is
-         matched by any candidate, it is added to a
-         "seen" set so the same product never appears
-         twice in the final list even if multiple OCR
-         lines reference it.
-
-       RESULT ORDERING:
-         Medicines are returned in the order their
-         prescription lines appear in the OCR output
-         (top-to-bottom reading order), which matches
-         the doctor's intended prescription sequence.
-
-       HANDLES GRACEFULLY:
-         • "PANADOL-EXTRA" → "Panadol Extra Tablets"
-         • "KOLAC" → "Kolac Syrup" / "Kolac Tablets"
-         • "BABYNOL" → "Babynol Drops" / "Babynol Syrup"
-         • Mixed case: panadol extra, PANADOL EXTRA
-         • Typos: "PANODOL" → still matches via word B
-         • Arabic text lines: discarded in Phase 1
-         • Patient name / date lines: discarded (no
-           dosage-form keyword, no cap words)
-         • Dose instructions ("2 مرات يومياً"): discarded
+       Handles: PANADOL-EXTRA → "Panadol Extra Tablets"
+                KOLAC → "Kolac Syrup"
+                BABYNOL → "Babynol Drops"
+                Mixed case, hyphens, trailing Arabic
        ============================================= */
 
-    /* ── Dosage-form prefix keywords to strip ── */
+    /* Dosage-form prefixes to detect + strip from prescription lines */
     const RX_PREFIXES = [
         'SYRUP', 'SYP', 'TABLET', 'TAB', 'CAPSULE', 'CAP', 'CAPS',
         'INJECTION', 'INJ', 'EYE DROPS', 'EAR DROPS', 'EYE', 'EAR',
@@ -1238,69 +1180,86 @@
         'NASAL', 'TOPICAL', 'ORAL', 'IV', 'IM', 'SC',
     ];
 
-    /* Regex: matches a line starting with a dosage-form prefix */
+    /* Matches a prescription line that starts with a dosage-form keyword */
     const RX_PREFIX_RE = new RegExp(
-        '^\\s*(?:R\\/|Rx\\.?|R:)?\\s*(' +
-        RX_PREFIXES.map(p => p.replace(/\s+/g, '\\s+')).join('|') +
-        ')[.:\\s]+',
+        '^\s*(?:R\/|Rx\.?|R:)?\s*(' +
+        RX_PREFIXES.map(function(p) { return p.replace(/\s+/g, '\\s+'); }).join('|') +
+        ')[.:\s]+',
         'i'
     );
 
-    /* Regex: matches a line that is ONLY noise (digits, units, punctuation, arabic).
-       Uses Unicode code-point ranges for Arabic instead of inline Arabic chars
-       so the regex is valid in both normal and strict unicode regex modes. */
-    const NOISE_LINE_RE = /^[\d\s.,+/\\()[\]%\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF-]+$/;
+    /* Matches lines that are ONLY noise: digits, punctuation, Arabic unicode ranges.
+       Uses unicode code-point ranges so no /u flag needed (avoids strict-mode errors). */
+    const NOISE_LINE_RE = new RegExp(
+        '^[\\d\\s\\.,\\+\\-\\/\\\\\\(\\)\\[\\]\\%' +
+        '\\u0600-\\u06FF\\u0750-\\u077F\\uFB50-\\uFDFF\\uFE70-\\uFEFF' +
+        ']+$'
+    );
 
-    /* Regex: strip trailing dosage info — e.g. "500mg", "20 ml", "1/2 tab" */
-    const TRAILING_DOSE_RE = /[\s-]+\d[\d\s/.]*\s*(?:mg|mcg|ml|g|iu|units?|tabs?|caps?|drops?)[\s\d]*$/i;
+    /* Strips trailing dose info: " 500mg", " 20ml", " 1/2 tab" etc. */
+    const TRAILING_DOSE_RE = new RegExp(
+        '[\\s\\-]+\\d[\\d\\s\\.\\/]*\\s*' +
+        '(?:mg|mcg|ml|g|iu|units?|tabs?|caps?|drops?)' +
+        '[\\s\\d]*$',
+        'i'
+    );
+
+    /* Common prescription header words — lines starting with these are skipped */
+    const HEADER_LINE_RE = new RegExp(
+        '^\s*(?:patient|name|gender|age|weight|height|b\.?p\.?|pulse|temp|' +
+        'city|date|address|dr\.|doctor|hospital|clinic|phone|tel|' +
+        'ref|diagnosis|clinical|tests?|investigation|vitals?|male|female|rx\b|' +
+        '\d{2,}[\\/\-]\d{2,})',
+        'i'
+    );
 
     async function extractMedicineNames(rawText) {
         if (!rawText || !rawText.trim()) return [];
 
-        /* ── PHASE 1: split into lines, discard garbage ── */
-        const lines = rawText
-            .split(/\r?\n/)
-            .map(l => l.trim())
-            .filter(l => l.length >= 3)
-            .filter(l => !NOISE_LINE_RE.test(l))
-            // Discard lines that are mostly non-latin (Arabic / Urdu OCR noise)
-            .filter(l => {
-                const latinChars = (l.match(/[a-zA-Z]/g) || []).length;
-                return latinChars >= 3;
-            });
+        /* ── PHASE 1: filter lines ── */
+        var allLines = rawText.split(/\r?\n/);
+        var filteredLines = [];
+        for (var fi = 0; fi < allLines.length; fi++) {
+            var l = allLines[fi].trim();
+            if (l.length < 3) continue;
+            if (NOISE_LINE_RE.test(l)) continue;
+            if (HEADER_LINE_RE.test(l)) continue;
+            var latinCount = (l.match(/[a-zA-Z]/g) || []).length;
+            if (latinCount < 3) continue;
+            filteredLines.push(l);
+        }
 
-        if (lines.length === 0) return [];
+        if (filteredLines.length === 0) return [];
 
-        /* ── PHASE 2: extract candidate medicine name from each line ── */
-        const candidates = [];
+        /* ── PHASE 2 + 3: extract and normalise candidates ── */
+        var candidates = [];
+        for (var li = 0; li < filteredLines.length; li++) {
+            var line = filteredLines[li];
+            var candidate = null;
 
-        for (const line of lines) {
-            let candidate = null;
-
-            // Check if line starts with a dosage-form prefix
-            const prefixMatch = line.match(RX_PREFIX_RE);
+            var prefixMatch = line.match(RX_PREFIX_RE);
             if (prefixMatch) {
-                // Strip the prefix, keep the rest as the medicine name candidate
+                /* Line starts with SYP/TAB/CAP etc. — strip prefix, keep name */
                 candidate = line.slice(prefixMatch[0].length).trim();
             } else {
-                // Fallback: check if line has ≥ 2 capitalised word tokens
-                // (typical of medicine brand names: "PANADOL EXTRA", "BABY NOL")
-                const upperWords = (line.match(/\b[A-Z][A-Z\d\-]{2,}\b/g) || []);
-                if (upperWords.length >= 1) {
+                /* Fallback: line with at least one all-caps token (brand name) */
+                var capsWords = line.match(/\b[A-Z][A-Z\d\-]{2,}\b/g) || [];
+                if (capsWords.length >= 1) {
                     candidate = line.trim();
                 }
             }
 
             if (!candidate || candidate.length < 3) continue;
 
-            /* ── PHASE 3: normalise the candidate ── */
+            /* Normalise: hyphens→spaces, collapse spaces, strip trailing arabic,
+               strip trailing dose units */
             candidate = candidate
-                .replace(/[-\.]/g, ' ')           // hyphens/dots → spaces
-                .replace(/\s+/g, ' ')              // collapse spaces
-                .replace(TRAILING_DOSE_RE, '')     // strip trailing dose info
+                .replace(/[-\.]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .replace(TRAILING_DOSE_RE, '')
+                .replace(/[^a-zA-Z0-9\s]+.*$/, '')
                 .trim();
 
-            // Discard very short or purely numeric candidates after normalisation
             if (candidate.length < 3) continue;
             if (/^\d+$/.test(candidate)) continue;
 
@@ -1309,93 +1268,96 @@
 
         if (candidates.length === 0) return [];
 
-        /* ── PHASE 4: fuzzy DB matching for each candidate ── */
-        const seenProducts = new Set(); // deduplicate across all candidates
-        const orderedNames = [];        // preserve prescription line order
+        /* ── PHASE 4: fuzzy DB matching (sequential for history race safety) ── */
+        var seenProducts = {};
+        var orderedNames = [];
 
-        // Process candidates sequentially to keep prescription order
-        for (const candidate of candidates) {
-            const normalised = candidate.toLowerCase().trim();
+        /* Stop words excluded from significant-word matching */
+        var STOP_WORDS = { 'with':1,'and':1,'the':1,'for':1,'tabs':1,'caps':1,'syp':1,'tab':1,'cap':1 };
 
-            // Significant words: ≥ 4 chars, not common noise words
-            const STOP_WORDS = new Set(['with','and','the','for','tabs','caps','syp','tab','cap']);
-            const sigWords = normalised
-                .split(/\s+/)
-                .filter(w => w.length >= 4 && !STOP_WORDS.has(w));
+        for (var ci = 0; ci < candidates.length; ci++) {
+            var candidate = candidates[ci];
+            var normalised = candidate.toLowerCase().trim();
 
+            /* Significant words: ≥4 chars, not stop words */
+            var allWords = normalised.split(/\s+/);
+            var sigWords = [];
+            for (var wi = 0; wi < allWords.length; wi++) {
+                var w = allWords[wi];
+                if (w.length >= 4 && !STOP_WORDS[w]) sigWords.push(w);
+            }
             if (sigWords.length === 0) continue;
 
-            let matched = null;
+            var matched = null;
 
-            /* ── Query A: prefix match (most precise) ── */
+            /* Query A: prefix match — most precise */
             try {
-                const { data: dataA } = await supabaseClient
+                var resA = await supabaseClient
                     .from('Pharmacy Data')
                     .select(COL.product_name)
-                    .ilike(COL.product_name, `${normalised}%`)
+                    .ilike(COL.product_name, normalised + '%')
                     .gt(COL.quantity, 0)
                     .limit(3);
-
-                if (dataA && dataA.length > 0) {
-                    matched = dataA[0][COL.product_name];
+                if (resA.data && resA.data.length > 0) {
+                    matched = resA.data[0][COL.product_name];
                 }
-            } catch (_) { /* continue to Query B */ }
+            } catch (_) { /* fall through to Query B */ }
 
-            /* ── Query B: ALL significant words must appear in product name ── */
+            /* Query B: all significant words must appear in product_name (AND) */
             if (!matched && sigWords.length >= 1) {
                 try {
-                    // Build an OR filter for all sig words, then client-filter for AND
-                    const orFilter = sigWords
-                        .map(w => `${COL.product_name}.ilike.%${w}%`)
-                        .join(',');
-
-                    const { data: dataB } = await supabaseClient
+                    var orParts = sigWords.map(function(w) {
+                        return COL.product_name + '.ilike.%' + w + '%';
+                    });
+                    var resB = await supabaseClient
                         .from('Pharmacy Data')
                         .select(COL.product_name)
-                        .or(orFilter)
+                        .or(orParts.join(','))
                         .gt(COL.quantity, 0)
                         .limit(50);
-
-                    if (dataB && dataB.length > 0) {
-                        // Client-side AND filter: product must contain ALL sig words
-                        const andMatch = dataB.find(row => {
-                            const pn = (row[COL.product_name] || '').toLowerCase();
-                            return sigWords.every(w => pn.includes(w));
-                        });
-                        if (andMatch) matched = andMatch[COL.product_name];
+                    if (resB.data && resB.data.length > 0) {
+                        for (var ri = 0; ri < resB.data.length; ri++) {
+                            var pn = (resB.data[ri][COL.product_name] || '').toLowerCase();
+                            var allMatch = true;
+                            for (var si = 0; si < sigWords.length; si++) {
+                                if (pn.indexOf(sigWords[si]) === -1) { allMatch = false; break; }
+                            }
+                            if (allMatch) { matched = resB.data[ri][COL.product_name]; break; }
+                        }
                     }
-                } catch (_) { /* continue to Query C */ }
+                } catch (_) { /* fall through to Query C */ }
             }
 
-            /* ── Query C: first significant word only (broadest fallback) ── */
+            /* Query C: first significant word, scored by overlap — broadest fallback */
             if (!matched && sigWords[0] && sigWords[0].length >= 4) {
                 try {
-                    const { data: dataC } = await supabaseClient
+                    var resC = await supabaseClient
                         .from('Pharmacy Data')
                         .select(COL.product_name)
-                        .ilike(COL.product_name, `%${sigWords[0]}%`)
+                        .ilike(COL.product_name, '%' + sigWords[0] + '%')
                         .gt(COL.quantity, 0)
                         .limit(20);
-
-                    if (dataC && dataC.length > 0) {
-                        // Score each result: count how many sig words appear in it
-                        const scored = dataC.map(row => {
-                            const pn = (row[COL.product_name] || '').toLowerCase();
-                            const score = sigWords.filter(w => pn.includes(w)).length;
-                            return { name: row[COL.product_name], score };
-                        });
-                        // Only keep if at least 1 sig word matched
-                        scored.sort((a, b) => b.score - a.score);
-                        if (scored[0].score >= 1) matched = scored[0].name;
+                    if (resC.data && resC.data.length > 0) {
+                        var best = null;
+                        var bestScore = 0;
+                        for (var ri2 = 0; ri2 < resC.data.length; ri2++) {
+                            var pn2 = (resC.data[ri2][COL.product_name] || '').toLowerCase();
+                            var score = 0;
+                            for (var si2 = 0; si2 < sigWords.length; si2++) {
+                                if (pn2.indexOf(sigWords[si2]) !== -1) score++;
+                            }
+                            if (score > bestScore) { bestScore = score; best = resC.data[ri2][COL.product_name]; }
+                        }
+                        if (bestScore >= 1) matched = best;
                     }
                 } catch (_) { /* no match for this candidate */ }
             }
 
-            // Add to ordered list if found and not already included
+            /* Add to results if found and not a duplicate */
             if (matched) {
-                const key = matched.toLowerCase().trim();
-                if (!seenProducts.has(key)) {
-                    seenProducts.add(key);
+                var key = matched.toLowerCase().trim();
+                if (!seenProducts[key]) {
+                    seenProducts[key] = true;
                     orderedNames.push(matched);
                 }
             }
