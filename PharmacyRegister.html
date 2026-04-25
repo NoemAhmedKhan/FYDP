@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - Register Pharmacy</title>
+    <link rel="stylesheet" href="PharmacyRegister.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- ── Header ── -->
+    <header class="site-header">
+        <div class="logo">
+            <img src="Images/Logo.png" alt="MediFinder Logo" class="logo-img">
+            <span class="logo-text">MediFinder</span>
+        </div>
+        <a href="index.html" class="btn-back-home">
+            <i class="fa-solid fa-arrow-left"></i> Back Home
+        </a>
+    </header>
+
+    <div class="page-container">
+
+        <!-- ── Left Panel ── -->
+        <aside class="left-panel">
+            <div class="left-content">
+                <div class="left-icon-wrap">
+                    <i class="fa-solid fa-hospital-user left-hero-icon"></i>
+                </div>
+                <h1>Register Your Pharmacy</h1>
+                <p>Join the MediFinder network and connect with thousands of patients looking for medicines near them.</p>
+
+                <ul class="benefit-list">
+                    <li>
+                        <span class="benefit-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <span>Appear in patient medicine searches</span>
+                    </li>
+                    <li>
+                        <span class="benefit-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
+                        <span>Manage your medicines inventory online</span>
+                    </li>
+                    <li>
+                        <span class="benefit-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                        <span>Receive near-expiry alerts</span>
+                    </li>
+                    <li>
+                        <span class="benefit-icon"><i class="fa-solid fa-chart-line"></i></span>
+                        <span>Get demand insights</span>
+                    </li>
+                    <li>
+                        <span class="benefit-icon"><i class="fa-solid fa-tags"></i></span>
+                        <span>Optimize pricing with smart suggestions</span>
+                    </li>
+                    <li>
+                        <span class="benefit-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                        <span>Build trust with verified pharmacy badge</span>
+                    </li>
+                </ul>
+
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <span class="stat-num">500+</span>
+                        <span class="stat-label">Pharmacies</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-num">50K+</span>
+                        <span class="stat-label">Patients</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-num">100+</span>
+                        <span class="stat-label">Cities</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ── Right Panel ── -->
+        <main class="right-panel">
+            <div class="register-wrapper">
+                <div class="form-header">
+                    <h2>Pharmacy Registration</h2>
+                    <p class="subtitle">Fill in the details below to get your pharmacy listed on MediFinder.</p>
+                </div>
+
+                <!-- Step Progress -->
+                <div class="step-progress" role="progressbar" aria-valuemin="1" aria-valuemax="3">
+                    <div class="step-item active" id="step-ind-1">
+                        <div class="step-circle"><span class="step-num">1</span><i class="fa-solid fa-check step-check"></i></div>
+                        <span class="step-label">Basic Info</span>
+                    </div>
+                    <div class="step-connector" id="line-1"></div>
+                    <div class="step-item" id="step-ind-2">
+                        <div class="step-circle"><span class="step-num">2</span><i class="fa-solid fa-check step-check"></i></div>
+                        <span class="step-label">Location</span>
+                    </div>
+                    <div class="step-connector" id="line-2"></div>
+                    <div class="step-item" id="step-ind-3">
+                        <div class="step-circle"><span class="step-num">3</span><i class="fa-solid fa-check step-check"></i></div>
+                        <span class="step-label">Account</span>
+                    </div>
+                </div>
+
+                <form class="register-form" id="pharmacy-form" novalidate>
+
+                    <!-- ════════════════════════════
+                         STEP 1 — Basic Info
+                    ════════════════════════════ -->
+                    <div class="form-step" id="step-1">
+
+                        <div class="section-label">
+                            <i class="fa-solid fa-store"></i> Pharmacy Details
+                        </div>
+
+                        <!-- Pharmacy Name -->
+                        <div class="form-group">
+                            <label for="pharmacy-name">Pharmacy Name <span class="required">*</span></label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-store input-icon"></i>
+                                <input type="text" id="pharmacy-name" class="form-control has-icon"
+                                    placeholder="e.g. Al-Shifa Pharmacy" required autocomplete="organization">
+                            </div>
+                            <span class="error-msg" id="err-pharmacy-name"></span>
+                        </div>
+
+                        <!-- Owner Name + Phone -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="owner-name">Owner / Manager Name <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-user input-icon"></i>
+                                    <input type="text" id="owner-name" class="form-control has-icon"
+                                        placeholder="Full name" required autocomplete="name">
+                                </div>
+                                <span class="error-msg" id="err-owner-name"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="phone">Phone Number <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-phone input-icon"></i>
+                                    <input type="tel" id="phone" class="form-control has-icon"
+                                        placeholder="e.g. 03001234567 or +923001234567" required autocomplete="tel">
+                                </div>
+                                <span class="error-msg" id="err-phone"></span>
+                                <small class="helper-text">Start with 0 (11 digits) or +92 (13 digits). No spaces or dashes.</small>
+                            </div>
+                        </div>
+
+                        <!-- License No + Reg No -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="license-no">Drug License No <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-id-card input-icon"></i>
+                                    <input type="text" id="license-no" class="form-control has-icon"
+                                        placeholder="e.g. DL-2024-00123" required>
+                                </div>
+                                <span class="error-msg" id="err-license-no"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="reg-no">Registration Number <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-hashtag input-icon"></i>
+                                    <input type="text" id="reg-no" class="form-control has-icon"
+                                        placeholder="e.g. REG-2024-00456" required>
+                                </div>
+                                <span class="error-msg" id="err-reg-no"></span>
+                            </div>
+                        </div>
+
+                        <!-- CNIC -->
+                        <div class="form-group">
+                            <label for="cnic">CNIC <span class="required">*</span></label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-fingerprint input-icon"></i>
+                                <input type="text" id="cnic" class="form-control has-icon"
+                                    placeholder="XXXXX-XXXXXXX-X" maxlength="15" required>
+                            </div>
+                            <span class="error-msg" id="err-cnic"></span>
+                            <small class="helper-text">Format: 42101-1234567-1</small>
+                        </div>
+
+                        <!-- Pharmacy Type + Operating Hours -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="pharmacy-type">Pharmacy Type <span class="required">*</span></label>
+                                <div class="select-wrapper">
+                                    <select id="pharmacy-type" class="form-control form-select" required>
+                                        <option value="" disabled selected>Select type</option>
+                                        <option value="retail">Retail Pharmacy</option>
+                                        <option value="hospital">Hospital Pharmacy</option>
+                                        <option value="compounding">Compounding Pharmacy</option>
+                                        <option value="online">Online / Delivery Only</option>
+                                        <option value="wholesale">Wholesale Pharmacy</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down select-arrow"></i>
+                                </div>
+                                <span class="error-msg" id="err-pharmacy-type"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="operating-hours">Operating Hours <span class="required">*</span></label>
+                                <div class="select-wrapper">
+                                    <select id="operating-hours" class="form-control form-select" required>
+                                        <option value="" disabled selected>Select hours</option>
+                                        <option value="24_7">24/7</option>
+                                        <option value="8am_12am">8 AM – 12 AM</option>
+                                        <option value="custom">Custom Hours</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down select-arrow"></i>
+                                </div>
+                                <span class="error-msg" id="err-operating-hours"></span>
+                            </div>
+                        </div>
+
+                        <!-- Custom Hours (shown only when custom is selected) -->
+                        <div class="form-row hidden" id="custom-hours-row">
+                            <div class="form-group">
+                                <label for="custom-open">Opening Time <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <i class="fa-regular fa-clock input-icon"></i>
+                                    <input type="time" id="custom-open" class="form-control has-icon">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="custom-close">Closing Time <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <i class="fa-regular fa-clock input-icon"></i>
+                                    <input type="time" id="custom-close" class="form-control has-icon">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Delivery Available -->
+                        <div class="form-group">
+                            <label class="field-label">Delivery Available? <span class="required">*</span></label>
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="delivery" value="yes" checked>
+                                    <span class="radio-custom"></span>
+                                    <i class="fa-solid fa-truck-fast"></i> Yes, we deliver
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="delivery" value="no">
+                                    <span class="radio-custom"></span>
+                                    <i class="fa-solid fa-store-slash"></i> No delivery
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn-next" id="btn-next-1">
+                            Next: Location <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <!-- ════════════════════════════
+                         STEP 2 — Location
+                    ════════════════════════════ -->
+                    <div class="form-step hidden" id="step-2">
+
+                        <div class="section-label">
+                            <i class="fa-solid fa-location-dot"></i> Location Details
+                        </div>
+
+                        <!-- Province + City -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="province">Province <span class="required">*</span></label>
+                                <div class="select-wrapper">
+                                    <select id="province" class="form-control form-select" required>
+                                        <option value="" disabled selected>Select province</option>
+                                        <option value="Punjab">Punjab</option>
+                                        <option value="Sindh">Sindh</option>
+                                        <option value="KPK">Khyber Pakhtunkhwa</option>
+                                        <option value="Balochistan">Balochistan</option>
+                                        <option value="ICT">Islamabad Capital Territory</option>
+                                        <option value="AJK">Azad Jammu & Kashmir</option>
+                                        <option value="GB">Gilgit-Baltistan</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down select-arrow"></i>
+                                </div>
+                                <span class="error-msg" id="err-province"></span>
+                            </div>
+                            <div class="form-group">
+                                <label for="city">City <span class="required">*</span></label>
+                                <div class="select-wrapper">
+                                    <select id="city" class="form-control form-select" required disabled>
+                                        <option value="" disabled selected>Select province first</option>
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down select-arrow"></i>
+                                </div>
+                                <span class="error-msg" id="err-city"></span>
+                            </div>
+                        </div>
+
+                        <!-- Street Address -->
+                        <div class="form-group">
+                            <label for="address">Street Address <span class="required">*</span></label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-road input-icon"></i>
+                                <input type="text" id="address" class="form-control has-icon"
+                                    placeholder="Shop # / Street / Area" required>
+                            </div>
+                            <span class="error-msg" id="err-address"></span>
+                        </div>
+
+                        <!-- Nearby Landmark -->
+                        <div class="form-group">
+                            <label for="landmark">Nearby Landmark <span class="optional-tag">Optional</span></label>
+                            <div class="input-wrapper">
+                                <i class="fa-solid fa-map-pin input-icon"></i>
+                                <input type="text" id="landmark" class="form-control has-icon"
+                                    placeholder="e.g. Near City Hospital, Blue Area">
+                            </div>
+                        </div>
+
+                        <!-- GPS Coordinates -->
+                        <div class="form-group">
+                            <label for="coordinates">
+                                GPS Coordinates <span class="required">*</span>
+                                <button type="button" class="btn-locate" id="btn-locate" title="Auto-detect location">
+                                    <i class="fa-solid fa-location-crosshairs"></i> Detect My Location
+                                </button>
+                            </label>
+                            <input type="text" id="coordinates" class="form-control"
+                                placeholder="Click 'Detect My Location' or enter manually" required>
+                            <small class="helper-text" id="coord-helper">
+                                <i class="fa-solid fa-circle-info"></i> Used to show your pharmacy on the map for nearby patients.
+                            </small>
+                        </div>
+
+                        <div class="btn-row">
+                            <button type="button" class="btn-back" id="btn-back-2">
+                                <i class="fa-solid fa-arrow-left"></i> Back
+                            </button>
+                            <button type="button" class="btn-next" id="btn-next-2">
+                                Next: Account <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ════════════════════════════
+                         STEP 3 — Account
+                    ════════════════════════════ -->
+                    <div class="form-step hidden" id="step-3">
+
+                        <div class="section-label">
+                            <i class="fa-solid fa-lock"></i> Account Credentials
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group">
+                            <label for="email">Email Address <span class="required">*</span></label>
+                            <div class="input-wrapper">
+                                <i class="fa-regular fa-envelope input-icon"></i>
+                                <input type="email" id="email" class="form-control has-icon"
+                                    placeholder="pharmacy@example.com" required autocomplete="email">
+                            </div>
+                            <span class="error-msg" id="err-email"></span>
+                        </div>
+
+                        <!-- Password + Confirm -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="password">Password <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-lock input-icon"></i>
+                                    <input type="password" id="password" class="form-control has-icon has-toggle"
+                                        placeholder="Create a password" required autocomplete="new-password">
+                                    <i class="fa-regular fa-eye-slash toggle-password" id="toggle-pass"></i>
+                                </div>
+                                <span class="error-msg" id="err-password"></span>
+                                <small class="helper-text">At least 8 characters.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm-password">Confirm Password <span class="required">*</span></label>
+                                <div class="input-wrapper">
+                                    <i class="fa-solid fa-lock input-icon"></i>
+                                    <input type="password" id="confirm-password" class="form-control has-icon has-toggle"
+                                        placeholder="Repeat password" required autocomplete="new-password">
+                                    <i class="fa-regular fa-eye-slash toggle-password" id="toggle-confirm"></i>
+                                </div>
+                                <span class="error-msg" id="err-confirm-password"></span>
+                            </div>
+                        </div>
+
+                        <!-- Documents -->
+                        <div class="section-label" style="margin-top: 8px;">
+                            <i class="fa-solid fa-file-medical"></i> Documents
+                        </div>
+
+                        <div class="docs-grid">
+                            <!-- Drug License -->
+                            <div class="form-group">
+                                <label>Drug License Document <span class="required">*</span></label>
+                                <div class="upload-area" id="upload-license" onclick="document.getElementById('license-doc').click()">
+                                    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                                    <p class="upload-text">Click to upload or drag & drop</p>
+                                    <p class="upload-hint">PDF, JPG, PNG — max 5 MB</p>
+                                    <input type="file" id="license-doc" accept=".pdf,.jpg,.jpeg,.png" hidden>
+                                    <span class="file-name" id="license-file-name"></span>
+                                </div>
+                                <span class="error-msg" id="err-license-doc"></span>
+                            </div>
+
+                            <!-- CNIC Document -->
+                            <div class="form-group">
+                                <label>CNIC Document <span class="required">*</span></label>
+                                <div class="upload-area" id="upload-cnic-doc" onclick="document.getElementById('cnic-doc').click()">
+                                    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                                    <p class="upload-text">Click to upload or drag & drop</p>
+                                    <p class="upload-hint">PDF, JPG, PNG — max 5 MB</p>
+                                    <input type="file" id="cnic-doc" accept=".pdf,.jpg,.jpeg,.png" hidden>
+                                    <span class="file-name" id="cnic-file-name"></span>
+                                </div>
+                                <span class="error-msg" id="err-cnic-doc"></span>
+                            </div>
+                        </div>
+
+                        <!-- Additional Documents -->
+                        <div class="form-group">
+                            <label>Additional Documents <span class="optional-tag">Optional</span></label>
+                            <div class="upload-area upload-area--multi" id="upload-extra" onclick="document.getElementById('extra-docs').click()">
+                                <i class="fa-solid fa-file-circle-plus upload-icon"></i>
+                                <p class="upload-text">Add more documents (optional)</p>
+                                <p class="upload-hint">PDF, JPG, PNG — max 5 MB each</p>
+                                <input type="file" id="extra-docs" accept=".pdf,.jpg,.jpeg,.png" multiple hidden>
+                                <span class="file-name" id="extra-file-names"></span>
+                            </div>
+                        </div>
+
+                        <!-- Terms -->
+                        <div class="terms-group">
+                            <input type="checkbox" id="terms" required>
+                            <label for="terms">
+                                I confirm all information is accurate and I agree to the
+                                <a href="#" class="link">Terms of Service</a> and
+                                <a href="#" class="link">Privacy Policy</a>.
+                            </label>
+                        </div>
+                        <span class="error-msg" id="err-terms"></span>
+
+                        <div class="btn-row">
+                            <button type="button" class="btn-back" id="btn-back-3">
+                                <i class="fa-solid fa-arrow-left"></i> Back
+                            </button>
+                            <button type="submit" class="btn-submit" id="btn-submit">
+                                <i class="fa-solid fa-check-circle"></i> Register Pharmacy
+                            </button>
+                        </div>
+
+                        <div class="login-prompt">
+                            <span>Already registered?</span>
+                            <a href="Login.html" class="login-link">Log In</a>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal-overlay hidden" id="success-modal">
+        <div class="modal-box">
+            <div class="modal-icon">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <h3>Registration Submitted!</h3>
+            <p>Thank you for registering your pharmacy on MediFinder. Please check your email and click the verification link. Your pharmacy will be reviewed and activated within 24–48 hours.</p>
+            <a href="index.html" class="btn-next" style="display:inline-flex;text-decoration:none;margin-top:8px;">Go to Home</a>
+        </div>
+    </div>
+
+    <!-- SUPABASE CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="PharmacyRegister.js"></script>
+</body>
+</html>
