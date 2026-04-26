@@ -146,9 +146,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     background: linear-gradient(145deg, var(--color-light-green) 0%, var(--color-forest-green) 60%, #155e2a 100%);
     color: white;
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
-    padding: 28px var(--spacing-lg);
+    padding: 24px 32px;
     position: sticky;
     top: var(--header-height);
     height: calc(100vh - var(--header-height));
@@ -182,11 +182,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .left-content {
     max-width: 380px;
     width: 100%;
+    height: 100%;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    justify-content: space-evenly;
+    gap: 0;
     position: relative;
     z-index: 1;
 }
@@ -228,17 +230,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
 }
 
 .benefit-list li {
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 0.82rem;
+    font-size: 0.81rem;
     opacity: 0.97;
     background: rgba(255,255,255,0.11);
-    padding: 8px 12px;
+    padding: 7px 11px;
     border-radius: var(--radius-md);
     border: 1px solid rgba(255,255,255,0.18);
     transition: var(--transition);
