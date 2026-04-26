@@ -59,20 +59,7 @@
                     </li>
                 </ul>
 
-                <div class="stats-row">
-                    <div class="stat-card">
-                        <span class="stat-num">500+</span>
-                        <span class="stat-label">Pharmacies</span>
-                    </div>
-                    <div class="stat-card">
-                        <span class="stat-num">50K+</span>
-                        <span class="stat-label">Patients</span>
-                    </div>
-                    <div class="stat-card">
-                        <span class="stat-num">100+</span>
-                        <span class="stat-label">Cities</span>
-                    </div>
-                </div>
+
             </div>
         </aside>
 
@@ -87,17 +74,17 @@
                 <!-- Step Progress -->
                 <div class="step-progress" role="progressbar" aria-valuemin="1" aria-valuemax="3">
                     <div class="step-item active" id="step-ind-1">
-                        <div class="step-circle"><span class="step-num">1</span><i class="fa-solid fa-check step-check"></i></div>
+                        <div class="step-circle"><span class="step-num">1</span></div>
                         <span class="step-label">Basic Info</span>
                     </div>
                     <div class="step-connector" id="line-1"></div>
                     <div class="step-item" id="step-ind-2">
-                        <div class="step-circle"><span class="step-num">2</span><i class="fa-solid fa-check step-check"></i></div>
+                        <div class="step-circle"><span class="step-num">2</span></div>
                         <span class="step-label">Location</span>
                     </div>
                     <div class="step-connector" id="line-2"></div>
                     <div class="step-item" id="step-ind-3">
-                        <div class="step-circle"><span class="step-num">3</span><i class="fa-solid fa-check step-check"></i></div>
+                        <div class="step-circle"><span class="step-num">3</span></div>
                         <span class="step-label">Account</span>
                     </div>
                 </div>
@@ -140,10 +127,9 @@
                                 <div class="input-wrapper">
                                     <i class="fa-solid fa-phone input-icon"></i>
                                     <input type="tel" id="phone" class="form-control has-icon"
-                                        placeholder="e.g. 03001234567 or +923001234567" required autocomplete="tel">
+                                        placeholder="e.g. +923001234567" required autocomplete="tel">
                                 </div>
                                 <span class="error-msg" id="err-phone"></span>
-                                <small class="helper-text">Start with 0 (11 digits) or +92 (13 digits). No spaces or dashes.</small>
                             </div>
                         </div>
 
@@ -204,7 +190,7 @@
                                     <select id="operating-hours" class="form-control form-select" required>
                                         <option value="" disabled selected>Select hours</option>
                                         <option value="24_7">24/7</option>
-                                        <option value="8am_12am">8 AM – 12 AM</option>
+                                        <option value="8am_12am">8:00 A.M – 12:00 P.M</option>
                                         <option value="custom">Custom Hours</option>
                                     </select>
                                     <i class="fa-solid fa-chevron-down select-arrow"></i>
@@ -390,42 +376,18 @@
                         </div>
 
                         <div class="docs-grid">
-                            <!-- Drug License -->
-                            <div class="form-group">
-                                <label>Drug License Document <span class="required">*</span></label>
-                                <div class="upload-area" id="upload-license" onclick="document.getElementById('license-doc').click()">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <div class="upload-area upload-area--unified" id="upload-all-docs" onclick="document.getElementById('all-docs').click()">
                                     <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
                                     <p class="upload-text">Click to upload or drag & drop</p>
-                                    <p class="upload-hint">PDF, JPG, PNG — max 5 MB</p>
-                                    <input type="file" id="license-doc" accept=".pdf,.jpg,.jpeg,.png" hidden>
-                                    <span class="file-name" id="license-file-name"></span>
+                                    <p class="upload-hint">PDF, JPG, PNG — max 5 MB each</p>
+                                    <p class="upload-required-note">
+                                        <strong>Required:</strong> Drug License Document, CNIC Document &nbsp;|&nbsp; <strong>Optional:</strong> Additional Documents
+                                    </p>
+                                    <input type="file" id="all-docs" accept=".pdf,.jpg,.jpeg,.png" multiple hidden>
+                                    <span class="file-name" id="all-docs-file-names"></span>
                                 </div>
-                                <span class="error-msg" id="err-license-doc"></span>
-                            </div>
-
-                            <!-- CNIC Document -->
-                            <div class="form-group">
-                                <label>CNIC Document <span class="required">*</span></label>
-                                <div class="upload-area" id="upload-cnic-doc" onclick="document.getElementById('cnic-doc').click()">
-                                    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-                                    <p class="upload-text">Click to upload or drag & drop</p>
-                                    <p class="upload-hint">PDF, JPG, PNG — max 5 MB</p>
-                                    <input type="file" id="cnic-doc" accept=".pdf,.jpg,.jpeg,.png" hidden>
-                                    <span class="file-name" id="cnic-file-name"></span>
-                                </div>
-                                <span class="error-msg" id="err-cnic-doc"></span>
-                            </div>
-                        </div>
-
-                        <!-- Additional Documents -->
-                        <div class="form-group">
-                            <label>Additional Documents <span class="optional-tag">Optional</span></label>
-                            <div class="upload-area upload-area--multi" id="upload-extra" onclick="document.getElementById('extra-docs').click()">
-                                <i class="fa-solid fa-file-circle-plus upload-icon"></i>
-                                <p class="upload-text">Add more documents (optional)</p>
-                                <p class="upload-hint">PDF, JPG, PNG — max 5 MB each</p>
-                                <input type="file" id="extra-docs" accept=".pdf,.jpg,.jpeg,.png" multiple hidden>
-                                <span class="file-name" id="extra-file-names"></span>
+                                <span class="error-msg" id="err-all-docs"></span>
                             </div>
                         </div>
 
