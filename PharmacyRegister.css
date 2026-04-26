@@ -148,12 +148,11 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--spacing-xl) var(--spacing-lg);
+    padding: 28px var(--spacing-lg);
     position: sticky;
     top: var(--header-height);
     height: calc(100vh - var(--header-height));
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 .left-panel::before {
@@ -187,14 +186,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 22px;
+    gap: 14px;
     position: relative;
     z-index: 1;
 }
 
 .left-icon-wrap {
-    width: 86px;
-    height: 86px;
+    width: 68px;
+    height: 68px;
     background: rgba(255,255,255,0.16);
     border-radius: 50%;
     display: flex;
@@ -206,20 +205,20 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .left-hero-icon {
-    font-size: 2.6rem;
+    font-size: 2rem;
     color: white;
 }
 
 .left-panel h1 {
     font-weight: var(--font-weight-bold);
-    font-size: 1.9rem;
+    font-size: 1.55rem;
     line-height: 1.25;
 }
 
 .left-panel > div > p {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     opacity: 0.9;
-    line-height: 1.65;
+    line-height: 1.5;
 }
 
 /* ── Benefit List ── */
@@ -229,17 +228,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 9px;
+    gap: 6px;
 }
 
 .benefit-list li {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 0.88rem;
+    gap: 10px;
+    font-size: 0.82rem;
     opacity: 0.97;
     background: rgba(255,255,255,0.11);
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-radius: var(--radius-md);
     border: 1px solid rgba(255,255,255,0.18);
     transition: var(--transition);
@@ -250,15 +249,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .benefit-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
     background: rgba(255,255,255,0.18);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    font-size: 0.85rem;
+    font-size: 0.78rem;
 }
 
 .benefit-icon i { color: #a7f3d0; }
@@ -977,7 +976,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 ════════════════════════ */
 @media (max-width: 1024px) {
     .site-header { padding: 0 var(--spacing-md); }
-    .left-panel { width: 44%; padding: var(--spacing-lg) var(--spacing-md); }
+    .left-panel { width: 44%; padding: 24px var(--spacing-md); }
     .right-panel { width: 56%; padding: 40px var(--spacing-md); }
     .left-panel h1 { font-size: 1.65rem; }
 }
@@ -1000,6 +999,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
         position: relative;
         top: 0;
         height: auto;
+        overflow-y: auto;
         padding: var(--spacing-lg) var(--spacing-md);
     }
 
