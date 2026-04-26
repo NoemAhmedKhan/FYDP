@@ -56,18 +56,20 @@
 html {
     scroll-behavior: smooth;
     font-size: 16px;
+    height: 100%;
+    overflow: hidden;
 }
 
 body {
     font-family: var(--font-family);
     font-weight: var(--font-weight-regular);
-    min-height: 100vh;
+    height: 100%;
     display: flex;
     flex-direction: column;
     background-color: var(--color-white);
     color: var(--color-dark);
     line-height: 1.6;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
 img { max-width: 100%; height: auto; display: block; }
@@ -135,7 +137,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .page-container {
     display: flex;
     flex: 1;
-    min-height: calc(100vh - var(--header-height));
+    height: calc(100vh - var(--header-height));
+    overflow: hidden;
 }
 
 /* ════════════════════════
@@ -143,16 +146,16 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 ════════════════════════ */
 .left-panel {
     width: 42%;
+    flex-shrink: 0;
     background: linear-gradient(145deg, var(--color-light-green) 0%, var(--color-forest-green) 60%, #155e2a 100%);
     color: white;
     display: flex;
     align-items: stretch;
     justify-content: center;
     padding: 24px 32px;
-    position: sticky;
-    top: var(--header-height);
-    height: calc(100vh - var(--header-height));
+    height: 100%;
     overflow: hidden;
+    position: relative;
 }
 
 .left-panel::before {
@@ -302,13 +305,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
    RIGHT PANEL
 ════════════════════════ */
 .right-panel {
-    width: 58%;
+    flex: 1;
     background-color: var(--color-white);
     display: flex;
     align-items: flex-start;
     justify-content: center;
     padding: 48px var(--spacing-lg);
+    height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .register-wrapper {
@@ -979,8 +984,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 @media (max-width: 1024px) {
     .site-header { padding: 0 var(--spacing-md); }
     .left-panel { width: 44%; padding: 24px var(--spacing-md); }
-    .right-panel { width: 56%; padding: 40px var(--spacing-md); }
-    .left-panel h1 { font-size: 1.65rem; }
+    .right-panel { padding: 40px var(--spacing-md); }
+    .left-panel h1 { font-size: 1.45rem; }
 }
 
 /* ════════════════════════
@@ -989,28 +994,39 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 @media (max-width: 768px) {
     :root { --header-height: 60px; }
 
+    html, body { height: auto; overflow: auto; }
+
     .site-header { padding: 0 var(--spacing-sm); }
     .logo-text { font-size: 1.2rem; }
     .logo-img { width: 38px; height: 38px; }
     .btn-back-home { font-size: 0.82rem; padding: 8px 14px; }
 
-    .page-container { flex-direction: column; }
+    .page-container {
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+    }
 
     .left-panel {
         width: 100%;
-        position: relative;
-        top: 0;
         height: auto;
-        overflow-y: auto;
+        overflow: visible;
         padding: var(--spacing-lg) var(--spacing-md);
     }
 
-    .left-content { gap: 16px; }
+    .left-content {
+        height: auto;
+        justify-content: flex-start;
+        gap: 16px;
+    }
+
     .left-panel h1 { font-size: 1.5rem; }
     .stats-row { gap: 8px; }
 
     .right-panel {
         width: 100%;
+        height: auto;
+        overflow: visible;
         padding: var(--spacing-lg) var(--spacing-md);
         align-items: flex-start;
     }
