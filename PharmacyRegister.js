@@ -257,8 +257,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const password = document.getElementById('password').value;
         const confirm  = document.getElementById('confirm-password').value;
         const terms    = document.getElementById('terms').checked;
-        const licFile  = document.getElementById('license-doc').files[0];
-        const cnicFile = document.getElementById('cnic-doc').files[0];
+        const allFiles = document.getElementById('all-docs').files;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!email) {
@@ -285,12 +284,8 @@ document.addEventListener('DOMContentLoaded', function () {
             valid = false;
         }
 
-        if (!licFile) {
-            showError('license-doc', 'Drug License document is required.');
-            valid = false;
-        }
-        if (!cnicFile) {
-            showError('cnic-doc', 'CNIC document is required.');
+        if (!allFiles || allFiles.length === 0) {
+            showError('all-docs', 'Please upload at least your Drug License and CNIC documents.');
             valid = false;
         }
 
@@ -304,8 +299,39 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     /* ─────────────────────────────────────────
-       CNIC AUTO-FORMAT (XXXXX-XXXXXXX-X)
+       PHONE — Real-time restriction
     ───────────────────────────────────────── */
+    const phoneInput = document.getElementById('phone');
+    phoneInput.addEventListener('keydown', function (e) {
+        // Allow: backspace, delete, tab, escape, arrows, home, end
+        const controlKeys = ['Backspace','Delete','Tab','Escape','ArrowLeft','ArrowRight','Home','End'];
+        if (controlKeys.includes(e.key)) return;
+        // Allow: digits
+        if (/^[0-9]$/.test(e.key)) return;
+        // Allow: + only if at position 0 and field is empty/just starting
+        if (e.key === '+' && this.selectionStart === 0 && !this.value.includes('+')) return;
+        // Block everything else (spaces, dashes, letters, etc.)
+        e.preventDefault();
+    });
+
+    phoneInput.addEventListener('input', function () {
+        let val = this.value;
+        // Remove any space, dash, underscore, or non-digit/non-plus
+        val = val.replace(/[^0-9+]/g, '');
+        // Ensure + only appears at the very start
+        if (val.indexOf('+') > 0) val = val.replace(/\+/g, '');
+        // Enforce length limit
+        if (val.startsWith('+92')) {
+            if (val.length > 13) val = val.slice(0, 13);
+        } else if (val.startsWith('0')) {
+            if (val.length > 11) val = val.slice(0, 11);
+        }
+        this.value = val;
+        clearError('phone');
+    });
+
+
+
     const cnicInput = document.getElementById('cnic');
     cnicInput.addEventListener('input', function () {
         let v = this.value.replace(/[^0-9]/g, '');
@@ -424,64 +450,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     /* ─────────────────────────────────────────
-       FILE UPLOAD — Shared helper
+       FILE UPLOAD — Unified single upload area
     ───────────────────────────────────────── */
-    function setupUpload(areaId, inputId, nameId, errId) {
-        const area     = document.getElementById(areaId);
-        const input    = document.getElementById(inputId);
-        const nameSpan = document.getElementById(nameId);
-        if (!area || !input || !nameSpan) return;
+    const allDocsInput = document.getElementById('all-docs');
+    const allDocsArea  = document.getElementById('upload-all-docs');
+    const allDocsNames = document.getElementById('all-docs-file-names');
 
-        function handleFile(file) {
-            if (!file) return;
-            if (file.size > 5 * 1024 * 1024) {
-                if (errId) document.getElementById(errId).textContent = 'File exceeds 5 MB limit.';
-                input.value = '';
-                nameSpan.textContent = '';
-                area.classList.remove('has-file');
-                return;
-            }
-            nameSpan.textContent = `✓ ${file.name}`;
-            area.classList.add('has-file');
-            if (errId) document.getElementById(errId).textContent = '';
+    function handleAllDocs(files) {
+        const arr   = Array.from(files);
+        const valid = arr.filter(f => f.size <= 5 * 1024 * 1024);
+        const over  = arr.filter(f => f.size > 5 * 1024 * 1024);
+        const errEl = document.getElementById('err-all-docs');
+        if (over.length > 0) {
+            errEl.textContent = `${over.length} file(s) exceed 5 MB and were skipped.`;
+        } else {
+            errEl.textContent = '';
         }
-
-        input.addEventListener('change', function () {
-            if (this.files && this.files[0]) handleFile(this.files[0]);
-        });
-
-        area.addEventListener('dragover',  (e) => { e.preventDefault(); area.style.borderColor = 'var(--color-forest-green)'; });
-        area.addEventListener('dragleave', ()  => { area.style.borderColor = ''; });
-        area.addEventListener('drop',      (e) => {
-            e.preventDefault();
-            area.style.borderColor = '';
-            const file = e.dataTransfer.files[0];
-            if (file) {
-                // Reassign files to input via DataTransfer
-                const dt = new DataTransfer();
-                dt.items.add(file);
-                input.files = dt.files;
-                handleFile(file);
-            }
-        });
+        if (valid.length > 0) {
+            allDocsNames.innerHTML = valid.map(f => `<span class="file-tag">✓ ${f.name}</span>`).join('');
+            allDocsArea.classList.add('has-file');
+        } else {
+            allDocsNames.innerHTML = '';
+            allDocsArea.classList.remove('has-file');
+        }
     }
 
-    setupUpload('upload-license',  'license-doc', 'license-file-name', 'err-license-doc');
-    setupUpload('upload-cnic-doc', 'cnic-doc',    'cnic-file-name',    'err-cnic-doc');
-
-    // Multi-file extra docs
-    const extraInput  = document.getElementById('extra-docs');
-    const extraArea   = document.getElementById('upload-extra');
-    const extraNames  = document.getElementById('extra-file-names');
-    if (extraInput && extraArea && extraNames) {
-        extraInput.addEventListener('change', function () {
-            const files = Array.from(this.files);
-            const valid = files.filter(f => f.size <= 5 * 1024 * 1024);
-            if (valid.length < files.length) alert('Some files exceed 5 MB and were skipped.');
-            if (valid.length > 0) {
-                extraNames.textContent = valid.map(f => `✓ ${f.name}`).join('  ');
-                extraArea.classList.add('has-file');
-            }
+    if (allDocsInput && allDocsArea) {
+        allDocsInput.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) handleAllDocs(this.files);
+        });
+        allDocsArea.addEventListener('dragover',  (e) => { e.preventDefault(); allDocsArea.style.borderColor = 'var(--color-forest-green)'; });
+        allDocsArea.addEventListener('dragleave', ()  => { allDocsArea.style.borderColor = ''; });
+        allDocsArea.addEventListener('drop',      (e) => {
+            e.preventDefault();
+            allDocsArea.style.borderColor = '';
+            const dt = new DataTransfer();
+            Array.from(e.dataTransfer.files).forEach(f => dt.items.add(f));
+            allDocsInput.files = dt.files;
+            handleAllDocs(dt.files);
         });
     }
 
@@ -532,39 +538,28 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             if (signUpError) throw signUpError;
 
-            /* STEP 2: Upload License doc */
+            /* STEP 2: Upload all documents */
             let licenseDocUrl = null;
-            const licenseFile = document.getElementById('license-doc').files[0];
-            if (licenseFile && authData.user) {
-                const ext      = licenseFile.name.split('.').pop();
-                const filePath = `licenses/${authData.user.id}/license.${ext}`;
-                const { error: uploadError } = await supabaseClient.storage
-                    .from('pharmacy-docs').upload(filePath, licenseFile, { upsert: true });
-                if (!uploadError) {
-                    const { data: urlData } = supabaseClient.storage.from('pharmacy-docs').getPublicUrl(filePath);
-                    licenseDocUrl = urlData?.publicUrl || null;
-                } else {
-                    console.warn('License upload failed:', uploadError.message);
+            let cnicDocUrl    = null;
+            const allFiles = document.getElementById('all-docs').files;
+            if (allFiles && allFiles.length > 0 && authData.user) {
+                for (let i = 0; i < allFiles.length; i++) {
+                    const f   = allFiles[i];
+                    const ext = f.name.split('.').pop();
+                    const fp  = `docs/${authData.user.id}/doc_${i}.${ext}`;
+                    const { error: uploadError } = await supabaseClient.storage
+                        .from('pharmacy-docs').upload(fp, f, { upsert: true });
+                    if (!uploadError) {
+                        const { data: urlData } = supabaseClient.storage.from('pharmacy-docs').getPublicUrl(fp);
+                        if (i === 0) licenseDocUrl = urlData?.publicUrl || null;
+                        if (i === 1) cnicDocUrl    = urlData?.publicUrl || null;
+                    } else {
+                        console.warn(`Upload failed for ${f.name}:`, uploadError.message);
+                    }
                 }
             }
 
-            /* STEP 3: Upload CNIC doc */
-            let cnicDocUrl = null;
-            const cnicFile = document.getElementById('cnic-doc').files[0];
-            if (cnicFile && authData.user) {
-                const ext      = cnicFile.name.split('.').pop();
-                const filePath = `cnics/${authData.user.id}/cnic.${ext}`;
-                const { error: uploadError } = await supabaseClient.storage
-                    .from('pharmacy-docs').upload(filePath, cnicFile, { upsert: true });
-                if (!uploadError) {
-                    const { data: urlData } = supabaseClient.storage.from('pharmacy-docs').getPublicUrl(filePath);
-                    cnicDocUrl = urlData?.publicUrl || null;
-                } else {
-                    console.warn('CNIC upload failed:', uploadError.message);
-                }
-            }
-
-            /* STEP 4: Insert pharmacy record */
+            /* STEP 3: Insert pharmacy record */
             const { error: insertError } = await supabaseClient.from('pharmacies').insert([{
                 auth_user_id:    authData.user.id,
                 pharmacy_name:   pharmacyName,
