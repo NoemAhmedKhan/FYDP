@@ -361,9 +361,9 @@ async function loadPharmacyRequests() {
 }
 
 function renderRequestCard(r) {
-    // Fields to show in card (exclude system/doc fields rendered separately)
-    const skipInCard  = ['id', 'status', 'created_at', 'updated_at', 'rejection_reason',
-                         'license_doc_url', 'cnic_doc_url', 'extra_doc_urls'];
+    // Fields to display — skip system/doc fields; doc_folder_path rendered separately
+    const skipInCard = ['id', 'status', 'created_at', 'updated_at',
+                        'rejection_reason', 'doc_folder_path'];
     const displayFields = Object.entries(r)
         .filter(([k]) => !skipInCard.includes(k))
         .map(([k, v]) => `
@@ -373,24 +373,24 @@ function renderRequestCard(r) {
             </div>
         `).join('');
 
-    // Build document links
-    const docLinks = [];
-    if (r.license_doc_url) docLinks.push(`<a href="${r.license_doc_url}" target="_blank" class="doc-link"><i class="fa-solid fa-file-medical"></i> Drug License</a>`);
-    if (r.cnic_doc_url)    docLinks.push(`<a href="${r.cnic_doc_url}"    target="_blank" class="doc-link"><i class="fa-solid fa-id-card"></i> CNIC</a>`);
-    if (Array.isArray(r.extra_doc_urls)) {
-        r.extra_doc_urls.forEach((u, i) => {
-            docLinks.push(`<a href="${u}" target="_blank" class="doc-link"><i class="fa-solid fa-file"></i> Extra Doc ${i + 1}</a>`);
-        });
-    }
-
-    const docsHtml = docLinks.length > 0
-        ? `<div class="request-docs"><span class="docs-label"><i class="fa-solid fa-paperclip"></i> Documents:</span>${docLinks.join('')}</div>`
-        : '<div class="request-docs"><span class="docs-label" style="color:#aaa">No documents uploaded</span></div>';
+    // Documents section: renders a "Load Documents" button.
+    // Clicking it calls loadDocLinks(requestId, folderPath) which
+    // lists all files in the folder from Storage and renders links.
+    const folderPath = r.doc_folder_path || '';
+    const docsHtml = folderPath
+        ? `<div class="request-docs" id="docs-${r.id}">
+               <span class="docs-label"><i class="fa-solid fa-paperclip"></i> Documents:</span>
+               <button class="doc-load-btn" onclick="loadDocLinks('${r.id}', '${folderPath}', this)">
+                   <i class="fa-solid fa-folder-open"></i> Load Documents
+               </button>
+           </div>`
+        : `<div class="request-docs"><span class="docs-label" style="color:#aaa"><i class="fa-solid fa-triangle-exclamation"></i> No documents uploaded</span></div>`;
 
     const name    = r.pharmacy_name || `Request #${r.id}`;
-    const created = r.created_at ? new Date(r.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const created = r.created_at
+        ? new Date(r.created_at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '';
 
-    // Escape for inline onclick attributes
     const safeEmail = (r.email || '').replace(/'/g, "\\'");
     const safeName  = name.replace(/'/g, "\\'");
 
@@ -418,6 +418,71 @@ function renderRequestCard(r) {
             </div>
         </div>
     `;
+}
+
+// ============================
+// LOAD DOC LINKS FROM STORAGE FOLDER
+// ============================
+async function loadDocLinks(requestId, folderPath, btn) {
+    btn.disabled  = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading…';
+
+    try {
+        const { data: files, error } = await sb.storage
+            .from('pharmacy-docs')
+            .list(folderPath, { sortBy: { column: 'name', order: 'asc' } });
+
+        if (error) throw error;
+
+        const docsContainer = document.getElementById(`docs-${requestId}`);
+
+        if (!files || files.length === 0) {
+            docsContainer.innerHTML = `
+                <span class="docs-label" style="color:#aaa">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Folder exists but contains no files
+                </span>`;
+            return;
+        }
+
+        // Build a public URL for each file and render as a link
+        const links = files.map((file, i) => {
+            const { data: urlData } = sb.storage
+                .from('pharmacy-docs')
+                .getPublicUrl(`${folderPath}/${file.name}`);
+
+            // Try to guess doc type from filename prefix (doc_0_, doc_1_, etc.)
+            const icon  = getDocIcon(file.name, i);
+            const label = getDocLabel(file.name, i);
+
+            return `<a href="${urlData.publicUrl}" target="_blank" class="doc-link" title="${file.name}">
+                        <i class="fa-solid ${icon}"></i> ${label}
+                    </a>`;
+        }).join('');
+
+        docsContainer.innerHTML = `
+            <span class="docs-label"><i class="fa-solid fa-paperclip"></i> Documents (${files.length}):</span>
+            ${links}`;
+
+    } catch (e) {
+        btn.disabled  = false;
+        btn.innerHTML = '<i class="fa-solid fa-folder-open"></i> Retry Load';
+        showToast(`Could not load documents: ${e.message}`, 'error');
+    }
+}
+
+function getDocIcon(filename, index) {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith('.pdf'))                    return 'fa-file-pdf';
+    if (lower.match(/\.(jpg|jpeg|png|webp)$/))     return 'fa-file-image';
+    return 'fa-file';
+}
+
+function getDocLabel(filename, index) {
+    // Filenames are like: doc_0_DrugLicense.pdf  doc_1_CNIC.jpg  doc_2_Extra.pdf
+    // Strip the "doc_N_" prefix and extension for a readable label
+    const clean = filename.replace(/^doc_\d+_/, '').replace(/\.[^.]+$/, '');
+    const labels = { 0: 'Drug License', 1: 'CNIC' };
+    return clean.length > 0 ? clean.replace(/_/g, ' ') : (labels[index] || `Document ${index + 1}`);
 }
 
 // ============================
