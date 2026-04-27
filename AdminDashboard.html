@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder — Admin Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="AdminDashboard.css">
+</head>
+<body>
+
+    <!-- LOADING SCREEN -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-content">
+            <div class="loading-logo">
+                <i class="fa-solid fa-pills"></i>
+            </div>
+            <div class="loading-text">MediFinder Admin</div>
+            <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+        </div>
+    </div>
+
+    <!-- MOBILE OVERLAY -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon"><i class="fa-solid fa-pills"></i></div>
+                <div>
+                    <div class="sidebar-logo-text">MediFinder</div>
+                    <div class="sidebar-logo-sub">Admin Panel</div>
+                </div>
+            </div>
+            <button class="sidebar-close" onclick="closeSidebar()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="sidebar-admin-info">
+            <div class="admin-avatar" id="admin-avatar">A</div>
+            <div class="admin-details">
+                <div class="admin-name" id="admin-name">Admin</div>
+                <div class="admin-email" id="admin-email">admin@medifinder.pk</div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Overview</div>
+            <a class="sidebar-link active" id="nav-overview" onclick="showOverview()">
+                <i class="fa-solid fa-gauge-high"></i>
+                <span>Dashboard</span>
+            </a>
+            
+            <div class="nav-section-label">Management</div>
+            <a class="sidebar-link" id="nav-requests" onclick="showPharmacyRequests()">
+                <i class="fa-solid fa-store"></i>
+                <span>Pharmacy Requests</span>
+                <span class="sidebar-badge" id="request-badge">0</span>
+            </a>
+
+            <div class="nav-section-label">Database</div>
+            <div id="table-list">
+                <div class="sidebar-loading">
+                    <div class="spinner-sm"></div> Loading tables...
+                </div>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="handleLogout()">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                Sign Out
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-wrapper" id="main-wrapper">
+
+        <!-- TOP BAR -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="breadcrumb" id="breadcrumb">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    Dashboard
+                </div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-user">
+                    <div class="topbar-avatar" id="topbar-avatar">A</div>
+                    <span id="topbar-name">Admin</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENT AREA -->
+        <main class="content" id="content-area">
+
+            <!-- OVERVIEW / DASHBOARD -->
+            <section id="view-overview" class="view active">
+                <div class="page-header">
+                    <h1 class="page-title">Dashboard Overview</h1>
+                    <p class="page-subtitle">Welcome back! Here's what's happening with MediFinder.</p>
+                </div>
+
+                <div class="stats-grid" id="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon--green"><i class="fa-solid fa-store"></i></div>
+                        <div class="stat-value" id="stat-pharmacies">—</div>
+                        <div class="stat-label">Total Pharmacies</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon--orange"><i class="fa-solid fa-clock"></i></div>
+                        <div class="stat-value" id="stat-pending">—</div>
+                        <div class="stat-label">Pending Requests</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon--blue"><i class="fa-solid fa-users"></i></div>
+                        <div class="stat-value" id="stat-users">—</div>
+                        <div class="stat-label">Registered Users</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon--purple"><i class="fa-solid fa-database"></i></div>
+                        <div class="stat-value" id="stat-tables">—</div>
+                        <div class="stat-label">Database Tables</div>
+                    </div>
+                </div>
+
+                <div class="overview-bottom">
+                    <div class="recent-card">
+                        <div class="card-header">
+                            <h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Pharmacy Requests</h3>
+                            <button class="btn-text" onclick="showPharmacyRequests()">View All →</button>
+                        </div>
+                        <div id="recent-requests-list">
+                            <div class="empty-state-sm">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PHARMACY REQUESTS -->
+            <section id="view-requests" class="view">
+                <div class="page-header">
+                    <h1 class="page-title"><i class="fa-solid fa-store"></i> Pharmacy Requests</h1>
+                    <p class="page-subtitle">Review and manage pending pharmacy registration requests.</p>
+                </div>
+                <div id="requests-container">
+                    <div class="loading-indicator"><div class="spinner"></div> Loading requests...</div>
+                </div>
+            </section>
+
+            <!-- TABLE VIEW -->
+            <section id="view-table" class="view">
+                <div class="page-header">
+                    <h1 class="page-title" id="table-view-title"><i class="fa-solid fa-table"></i> Table</h1>
+                    <p class="page-subtitle" id="table-view-subtitle">Manage database records</p>
+                </div>
+
+                <div class="table-toolbar">
+                    <div class="table-info" id="table-row-count">Loading...</div>
+                    <div class="table-actions">
+                        <button class="btn-primary-sm" onclick="showAddRowModal()">
+                            <i class="fa-solid fa-plus"></i> Add Row
+                        </button>
+                        <button class="btn-secondary-sm" onclick="refreshTable()">
+                            <i class="fa-solid fa-rotate-right"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-wrapper" id="table-wrapper">
+                    <div class="loading-indicator"><div class="spinner"></div> Loading data...</div>
+                </div>
+
+                <div class="pagination" id="pagination"></div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- REJECT MODAL -->
+    <div class="modal-overlay" id="reject-modal" onclick="closeModal('reject-modal')">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-circle-xmark" style="color:#ef4444"></i> Reject Request</h3>
+                <button class="modal-close" onclick="closeModal('reject-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--gray);margin-bottom:16px;font-size:14px;">Please provide a reason for rejection. This will be emailed to the pharmacy owner.</p>
+                <div class="form-group">
+                    <label>Pharmacy Name</label>
+                    <input type="text" class="modal-input" id="reject-pharmacy-name" readonly>
+                </div>
+                <div class="form-group">
+                    <label>Rejection Reason <span style="color:#ef4444">*</span></label>
+                    <textarea class="modal-input modal-textarea" id="reject-reason" placeholder="e.g. Incomplete documentation, Invalid license number, Location not verified..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" onclick="closeModal('reject-modal')">Cancel</button>
+                <button class="btn-modal-danger" onclick="confirmReject()">
+                    <i class="fa-solid fa-times"></i> Confirm Rejection
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRM MODAL -->
+    <div class="modal-overlay" id="delete-modal" onclick="closeModal('delete-modal')">
+        <div class="modal modal--sm" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-trash" style="color:#ef4444"></i> Delete Record</h3>
+                <button class="modal-close" onclick="closeModal('delete-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="color:var(--gray);font-size:14px;">Are you sure you want to delete this record? This action <strong>cannot be undone</strong>.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" onclick="closeModal('delete-modal')">Cancel</button>
+                <button class="btn-modal-danger" onclick="confirmDelete()">
+                    <i class="fa-solid fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT MODAL -->
+    <div class="modal-overlay" id="edit-modal" onclick="closeModal('edit-modal')">
+        <div class="modal modal--lg" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square" style="color:var(--green)"></i> Edit Record</h3>
+                <button class="modal-close" onclick="closeModal('edit-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="edit-modal-body">
+                <!-- dynamically filled -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" onclick="closeModal('edit-modal')">Cancel</button>
+                <button class="btn-modal-primary" onclick="confirmEdit()">
+                    <i class="fa-solid fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD ROW MODAL -->
+    <div class="modal-overlay" id="add-modal" onclick="closeModal('add-modal')">
+        <div class="modal modal--lg" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-plus" style="color:var(--green)"></i> Add New Row</h3>
+                <button class="modal-close" onclick="closeModal('add-modal')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="add-modal-body">
+                <!-- dynamically filled -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal-cancel" onclick="closeModal('add-modal')">Cancel</button>
+                <button class="btn-modal-primary" onclick="confirmAdd()">
+                    <i class="fa-solid fa-plus"></i> Add Row
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="AdminDashboard.js"></script>
+</body>
+</html>
