@@ -1,46 +1,14 @@
 /* ══════════════════════════════════════════════════════
    PharmacyRegister.js — MediFinder
-   Multi-step pharmacy registration with Supabase backend
-
-   Supabase table required — run this SQL in your Supabase SQL Editor:
-
-   CREATE TABLE pharmacies (
-       id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-       auth_user_id    UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-       pharmacy_name   TEXT NOT NULL,
-       owner_name      TEXT NOT NULL,
-       phone           TEXT NOT NULL,
-       license_no      TEXT NOT NULL,
-       reg_no          TEXT NOT NULL,
-       cnic            TEXT NOT NULL,
-       pharmacy_type   TEXT NOT NULL,
-       operating_hours TEXT NOT NULL,
-       delivery        BOOLEAN DEFAULT TRUE,
-       province        TEXT NOT NULL,
-       city            TEXT NOT NULL,
-       address         TEXT NOT NULL,
-       landmark        TEXT,
-       coordinates     TEXT NOT NULL,
-       email           TEXT NOT NULL,
-       license_doc_url TEXT,
-       cnic_doc_url    TEXT,
-       status          TEXT DEFAULT 'pending',
-       created_at      TIMESTAMPTZ DEFAULT NOW()
-   );
-
-   ALTER TABLE pharmacies ENABLE ROW LEVEL SECURITY;
-
-   CREATE POLICY "Allow pharmacy self-insert"
-       ON pharmacies FOR INSERT TO authenticated
-       WITH CHECK (auth.uid() = auth_user_id);
-
-   CREATE POLICY "Allow pharmacy self-select"
-       ON pharmacies FOR SELECT TO authenticated
-       USING (auth.uid() = auth_user_id);
+   ▸ Supabase project : ktzsshlllyjuzphprzso  (single project)
+   ▸ Inserts into     : pharmacy_requests
+   ▸ Uploads docs to  : Storage bucket "pharmacy-docs"
+   ▸ NO auth.signUp() at this stage — account is created
+     by the admin Edge Function on approval.
    ══════════════════════════════════════════════════════ */
 
-const SUPABASE_URL      = 'https://yeckojtbgrdwuennjgke.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InllY2tvanRiZ3Jkd3Vlbm5qZ2tlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIzODMxODAsImV4cCI6MjA4Nzk1OTE4MH0.rXyWstRjT0PeE35Rvl_BgXbTFa8zhrUMEoHtgBBpPso';
+const SUPABASE_URL      = 'https://ktzsshlllyjuzphprzso.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic';
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -91,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById(`step-${n}`).classList.remove('hidden');
 
         for (let i = 1; i <= totalSteps; i++) {
-            const ind  = document.getElementById(`step-ind-${i}`);
+            const ind = document.getElementById(`step-ind-${i}`);
             ind.classList.remove('active', 'done');
             if (i < n) ind.classList.add('done');
             if (i === n) ind.classList.add('active');
@@ -103,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 else line.classList.remove('done');
             }
         }
-
         currentStep = n;
         document.querySelector('.right-panel').scrollTo({ top: 0, behavior: 'smooth' });
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -128,13 +95,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function clearError(fieldId) {
         const field   = document.getElementById(fieldId);
         const errSpan = document.getElementById(`err-${fieldId}`);
-        if (field)   { field.classList.remove('is-invalid'); field.classList.remove('is-valid'); }
+        if (field)   { field.classList.remove('is-invalid', 'is-valid'); }
         if (errSpan) errSpan.textContent = '';
-    }
-
-    function markValid(fieldId) {
-        const field = document.getElementById(fieldId);
-        if (field) { field.classList.remove('is-invalid'); field.classList.add('is-valid'); }
     }
 
     function clearAllErrors() {
@@ -147,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
     ───────────────────────────────────────── */
     ['pharmacy-name','owner-name','phone','license-no','reg-no','cnic',
      'pharmacy-type','operating-hours','province','city','address',
-     'email','password','confirm-password'].forEach(id => {
+     'email'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', () => clearError(id));
     });
@@ -172,7 +134,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!pharmacyName) { showError('pharmacy-name', 'Pharmacy name is required.'); valid = false; }
         if (!ownerName)    { showError('owner-name',    'Owner / Manager name is required.'); valid = false; }
 
-        // Phone validation: 0 → 11 digits | +92 → 13 digits | no spaces/dashes/underscores
         if (!phone) {
             showError('phone', 'Phone number is required.');
             valid = false;
@@ -193,7 +154,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!licenseNo) { showError('license-no', 'Drug License No is required.'); valid = false; }
         if (!regNo)     { showError('reg-no',      'Registration Number is required.'); valid = false; }
 
-        // CNIC validation: XXXXX-XXXXXXX-X
         if (!cnic) {
             showError('cnic', 'CNIC is required.');
             valid = false;
@@ -202,10 +162,9 @@ document.addEventListener('DOMContentLoaded', function () {
             valid = false;
         }
 
-        if (!pharmType) { showError('pharmacy-type',    'Please select pharmacy type.'); valid = false; }
-        if (!opHours)   { showError('operating-hours',  'Please select operating hours.'); valid = false; }
+        if (!pharmType) { showError('pharmacy-type',   'Please select pharmacy type.'); valid = false; }
+        if (!opHours)   { showError('operating-hours', 'Please select operating hours.'); valid = false; }
 
-        // Custom hours check
         if (opHours === 'custom') {
             const open  = document.getElementById('custom-open').value;
             const close = document.getElementById('custom-close').value;
@@ -234,11 +193,13 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!province) { showError('province', 'Please select a province.'); valid = false; }
         if (!city)     { showError('city',     'Please select a city.'); valid = false; }
         if (!address)  { showError('address',  'Street address is required.'); valid = false; }
+
         if (!coordinates) {
             const coordInput = document.getElementById('coordinates');
             coordInput.classList.add('is-invalid');
-            document.getElementById('coord-helper').textContent = 'GPS Coordinates are required. Click "Detect My Location" or enter manually.';
-            document.getElementById('coord-helper').style.color = 'var(--color-error)';
+            const helper = document.getElementById('coord-helper');
+            helper.textContent = 'GPS Coordinates are required. Click "Detect My Location" or enter manually.';
+            helper.style.color = 'var(--color-error)';
             valid = false;
         }
 
@@ -247,16 +208,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     /* ─────────────────────────────────────────
-       STEP 3 VALIDATION — Account
+       STEP 3 VALIDATION — Account & Docs
     ───────────────────────────────────────── */
     function validateStep3() {
         clearAllErrors();
         let valid = true;
 
-        const email    = document.getElementById('email').value.trim();
-        const password = document.getElementById('password').value;
-        const confirm  = document.getElementById('confirm-password').value;
-        const terms    = document.getElementById('terms').checked;
+        const email   = document.getElementById('email').value.trim();
+        const terms   = document.getElementById('terms').checked;
         const allFiles = document.getElementById('all-docs').files;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -268,24 +227,9 @@ document.addEventListener('DOMContentLoaded', function () {
             valid = false;
         }
 
-        if (!password) {
-            showError('password', 'Password is required.');
-            valid = false;
-        } else if (password.length < 8) {
-            showError('password', 'Password must be at least 8 characters.');
-            valid = false;
-        }
-
-        if (!confirm) {
-            showError('confirm-password', 'Please confirm your password.');
-            valid = false;
-        } else if (password && confirm !== password) {
-            showError('confirm-password', 'Passwords do not match.');
-            valid = false;
-        }
-
-        if (!allFiles || allFiles.length === 0) {
-            showError('all-docs', 'Please upload at least your Drug License and CNIC documents.');
+        // At least 2 files required: license + CNIC
+        if (!allFiles || allFiles.length < 2) {
+            showError('all-docs', 'Please upload at least your Drug License and CNIC documents (minimum 2 files).');
             valid = false;
         }
 
@@ -303,24 +247,16 @@ document.addEventListener('DOMContentLoaded', function () {
     ───────────────────────────────────────── */
     const phoneInput = document.getElementById('phone');
     phoneInput.addEventListener('keydown', function (e) {
-        // Allow: backspace, delete, tab, escape, arrows, home, end
         const controlKeys = ['Backspace','Delete','Tab','Escape','ArrowLeft','ArrowRight','Home','End'];
         if (controlKeys.includes(e.key)) return;
-        // Allow: digits
         if (/^[0-9]$/.test(e.key)) return;
-        // Allow: + only if at position 0 and field is empty/just starting
         if (e.key === '+' && this.selectionStart === 0 && !this.value.includes('+')) return;
-        // Block everything else (spaces, dashes, letters, etc.)
         e.preventDefault();
     });
 
     phoneInput.addEventListener('input', function () {
-        let val = this.value;
-        // Remove any space, dash, underscore, or non-digit/non-plus
-        val = val.replace(/[^0-9+]/g, '');
-        // Ensure + only appears at the very start
+        let val = this.value.replace(/[^0-9+]/g, '');
         if (val.indexOf('+') > 0) val = val.replace(/\+/g, '');
-        // Enforce length limit
         if (val.startsWith('+92')) {
             if (val.length > 13) val = val.slice(0, 13);
         } else if (val.startsWith('0')) {
@@ -330,15 +266,14 @@ document.addEventListener('DOMContentLoaded', function () {
         clearError('phone');
     });
 
-
-
+    /* CNIC auto-format */
     const cnicInput = document.getElementById('cnic');
     cnicInput.addEventListener('input', function () {
         let v = this.value.replace(/[^0-9]/g, '');
         if (v.length > 13) v = v.slice(0, 13);
         let formatted = v;
-        if (v.length > 5)  formatted = v.slice(0,5) + '-' + v.slice(5);
-        if (v.length > 12) formatted = v.slice(0,5) + '-' + v.slice(5,12) + '-' + v.slice(12);
+        if (v.length > 5)  formatted = v.slice(0, 5)  + '-' + v.slice(5);
+        if (v.length > 12) formatted = v.slice(0, 5)  + '-' + v.slice(5, 12) + '-' + v.slice(12);
         this.value = formatted;
     });
 
@@ -350,11 +285,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const customHoursRow = document.getElementById('custom-hours-row');
 
     opHoursSelect.addEventListener('change', function () {
-        if (this.value === 'custom') {
-            customHoursRow.classList.remove('hidden');
-        } else {
-            customHoursRow.classList.add('hidden');
-        }
+        customHoursRow.classList.toggle('hidden', this.value !== 'custom');
     });
 
 
@@ -391,7 +322,6 @@ document.addEventListener('DOMContentLoaded', function () {
             coordHelper.style.color = 'var(--color-error)';
             return;
         }
-
         this.disabled = true;
         this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Detecting…';
         coordHelper.textContent = 'Detecting your location…';
@@ -401,52 +331,30 @@ document.addEventListener('DOMContentLoaded', function () {
             (pos) => {
                 const lat = pos.coords.latitude.toFixed(6);
                 const lng = pos.coords.longitude.toFixed(6);
-                coordInput.value        = `${lat}, ${lng}`;
-                coordInput.removeAttribute('readonly');
-                coordHelper.innerHTML   = '<i class="fa-solid fa-circle-check" style="color:var(--color-forest-green)"></i> Location detected successfully.';
+                coordInput.value      = `${lat}, ${lng}`;
+                coordHelper.innerHTML = '<i class="fa-solid fa-circle-check" style="color:var(--color-forest-green)"></i> Location detected successfully.';
                 coordHelper.style.color = 'var(--color-forest-green)';
                 coordInput.classList.remove('is-invalid');
-                btnLocate.innerHTML     = '<i class="fa-solid fa-location-crosshairs"></i> Detect My Location';
-                btnLocate.disabled      = false;
+                btnLocate.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Detect My Location';
+                btnLocate.disabled  = false;
             },
             () => {
                 coordHelper.textContent = 'Could not detect location. Please enter coordinates manually.';
                 coordHelper.style.color = 'var(--color-error)';
-                coordInput.removeAttribute('readonly');
                 coordInput.placeholder  = 'e.g. 24.8607, 67.0011';
-                btnLocate.innerHTML     = '<i class="fa-solid fa-location-crosshairs"></i> Detect My Location';
-                btnLocate.disabled      = false;
+                btnLocate.innerHTML = '<i class="fa-solid fa-location-crosshairs"></i> Detect My Location';
+                btnLocate.disabled  = false;
             }
         );
     });
 
-    // Allow manual edit of coordinates
     coordInput.addEventListener('input', function () {
         if (this.value.trim()) {
             this.classList.remove('is-invalid');
-            coordHelper.innerHTML = '<i class="fa-solid fa-circle-info"></i> Used to show your pharmacy on the map for nearby patients.';
+            coordHelper.innerHTML   = '<i class="fa-solid fa-circle-info"></i> Used to show your pharmacy on the map for nearby patients.';
             coordHelper.style.color = '#888';
         }
     });
-
-
-    /* ─────────────────────────────────────────
-       PASSWORD TOGGLE
-    ───────────────────────────────────────── */
-    function setupPasswordToggle(inputId, toggleId) {
-        const inp    = document.getElementById(inputId);
-        const toggle = document.getElementById(toggleId);
-        if (!inp || !toggle) return;
-        toggle.addEventListener('click', () => {
-            const isPass = inp.type === 'password';
-            inp.type     = isPass ? 'text' : 'password';
-            toggle.className = isPass
-                ? 'fa-regular fa-eye toggle-password'
-                : 'fa-regular fa-eye-slash toggle-password';
-        });
-    }
-    setupPasswordToggle('password',         'toggle-pass');
-    setupPasswordToggle('confirm-password', 'toggle-confirm');
 
 
     /* ─────────────────────────────────────────
@@ -455,20 +363,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const allDocsInput = document.getElementById('all-docs');
     const allDocsArea  = document.getElementById('upload-all-docs');
     const allDocsNames = document.getElementById('all-docs-file-names');
+    const MAX_FILE_MB  = 5;
 
     function handleAllDocs(files) {
         const arr   = Array.from(files);
-        const valid = arr.filter(f => f.size <= 5 * 1024 * 1024);
-        const over  = arr.filter(f => f.size > 5 * 1024 * 1024);
+        const valid = arr.filter(f => f.size <= MAX_FILE_MB * 1024 * 1024);
+        const over  = arr.filter(f => f.size >  MAX_FILE_MB * 1024 * 1024);
         const errEl = document.getElementById('err-all-docs');
+
         if (over.length > 0) {
-            errEl.textContent = `${over.length} file(s) exceed 5 MB and were skipped.`;
+            errEl.textContent = `${over.length} file(s) exceed ${MAX_FILE_MB} MB and were skipped: ${over.map(f => f.name).join(', ')}`;
         } else {
             errEl.textContent = '';
         }
+
         if (valid.length > 0) {
             allDocsNames.innerHTML = valid.map(f => `<span class="file-tag">✓ ${f.name}</span>`).join('');
             allDocsArea.classList.add('has-file');
+            // rebuild file list without oversized files
+            if (over.length > 0) {
+                const dt = new DataTransfer();
+                valid.forEach(f => dt.items.add(f));
+                allDocsInput.files = dt.files;
+            }
         } else {
             allDocsNames.innerHTML = '';
             allDocsArea.classList.remove('has-file');
@@ -493,28 +410,51 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
     /* ─────────────────────────────────────────
+       PROGRESS BAR HELPER
+    ───────────────────────────────────────── */
+    function showProgressBar(show, pct = 0, msg = '') {
+        let bar = document.getElementById('upload-progress-wrap');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'upload-progress-wrap';
+            bar.style.cssText = 'margin:12px 0;';
+            bar.innerHTML = `
+                <div id="upload-progress-msg" style="font-size:13px;color:#555;margin-bottom:6px;"></div>
+                <div style="background:#e5e5e5;border-radius:6px;height:8px;overflow:hidden;">
+                    <div id="upload-progress-fill" style="height:100%;background:var(--color-forest-green,#208B3A);width:0%;transition:width 0.3s;border-radius:6px;"></div>
+                </div>`;
+            const docsGroup = document.getElementById('upload-all-docs').parentElement;
+            docsGroup.appendChild(bar);
+        }
+        bar.style.display = show ? 'block' : 'none';
+        document.getElementById('upload-progress-fill').style.width = `${pct}%`;
+        document.getElementById('upload-progress-msg').textContent  = msg;
+    }
+
+
+    /* ─────────────────────────────────────────
        FORM SUBMISSION → SUPABASE
     ───────────────────────────────────────── */
     document.getElementById('pharmacy-form').addEventListener('submit', async function (e) {
         e.preventDefault();
         if (!validateStep3()) return;
 
-        const pharmacyName   = document.getElementById('pharmacy-name').value.trim();
-        const ownerName      = document.getElementById('owner-name').value.trim();
-        const phone          = document.getElementById('phone').value.trim();
-        const licenseNo      = document.getElementById('license-no').value.trim();
-        const regNo          = document.getElementById('reg-no').value.trim();
-        const cnic           = document.getElementById('cnic').value.trim();
-        const pharmacyType   = document.getElementById('pharmacy-type').value;
-        const opHoursVal     = document.getElementById('operating-hours').value;
-        const delivery       = document.querySelector('input[name="delivery"]:checked').value === 'yes';
-        const province       = document.getElementById('province').value;
-        const city           = document.getElementById('city').value;
-        const address        = document.getElementById('address').value.trim();
-        const landmark       = document.getElementById('landmark').value.trim();
-        const coordinates    = document.getElementById('coordinates').value.trim();
-        const email          = document.getElementById('email').value.trim();
-        const password       = document.getElementById('password').value;
+        // Collect all field values
+        const pharmacyName  = document.getElementById('pharmacy-name').value.trim();
+        const ownerName     = document.getElementById('owner-name').value.trim();
+        const phone         = document.getElementById('phone').value.trim();
+        const licenseNo     = document.getElementById('license-no').value.trim();
+        const regNo         = document.getElementById('reg-no').value.trim();
+        const cnic          = document.getElementById('cnic').value.trim();
+        const pharmacyType  = document.getElementById('pharmacy-type').value;
+        const opHoursVal    = document.getElementById('operating-hours').value;
+        const delivery      = document.querySelector('input[name="delivery"]:checked').value === 'yes';
+        const province      = document.getElementById('province').value;
+        const city          = document.getElementById('city').value;
+        const address       = document.getElementById('address').value.trim();
+        const landmark      = document.getElementById('landmark').value.trim();
+        const coordinates   = document.getElementById('coordinates').value.trim();
+        const email         = document.getElementById('email').value.trim();
 
         let operatingHours = opHoursVal;
         if (opHoursVal === 'custom') {
@@ -525,43 +465,51 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const submitBtn = document.getElementById('btn-submit');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registering…';
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…';
 
         try {
-            /* STEP 1: Create Auth account */
-            const { data: authData, error: signUpError } = await supabaseClient.auth.signUp({
-                email,
-                password,
-                options: {
-                    emailRedirectTo: window.location.origin + '/PharmacyDashboard.html'
-                }
-            });
-            if (signUpError) throw signUpError;
+            /* ── STEP 1: Upload documents to Storage ── */
+            const allFiles = Array.from(document.getElementById('all-docs').files);
+            let licenseDocUrl  = null;
+            let cnicDocUrl     = null;
+            const extraDocUrls = [];
 
-            /* STEP 2: Upload all documents */
-            let licenseDocUrl = null;
-            let cnicDocUrl    = null;
-            const allFiles = document.getElementById('all-docs').files;
-            if (allFiles && allFiles.length > 0 && authData.user) {
-                for (let i = 0; i < allFiles.length; i++) {
-                    const f   = allFiles[i];
-                    const ext = f.name.split('.').pop();
-                    const fp  = `docs/${authData.user.id}/doc_${i}.${ext}`;
-                    const { error: uploadError } = await supabaseClient.storage
-                        .from('pharmacy-docs').upload(fp, f, { upsert: true });
-                    if (!uploadError) {
-                        const { data: urlData } = supabaseClient.storage.from('pharmacy-docs').getPublicUrl(fp);
-                        if (i === 0) licenseDocUrl = urlData?.publicUrl || null;
-                        if (i === 1) cnicDocUrl    = urlData?.publicUrl || null;
-                    } else {
-                        console.warn(`Upload failed for ${f.name}:`, uploadError.message);
-                    }
+            // Use a temp ID for storage path (replaced by row id after insert)
+            const tempId = crypto.randomUUID();
+
+            showProgressBar(true, 5, 'Uploading documents…');
+
+            for (let i = 0; i < allFiles.length; i++) {
+                const f   = allFiles[i];
+                const ext = f.name.split('.').pop().toLowerCase();
+                const fp  = `docs/${tempId}/doc_${i}.${ext}`;
+
+                const { error: uploadErr } = await supabaseClient.storage
+                    .from('pharmacy-docs')
+                    .upload(fp, f, { upsert: true, cacheControl: '3600' });
+
+                if (uploadErr) {
+                    console.warn(`Upload failed for ${f.name}:`, uploadErr.message);
+                    continue;
                 }
+
+                const { data: urlData } = supabaseClient.storage
+                    .from('pharmacy-docs')
+                    .getPublicUrl(fp);
+                const url = urlData?.publicUrl || null;
+
+                if (i === 0) licenseDocUrl = url;
+                else if (i === 1) cnicDocUrl = url;
+                else if (url) extraDocUrls.push(url);
+
+                const pct = Math.round(((i + 1) / allFiles.length) * 80);
+                showProgressBar(true, pct, `Uploading ${i + 1} of ${allFiles.length} files…`);
             }
 
-            /* STEP 3: Insert pharmacy record */
-            const { error: insertError } = await supabaseClient.from('pharmacies').insert([{
-                auth_user_id:    authData.user.id,
+            showProgressBar(true, 90, 'Saving registration…');
+
+            /* ── STEP 2: Insert into pharmacy_requests ── */
+            const { error: insertErr } = await supabaseClient.from('pharmacy_requests').insert([{
                 pharmacy_name:   pharmacyName,
                 owner_name:      ownerName,
                 phone,
@@ -579,18 +527,41 @@ document.addEventListener('DOMContentLoaded', function () {
                 email,
                 license_doc_url: licenseDocUrl,
                 cnic_doc_url:    cnicDocUrl,
+                extra_doc_urls:  extraDocUrls.length > 0 ? extraDocUrls : null,
                 status:          'pending'
             }]);
-            if (insertError) throw insertError;
 
-            /* Success */
+            if (insertErr) throw insertErr;
+
+            showProgressBar(true, 100, 'Done!');
+            setTimeout(() => showProgressBar(false), 800);
+
+            /* ── Success ── */
             document.getElementById('success-modal').classList.remove('hidden');
 
         } catch (err) {
-            alert('Registration failed: ' + err.message);
+            showProgressBar(false);
+            console.error('Registration error:', err);
+            showFormError(err.message);
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Register Pharmacy';
         }
     });
+
+    function showFormError(msg) {
+        let errDiv = document.getElementById('form-global-error');
+        if (!errDiv) {
+            errDiv = document.createElement('div');
+            errDiv.id = 'form-global-error';
+            errDiv.style.cssText = `
+                background:#fef2f2;border:1px solid #fecaca;color:#dc2626;
+                padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:12px;
+                display:flex;align-items:center;gap:8px;`;
+            const btnRow = document.querySelector('#step-3 .btn-row');
+            btnRow.parentElement.insertBefore(errDiv, btnRow);
+        }
+        errDiv.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> Registration failed: ${msg}`;
+        errDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
 });
