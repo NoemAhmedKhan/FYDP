@@ -470,19 +470,20 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             /* ── STEP 1: Upload documents to Storage ── */
             const allFiles = Array.from(document.getElementById('all-docs').files);
-            let licenseDocUrl  = null;
-            let cnicDocUrl     = null;
-            const extraDocUrls = [];
 
-            // Use a temp ID for storage path (replaced by row id after insert)
-            const tempId = crypto.randomUUID();
+            // One stable folder per submission — used as the single reference saved in DB
+            // Layout: pharmacy-docs bucket → docs/{folderUUID}/doc_0_filename.ext
+            const folderUUID    = crypto.randomUUID();
+            const docFolderPath = `docs/${folderUUID}`;
 
             showProgressBar(true, 5, 'Uploading documents…');
 
             for (let i = 0; i < allFiles.length; i++) {
-                const f   = allFiles[i];
-                const ext = f.name.split('.').pop().toLowerCase();
-                const fp  = `docs/${tempId}/doc_${i}.${ext}`;
+                const f        = allFiles[i];
+                const ext      = f.name.split('.').pop().toLowerCase();
+                // Keep original filename prefix so admin can identify doc type at a glance
+                const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                const fp       = `${docFolderPath}/doc_${i}_${safeName}`;
 
                 const { error: uploadErr } = await supabaseClient.storage
                     .from('pharmacy-docs')
@@ -490,17 +491,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (uploadErr) {
                     console.warn(`Upload failed for ${f.name}:`, uploadErr.message);
-                    continue;
+                    // Don't block submission for one failed file, but warn user
                 }
-
-                const { data: urlData } = supabaseClient.storage
-                    .from('pharmacy-docs')
-                    .getPublicUrl(fp);
-                const url = urlData?.publicUrl || null;
-
-                if (i === 0) licenseDocUrl = url;
-                else if (i === 1) cnicDocUrl = url;
-                else if (url) extraDocUrls.push(url);
 
                 const pct = Math.round(((i + 1) / allFiles.length) * 80);
                 showProgressBar(true, pct, `Uploading ${i + 1} of ${allFiles.length} files…`);
@@ -525,9 +517,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 landmark:        landmark || null,
                 coordinates,
                 email,
-                license_doc_url: licenseDocUrl,
-                cnic_doc_url:    cnicDocUrl,
-                extra_doc_urls:  extraDocUrls.length > 0 ? extraDocUrls : null,
+                doc_folder_path: docFolderPath,   // ← single value: "docs/{uuid}"
                 status:          'pending'
             }]);
 
