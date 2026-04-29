@@ -57,8 +57,8 @@
     function getInitials(fullName) {
         const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
         const f = parts[0]?.[0] || '';
-        const l = parts[1]?.[0] || '';
-        return (f + l).toUpperCase() || '?';
+        const l = parts[parts.length - 1]?.[0] || '';
+        return (f + (parts.length > 1 ? l : '')).toUpperCase() || '?';
     }
 
     /* ============================================================
@@ -208,22 +208,16 @@
        location → public.customer_location row (may be null)
        ============================================================ */
     function populateUI(user, profile, location) {
-        const email    = user.email       || '';
+        const email    = user.email        || '';
         const fullName = profile.full_name || '';
-
-        // Split full_name into first / last for the two-field form
-        const nameParts = fullName.trim().split(/\s+/);
-        const firstName = nameParts[0]                           || '';
-        const lastName  = nameParts.slice(1).join(' ')           || '';
 
         currentInitials = getInitials(fullName);
 
-        setVal('firstName',   firstName);
-        setVal('lastName',    lastName);
+        setVal('fullName',    fullName);
         setVal('email',       email);
-        setVal('phone',       profile.phone_no    || '');
-        setVal('city',        profile.city        || '');
-        setVal('street',      location?.address   || '');
+        setVal('phone',       profile.phone_no     || '');
+        setVal('city',        profile.city         || '');
+        setVal('street',      location?.address    || '');
         setVal('coordinates', location?.coordinates || '');
 
         setText('avatarName',       fullName || 'User');
@@ -342,15 +336,13 @@
 
         /* ── Step 2: Upsert profiles ── */
         if (!hasError) {
-            const firstName = val('firstName');
-            const lastName  = val('lastName');
-            const fullName  = [firstName, lastName].filter(Boolean).join(' ') || null;
+            const fullName = val('fullName') || null;
 
             const profilePayload = {
                 user_id:   currentUser.id,
                 full_name: fullName,
-                phone_no:  val('phone')       || null,
-                city:      val('city')        || null,
+                phone_no:  val('phone') || null,
+                city:      val('city')  || null,
             };
 
             if (newAvatarUrl) {
@@ -365,11 +357,9 @@
                 showToast('Profile save failed: ' + profileErr.message, 'error');
                 hasError = true;
             } else {
-                // Keep originalProfile in sync so Cancel restores correctly
                 originalProfile = { ...originalProfile, ...profilePayload };
                 if (newAvatarUrl) originalProfile.profile_img = newAvatarUrl;
 
-                // Update UI name display
                 const displayName = fullName || 'User';
                 currentInitials   = getInitials(displayName);
                 setText('avatarName',      displayName);
@@ -454,7 +444,6 @@
     }
 
     saveBtn && saveBtn.addEventListener('click', saveProfile);
-
     /* ============================================================
        CANCEL
        ============================================================ */
@@ -468,7 +457,6 @@
         setVal('newPassword', '');
         showToast('Changes discarded.', 'info');
     });
-
     /* ── INIT ── */
     initAuth();
 
