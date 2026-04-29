@@ -22,6 +22,7 @@
     </header>
 
     <div class="container">
+        <!-- Left panel -->
         <div class="left-panel">
             <div class="left-content">
                 <h1>Find Nearest Pharmacy & Medicine Stock</h1>
@@ -32,6 +33,7 @@
             </div>
         </div>
 
+        <!-- Right panel -->
         <div class="right-panel">
             <div class="signup-wrapper">
                 <h2>Create Account</h2>
@@ -39,24 +41,32 @@
 
                 <form action="#" class="signup-form" id="signup-form">
 
-                    <!-- First Name + Last Name -->
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="first-name">First Name <span class="required">*</span></label>
-                            <input type="text" id="first-name" class="form-control" placeholder="Enter first name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="last-name">Last Name</label>
-                            <input type="text" id="last-name" class="form-control" placeholder="Enter last name">
+                    <!-- Full Name (single field, required) -->
+                    <div class="form-group">
+                        <label for="full-name">
+                            Full Name <span class="required">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="fa-solid fa-user input-icon"></i>
+                            <input
+                                type="text"
+                                id="full-name"
+                                class="form-control has-icon"
+                                placeholder="Enter your full name"
+                                required
+                                autocomplete="name"
+                            >
                         </div>
                     </div>
 
-                    <!-- City + Phone No -->
+                    <!-- City + Phone No (both required) -->
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="city">City</label>
+                            <label for="city">
+                                City <span class="required">*</span>
+                            </label>
                             <div class="select-wrapper">
-                                <select id="city" class="form-control form-select">
+                                <select id="city" class="form-control form-select" required>
                                     <option value="" disabled selected>Select your city</option>
                                     <optgroup label="Punjab">
                                         <option>Lahore</option>
@@ -195,22 +205,44 @@
                                 <i class="fa-solid fa-chevron-down select-arrow"></i>
                             </div>
                         </div>
+
+                        <!-- Phone No — required, with real-time validation -->
                         <div class="form-group">
-                            <label for="phone">Phone No</label>
+                            <label for="phone">
+                                Phone No <span class="required">*</span>
+                            </label>
                             <div class="input-wrapper">
                                 <i class="fa-solid fa-phone input-icon"></i>
-                                <input type="tel" id="phone" class="form-control has-icon" placeholder="+92 300 0000000">
+                                <input
+                                    type="tel"
+                                    id="phone"
+                                    class="form-control has-icon"
+                                    placeholder="+923003000000"
+                                    required
+                                    autocomplete="tel"
+                                    inputmode="tel"
+                                    maxlength="13"
+                                >
                             </div>
+                            <small class="helper-text" id="phone-helper">
+                                Start with +92 (13 digits) or 0 (11 digits). Digits only.
+                            </small>
                         </div>
                     </div>
 
-                    <!-- Address -->
+                    <!-- Address (optional) -->
                     <div class="form-group">
                         <label for="address">Address</label>
-                        <input type="text" id="address" class="form-control" placeholder="Enter your street address">
+                        <input
+                            type="text"
+                            id="address"
+                            class="form-control"
+                            placeholder="Enter your street address (optional)"
+                            autocomplete="street-address"
+                        >
                     </div>
 
-                    <!-- Coordinates -->
+                    <!-- Coordinates (required) -->
                     <div class="form-group">
                         <label for="coordinates">
                             Coordinates <span class="required">*</span>
@@ -218,33 +250,68 @@
                                 <i class="fa-solid fa-location-crosshairs"></i> Detect
                             </button>
                         </label>
-                        <input type="text" id="coordinates" class="form-control" placeholder="Click 'Detect' or enter manually" required>
-                        <small class="helper-text" id="coord-helper">Helps us find the nearest pharmacies to you.</small>
+                        <input
+                            type="text"
+                            id="coordinates"
+                            class="form-control"
+                            placeholder="Click 'Detect' to auto-fill your location"
+                            required
+                        >
+                        <small class="helper-text" id="coord-helper">
+                            Helps us find the nearest pharmacies to you.
+                        </small>
                     </div>
 
-                    <!-- Email -->
+                    <!-- Email (required) -->
                     <div class="form-group">
-                        <label for="email">Email <span class="required">*</span></label>
+                        <label for="email">
+                            Email <span class="required">*</span>
+                        </label>
                         <div class="input-wrapper">
                             <i class="fa-regular fa-envelope input-icon"></i>
-                            <input type="email" id="email" class="form-control has-icon" placeholder="Enter your email address" required>
+                            <input
+                                type="email"
+                                id="email"
+                                class="form-control has-icon"
+                                placeholder="Enter your email address"
+                                required
+                                autocomplete="email"
+                            >
                         </div>
                     </div>
 
                     <!-- Password + Confirm Password -->
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="password">Password <span class="required">*</span></label>
+                            <label for="password">
+                                Password <span class="required">*</span>
+                            </label>
                             <div class="input-wrapper">
-                                <input type="password" id="password" class="form-control" placeholder="Create a password" required>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    class="form-control"
+                                    placeholder="Create a password"
+                                    required
+                                    autocomplete="new-password"
+                                >
                                 <i class="fa-regular fa-eye-slash toggle-password"></i>
                             </div>
                             <small class="helper-text" id="pass-helper">Must be at least 8 characters.</small>
                         </div>
                         <div class="form-group">
-                            <label for="confirm-password">Confirm Password <span class="required">*</span></label>
+                            <label for="confirm-password">
+                                Confirm Password <span class="required">*</span>
+                            </label>
                             <div class="input-wrapper">
-                                <input type="password" id="confirm-password" class="form-control" placeholder="Confirm your password" required>
+                                <input
+                                    type="password"
+                                    id="confirm-password"
+                                    class="form-control"
+                                    placeholder="Re-enter your password"
+                                    required
+                                    autocomplete="new-password"
+                                >
                                 <i class="fa-regular fa-eye-slash toggle-password"></i>
                             </div>
                         </div>
@@ -272,7 +339,6 @@
         </div>
     </div>
 
-    <!-- SUPABASE CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase.js"></script>
     <script src="SignUp.js"></script>
