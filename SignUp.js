@@ -36,24 +36,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ════════════════════════════════════════
     // PHONE NUMBER VALIDATION & FORMATTING
-    // Rules:
-    //   • Only digits and leading + allowed
-    //   • Starts with +92  → exactly 13 chars total (+923XXXXXXXXX)
-    //   • Starts with 0    → exactly 11 digits (03XXXXXXXXX)
-    //   • No spaces, dashes, or other characters at any point
     // ════════════════════════════════════════
     const phoneInput  = document.getElementById('phone');
     const phoneHelper = document.getElementById('phone-helper');
 
     if (phoneInput) {
-        phoneInput.addEventListener('input', function (e) {
+        phoneInput.addEventListener('input', function () {
             let val = this.value;
-
-            // Allow only + at start and digits everywhere else
-            // Remove any character that is not a digit or a leading +
-            val = val.replace(/(?!^\+)[^\d]/g, '');   // keep leading +, remove all non-digits elsewhere
-            val = val.replace(/\s/g, '');              // remove any spaces just in case
-
+            val = val.replace(/(?!^\+)[^\d]/g, '');
+            val = val.replace(/\s/g, '');
             this.value = val;
             validatePhone(val);
         });
@@ -61,24 +52,13 @@ document.addEventListener('DOMContentLoaded', function () {
         phoneInput.addEventListener('keydown', function (e) {
             const allowedKeys = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
             if (allowedKeys.includes(e.key)) return;
-
             const val = this.value;
             const pos = this.selectionStart;
-
-            // Only allow + as the very first character
             if (e.key === '+') {
-                if (pos === 0 && val.indexOf('+') === -1) return; // allow
-                e.preventDefault();
-                return;
+                if (pos === 0 && val.indexOf('+') === -1) return;
+                e.preventDefault(); return;
             }
-
-            // Only allow digits
-            if (!/^\d$/.test(e.key)) {
-                e.preventDefault();
-                return;
-            }
-
-            // Enforce max length based on prefix
+            if (!/^\d$/.test(e.key)) { e.preventDefault(); return; }
             if (val.startsWith('+92') && val.length >= 13) { e.preventDefault(); return; }
             if (val.startsWith('0')   && val.length >= 11) { e.preventDefault(); return; }
             if (!val.startsWith('+') && !val.startsWith('0') && val.length >= 11) {
@@ -86,12 +66,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        // Paste handler — strip bad characters
         phoneInput.addEventListener('paste', function (e) {
             e.preventDefault();
             let pasted = (e.clipboardData || window.clipboardData).getData('text');
-            pasted = pasted.replace(/\s/g, '');
-            pasted = pasted.replace(/(?!^\+)[^\d]/g, '');
+            pasted = pasted.replace(/\s/g, '').replace(/(?!^\+)[^\d]/g, '');
             this.value = pasted;
             validatePhone(pasted);
         });
@@ -99,31 +77,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function validatePhone(val) {
         if (!phoneHelper) return;
-
         if (!val) {
             phoneHelper.textContent = 'Start with +92 (13 digits) or 0 (11 digits). Digits only.';
             phoneHelper.style.color = 'var(--color-gray)';
             return;
         }
-
         if (val.startsWith('+92')) {
-            const remaining = 13 - val.length;
-            if (remaining > 0) {
-                phoneHelper.textContent = `${remaining} more digit${remaining > 1 ? 's' : ''} needed.`;
-                phoneHelper.style.color = '#dc2626';
-            } else {
-                phoneHelper.textContent = 'Valid number ✓';
-                phoneHelper.style.color = 'var(--color-forest-green)';
-            }
+            const r = 13 - val.length;
+            phoneHelper.textContent = r > 0 ? `${r} more digit${r > 1 ? 's' : ''} needed.` : 'Valid number ✓';
+            phoneHelper.style.color = r > 0 ? '#dc2626' : 'var(--color-forest-green)';
         } else if (val.startsWith('0')) {
-            const remaining = 11 - val.length;
-            if (remaining > 0) {
-                phoneHelper.textContent = `${remaining} more digit${remaining > 1 ? 's' : ''} needed.`;
-                phoneHelper.style.color = '#dc2626';
-            } else {
-                phoneHelper.textContent = 'Valid number ✓';
-                phoneHelper.style.color = 'var(--color-forest-green)';
-            }
+            const r = 11 - val.length;
+            phoneHelper.textContent = r > 0 ? `${r} more digit${r > 1 ? 's' : ''} needed.` : 'Valid number ✓';
+            phoneHelper.style.color = r > 0 ? '#dc2626' : 'var(--color-forest-green)';
         } else {
             phoneHelper.textContent = 'Must start with +92 or 0.';
             phoneHelper.style.color = '#dc2626';
@@ -151,15 +117,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 coordHelper.style.color = '#dc2626';
                 return;
             }
-            btnLocate.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Detecting…';
-            btnLocate.disabled  = true;
+            btnLocate.innerHTML     = '<i class="fa-solid fa-spinner fa-spin"></i> Detecting…';
+            btnLocate.disabled      = true;
             coordHelper.textContent = 'Detecting your location…';
             coordHelper.style.color = 'var(--color-gray)';
 
             navigator.geolocation.getCurrentPosition(
                 function (position) {
-                    const lat = position.coords.latitude.toFixed(6);
-                    const lng = position.coords.longitude.toFixed(6);
+                    const lat           = position.coords.latitude.toFixed(6);
+                    const lng           = position.coords.longitude.toFixed(6);
                     coordInput.value        = `${lat}, ${lng}`;
                     coordHelper.textContent = 'Location detected ✓';
                     coordHelper.style.color = 'var(--color-forest-green)';
@@ -167,21 +133,48 @@ document.addEventListener('DOMContentLoaded', function () {
                     btnLocate.disabled      = false;
                 },
                 function () {
-                    coordHelper.textContent  = 'Could not detect location. You may enter coordinates manually.';
-                    coordHelper.style.color  = '#dc2626';
+                    coordHelper.textContent = 'Could not detect location. You may enter coordinates manually.';
+                    coordHelper.style.color = '#dc2626';
                     coordInput.removeAttribute('readonly');
-                    coordInput.placeholder   = 'e.g. 24.8607, 67.0011';
-                    btnLocate.innerHTML      = '<i class="fa-solid fa-location-crosshairs"></i> Retry';
-                    btnLocate.disabled       = false;
+                    coordInput.placeholder  = 'e.g. 24.8607, 67.0011';
+                    btnLocate.innerHTML     = '<i class="fa-solid fa-location-crosshairs"></i> Retry';
+                    btnLocate.disabled      = false;
                 }
             );
         });
     }
 
-    // ════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════════
     // FORM SUBMISSION
-    // Writes to: users, profiles, customer_location
-    // ════════════════════════════════════════
+    //
+    // COMPLETE FLOW:
+    //
+    //   [SignUp page]
+    //   1. User fills form and submits
+    //   2. auth.signUp() is called → Supabase sends verification email
+    //      • User has NO active session yet (email not verified)
+    //      • DB trigger auto-inserts public.users row on verification
+    //   3. Profile data (name, city, phone, address, coordinates) is
+    //      saved to localStorage as "pendingProfile"
+    //   4. User is redirected to Login.html with a message to verify first
+    //
+    //   [User clicks verification link in email]
+    //   • Supabase verifies the email and redirects to Login.html
+    //   • The DB trigger (handle_new_auth_user) now fires and creates
+    //     the public.users row automatically (role = 'user')
+    //
+    //   [Login.js — on successful login]
+    //   5. Login.js checks localStorage for "pendingProfile"
+    //   6. If found, it inserts into public.profiles + public.customer_location
+    //      using the now-active session (auth.uid() is valid)
+    //   7. localStorage entry is cleared
+    //   8. User is redirected to UserDashboard.html
+    //
+    // WHY localStorage for profile data?
+    //   RLS on profiles/customer_location requires auth.uid() to be set.
+    //   auth.uid() is only valid AFTER email verification + login.
+    //   Storing data in localStorage bridges the gap safely.
+    // ════════════════════════════════════════════════════════════════
     document.getElementById('signup-form').addEventListener('submit', async function (e) {
         e.preventDefault();
 
@@ -195,32 +188,23 @@ document.addEventListener('DOMContentLoaded', function () {
         const confirm     = document.getElementById('confirm-password').value;
         const terms       = document.getElementById('terms').checked;
 
-        // ── Validation ────────────────────────────────────────────────────
-
-        if (!fullName) {
-            showError('full-name', 'Full Name is required.');
-            return;
-        }
+        // ── Validation ──────────────────────────────────────────────────
+        if (!fullName) { showError('full-name', 'Full Name is required.'); return; }
 
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            showError('email', 'Please enter a valid email address.');
-            return;
+            showError('email', 'Please enter a valid email address.'); return;
         }
 
         if (!city) {
             alert('Please select your City.');
-            document.getElementById('city').focus();
-            return;
+            document.getElementById('city').focus(); return;
         }
 
-        if (!phone) {
-            showError('phone', 'Phone number is required.');
-            return;
-        }
+        if (!phone) { showError('phone', 'Phone number is required.'); return; }
 
         if (!isPhoneValid(phone)) {
             if (phone.startsWith('+92')) {
-                showError('phone', 'Phone starting with +92 must be exactly 13 digits total (+92XXXXXXXXXX).');
+                showError('phone', 'Phone starting with +92 must be exactly 13 digits (+92XXXXXXXXXX).');
             } else if (phone.startsWith('0')) {
                 showError('phone', 'Phone starting with 0 must be exactly 11 digits (0XXXXXXXXXX).');
             } else {
@@ -235,13 +219,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (!password || password.length < 8) {
-            showError('password', 'Password must be at least 8 characters long.');
-            return;
+            showError('password', 'Password must be at least 8 characters long.'); return;
         }
 
         if (password !== confirm) {
-            showError('confirm-password', 'Passwords do not match.');
-            return;
+            showError('confirm-password', 'Passwords do not match.'); return;
         }
 
         if (!terms) {
@@ -249,82 +231,66 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        // ── Loading state ─────────────────────────────────────────────────
-        const submitBtn = document.querySelector('.btn-submit');
+        // ── Loading state ───────────────────────────────────────────────
+        const submitBtn       = document.querySelector('.btn-submit');
         submitBtn.disabled    = true;
         submitBtn.textContent = 'Creating Account…';
 
         try {
-            // ── STEP 1: Create auth account (Supabase Auth) ───────────────
+            // ── STEP 1: Register with Supabase Auth ─────────────────────
+            // emailRedirectTo = the page user lands on after clicking the
+            // verification link. We send them straight to Login.html.
             const { data, error: signUpError } = await supabaseClient.auth.signUp({
                 email,
                 password,
                 options: {
-                    emailRedirectTo: 'https://noemahmedkhan.github.io/FYDP/UserDashboard.html'
+                    emailRedirectTo: 'https://noemahmedkhan.github.io/FYDP/Login.html'
                 }
             });
 
             if (signUpError) throw signUpError;
 
-            const userId = data.user.id;
+            // ── STEP 2: Save profile data to localStorage ────────────────
+            // Login.js will read this after the user verifies and logs in,
+            // then write it to public.profiles + public.customer_location.
+            localStorage.setItem('pendingProfile', JSON.stringify({
+                full_name:   fullName,
+                city:        city,
+                phone_no:    phone,
+                address:     address || null,
+                coordinates: coordinates
+            }));
 
-            // ── STEP 2: Insert into public.users ──────────────────────────
-            const { error: userError } = await supabaseClient
-                .from('users')
-                .insert([{
-                    id:    userId,
-                    email: email,
-                    role:  'user'
-                }]);
-
-            // Ignore duplicate key error (user already exists from a previous attempt)
-            if (userError && !userError.message.includes('duplicate')) {
-                throw userError;
-            }
-
-            // ── STEP 3: Insert into public.profiles ───────────────────────
-            const { error: profileError } = await supabaseClient
-                .from('profiles')
-                .insert([{
-                    user_id:   userId,
-                    full_name: fullName,
-                    city:      city,
-                    phone_no:  phone
-                }]);
-
-            if (profileError && !profileError.message.includes('duplicate')) {
-                throw profileError;
-            }
-
-            // ── STEP 4: Insert into public.customer_location ──────────────
-            const { error: locationError } = await supabaseClient
-                .from('customer_location')
-                .insert([{
-                    user_id:     userId,
-                    address:     address || null,
-                    coordinates: coordinates
-                }]);
-
-            if (locationError && !locationError.message.includes('duplicate')) {
-                throw locationError;
-            }
-
-            // ── STEP 5: Success ───────────────────────────────────────────
+            // ── STEP 3: Inform user and redirect ────────────────────────
             alert(
-                'Account created successfully! 🎉\n\n' +
-                'Please check your email inbox and click the verification link before logging in.'
+                '✅ Account created!\n\n' +
+                'A verification email has been sent to:\n' + email + '\n\n' +
+                'Please check your inbox and click the verification link.\n' +
+                'After verifying, come back here to Log In.'
             );
+
             window.location.href = 'Login.html';
 
         } catch (err) {
             console.error('Signup error:', err);
-            alert('Error: ' + (err.message || 'Something went wrong. Please try again.'));
+
+            let msg = 'Something went wrong. Please try again.';
+            if (err.message?.toLowerCase().includes('already registered') ||
+                err.message?.toLowerCase().includes('user already exists') ||
+                err.message?.toLowerCase().includes('duplicate')) {
+                msg = 'An account with this email already exists. Please log in instead.';
+            } else if (err.message?.toLowerCase().includes('password')) {
+                msg = 'Password is too weak. Please use at least 8 characters.';
+            } else if (err.message) {
+                msg = err.message;
+            }
+
+            alert('Error: ' + msg);
             submitBtn.disabled    = false;
             submitBtn.textContent = 'Create Account';
         }
     });
 
-    // ── Helper: show inline error & focus ────────────────────────────────
     function showError(fieldId, message) {
         const el = document.getElementById(fieldId);
         alert(message);
