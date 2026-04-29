@@ -228,7 +228,6 @@ if (logoutBtn) {
    ============================================= */
 (function () {
     'use strict';
-
     const sidebar        = document.getElementById('sidebar');
     const hamburgerBtn   = document.getElementById('hamburgerBtn');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
@@ -242,6 +241,5 @@ if (logoutBtn) {
     sidebarOverlay && sidebarOverlay.addEventListener('click', closeSidebar);
     document.addEventListener('keydown', e => e.key === 'Escape' && closeSidebar());
 })();
-
 /* ── Run on page load ── */
 initDashboard();
