@@ -501,11 +501,10 @@ document.addEventListener('DOMContentLoaded', function () {
             showProgressBar(true, 90, 'Saving registration…');
 
             /* ── STEP 2: Insert into pharmacy_requests ── */
+            // Column names match the new normalized schema exactly
             const { error: insertErr } = await supabaseClient.from('pharmacy_requests').insert([{
                 pharmacy_name:   pharmacyName,
-                owner_name:      ownerName,
-                phone,
-                license_no:      licenseNo,
+                drug_license_no: licenseNo,       // renamed from license_no
                 reg_no:          regNo,
                 cnic,
                 pharmacy_type:   pharmacyType,
@@ -516,8 +515,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 address,
                 landmark:        landmark || null,
                 coordinates,
+                doc_folder_path: docFolderPath,
+                // Owner / profile fields (stored here for admin review)
+                full_name:       ownerName,        // renamed from owner_name
+                phone_no:        phone,            // renamed from phone
                 email,
-                doc_folder_path: docFolderPath,   // ← single value: "docs/{uuid}"
                 status:          'pending'
             }]);
 
