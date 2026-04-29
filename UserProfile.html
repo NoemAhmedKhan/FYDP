@@ -133,10 +133,13 @@
             </div>
 
             <form class="profile-form" id="profileForm" novalidate>
-                <!-- Row 1: First + Last Name -->
+                <!-- Row 1: First + Last Name (stored together as full_name in profiles table) -->
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label" for="firstName">First Name</label>
+                        <label class="form-label" for="firstName">
+                            First Name
+                            <span class="form-label__note">(saved as part of full name)</span>
+                        </label>
                         <input type="text" id="firstName" class="form-input"
                                placeholder="Enter first name" autocomplete="given-name">
                     </div>
