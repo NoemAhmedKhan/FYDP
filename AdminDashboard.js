@@ -287,7 +287,9 @@ async function loadOverviewStats() {
     } catch { document.getElementById('stat-pending').textContent = '—'; }
 
     try {
-        const { count } = await sb.from('users').select('*', { count: 'exact', head: true });
+        const { count } = await sb.from('users')
+            .select('*', { count: 'exact', head: true })
+            .eq('role', 'user');
         document.getElementById('stat-users').textContent = count ?? '—';
     } catch { document.getElementById('stat-users').textContent = '—'; }
 
@@ -486,14 +488,16 @@ function getDocLabel(filename, index) {
 }
 
 // ============================
-// APPROVE REQUEST
+// APPROVE REQUEST — Normalized Schema
+// Creates: users row + profiles row + pharmacies row
+// Deletes: pharmacy_requests row
 // ============================
 async function approveRequest(requestId, btn) {
     btn.disabled  = true;
     btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:rgba(255,255,255,0.4);border-top-color:white"></div> Approving...';
 
     try {
-        // 1. Fetch the full request
+        // 1. Fetch the full request row
         const { data: req, error: fetchErr } = await sb
             .from('pharmacy_requests')
             .select('*')
@@ -501,30 +505,60 @@ async function approveRequest(requestId, btn) {
             .single();
         if (fetchErr) throw fetchErr;
 
-        // 2. Build pharmacy record — strip request-only fields
-        const { id, status, created_at, updated_at, rejection_reason, ...pharmacyData } = req;
+        const now           = new Date().toISOString();
+        const pharmacistId  = crypto.randomUUID(); // stable UUID for all 3 tables
 
-        // 3. Insert into pharmacies
-        const { error: insertErr } = await sb
-            .from('pharmacies')
-            .insert([{ ...pharmacyData, approved_at: new Date().toISOString(), status: 'active' }]);
-        if (insertErr) throw insertErr;
+        // 2. Insert into public.users (role = pharmacist)
+        const { error: userErr } = await sb.from('users').insert([{
+            id:    pharmacistId,
+            email: req.email,
+            role:  'pharmacist'
+        }]);
+        if (userErr && !userErr.message.includes('duplicate')) throw userErr;
 
-        // 4. Delete from pharmacy_requests
+        // 3. Insert into public.profiles (owner contact details)
+        const { error: profileErr } = await sb.from('profiles').insert([{
+            user_id:   pharmacistId,
+            full_name: req.full_name,
+            city:      req.city,
+            phone_no:  req.phone_no
+        }]);
+        if (profileErr && !profileErr.message.includes('duplicate')) throw profileErr;
+
+        // 4. Insert into public.pharmacies (pharmacy details only)
+        const { error: pharmacyErr } = await sb.from('pharmacies').insert([{
+            user_id:         pharmacistId,
+            pharmacy_name:   req.pharmacy_name,
+            drug_license_no: req.drug_license_no,
+            reg_no:          req.reg_no,
+            cnic:            req.cnic,
+            pharmacy_type:   req.pharmacy_type,
+            operating_hours: req.operating_hours,
+            delivery:        req.delivery,
+            province:        req.province,
+            city:            req.city,
+            address:         req.address,
+            landmark:        req.landmark || null,
+            coordinates:     req.coordinates,
+            doc_folder_path: req.doc_folder_path || null,
+            status:          'active',
+            approved_at:     now
+        }]);
+        if (pharmacyErr) throw pharmacyErr;
+
+        // 5. Delete from pharmacy_requests
         const { error: deleteErr } = await sb
-            .from('pharmacy_requests')
-            .delete()
-            .eq('id', requestId);
+            .from('pharmacy_requests').delete().eq('id', requestId);
         if (deleteErr) throw deleteErr;
 
-        // 5. Send approval email (non-blocking)
+        // 6. Send approval email (non-blocking)
         sendEmail({
             to:           req.email,
             type:         'approval',
             pharmacyName: req.pharmacy_name
         }).catch(err => console.warn('Approval email failed (non-critical):', err));
 
-        // 6. Animate card out
+        // 7. Animate card out
         animateCardOut(`req-card-${requestId}`, 'right');
         showToast(`${req.pharmacy_name} approved and added to pharmacies!`, 'success');
         await updatePendingBadge();
