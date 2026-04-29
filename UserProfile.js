@@ -1,15 +1,20 @@
 /* ============================================================
-   MediFinder — UserProfile.js  v2.0
+   MediFinder — UserProfile.js  v3.0
 
-   CHANGES IN v2.0:
-   1. Forgot Password logic completely removed (link, handler,
-      and related toast/spinner code all gone).
-   2. Avatar upload now DELETES the old file from Supabase
-      Storage before uploading the new one, so only 1 file
-      ever exists per user in the "avatars" bucket.
-      Old file path is read from the profile_img URL saved
-      in the users table.
-   3. All other logic unchanged.
+   FIXES IN v3.0:
+   1. "infinite recursion" error fixed — no longer queries
+      public.users for profile data. The RLS policy on users
+      does a self-referencing subquery (checks role = 'admin'
+      inside users itself) which causes infinite recursion.
+      All profile data now comes from:
+        • public.profiles   → full_name, phone_no, city, profile_img
+        • public.customer_location → address, coordinates
+   2. first_name / last_name split from full_name on load,
+      rejoined as full_name on save (profiles.full_name).
+   3. Avatar (profile_img) saved to profiles table, not users.
+   4. address / coordinates saved to customer_location via
+      upsert (user_id conflict key).
+   5. Sidebar name/email/avatar all populated from profiles.
    ============================================================ */
 (function () {
     'use strict';
@@ -24,8 +29,6 @@
         console.error('[UserProfile] Supabase SDK not found. Check script load order.');
         return;
     }
-
-    console.log('[UserProfile] Supabase client ready.');
 
     const AVATAR_BUCKET = 'avatars';
 
@@ -46,39 +49,34 @@
     /* ============================================================
        DOM HELPERS
        ============================================================ */
-    const $      = id  => document.getElementById(id);
-    const val    = id  => $(id)?.value.trim() || '';
-    const setVal = (id, v) => { const el = $(id); if (el) el.value       = v ?? ''; };
-    const setText= (id, v) => { const el = $(id); if (el) el.textContent = v ?? ''; };
+    const $       = id  => document.getElementById(id);
+    const val     = id  => $(id)?.value.trim() || '';
+    const setVal  = (id, v) => { const el = $(id); if (el) el.value       = v ?? ''; };
+    const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? ''; };
 
-    function getInitials(first, last) {
-        const f = (first || '').trim()[0] || '';
-        const l = (last  || '').trim()[0] || '';
+    function getInitials(fullName) {
+        const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+        const f = parts[0]?.[0] || '';
+        const l = parts[1]?.[0] || '';
         return (f + l).toUpperCase() || '?';
     }
 
     /* ============================================================
-       AVATAR RENDERING — 100% JS-driven, no static img in HTML
-       Priority: customUrl → Images/ProfileAvatar.jpg → initials
+       AVATAR RENDERING
        ============================================================ */
     function renderAvatar(containerId, imageUrl, initialsText) {
         const container = $(containerId);
         if (!container) return;
-
         container.innerHTML = '';
 
         const img     = document.createElement('img');
         img.alt       = 'Profile Photo';
         img.className = 'avatar-photo';
 
-        container.appendChild(img);
-
         img.onerror = () => {
-            // Profile URL failed — fall back to default avatar
-            if (img.src !== window.location.origin + '/Images/ProfileAvatar.jpg') {
+            if (!img.src.includes('ProfileAvatar')) {
                 img.src = 'Images/ProfileAvatar.jpg';
             } else {
-                // Default also failed — show initials
                 container.innerHTML = '';
                 const span       = document.createElement('span');
                 span.className   = 'avatar-initials-text';
@@ -88,10 +86,11 @@
         };
 
         img.src = imageUrl || 'Images/ProfileAvatar.jpg';
+        container.appendChild(img);
     }
 
     const setMainAvatar    = (url, ini) => renderAvatar('avatarImgContainer', url, ini);
-    const setSidebarAvatar = (url, ini) => renderAvatar('sidebarAvatarInner', url, ini);
+    const setSidebarAvatar = (url, ini) => renderAvatar('sidebarAvatarInner',  url, ini);
 
     /* ============================================================
        SIDEBAR TOGGLE (mobile)
@@ -155,75 +154,38 @@
         showAvatarError('');
         pendingAvatarFile = file;
 
-        // Show local preview immediately (before save)
         const blobUrl = URL.createObjectURL(file);
         setMainAvatar(blobUrl, currentInitials);
         setSidebarAvatar(blobUrl, currentInitials);
-        console.log('[UserProfile] Avatar preview set (local blob). Will upload on Save.');
     });
 
     /* ============================================================
        DELETE OLD AVATAR FROM STORAGE
-       ─────────────────────────────────────────────────────────────
-       Extracts the file path from the existing profile_img URL
-       and removes it from the bucket before uploading the new one.
-       This ensures only 1 file per user ever exists in storage.
-
-       The public URL format is:
-         https://<project>.supabase.co/storage/v1/object/public/avatars/<path>
-       We extract everything after "/avatars/" as the file path.
-
-       If deletion fails we log a warning but do NOT block the upload.
        ============================================================ */
     async function deleteOldAvatar(existingProfileImgUrl) {
         if (!existingProfileImgUrl) return;
-
         try {
-            // Strip query string (e.g. ?v=123456) before parsing
             const cleanUrl  = existingProfileImgUrl.split('?')[0];
             const marker    = `/avatars/`;
             const markerIdx = cleanUrl.indexOf(marker);
-
-            if (markerIdx === -1) {
-                console.warn('[UserProfile] Could not parse old avatar path from URL:', cleanUrl);
-                return;
-            }
+            if (markerIdx === -1) return;
 
             const oldPath = cleanUrl.substring(markerIdx + marker.length);
-            console.log('[UserProfile] Deleting old avatar file:', oldPath);
-
-            const { error } = await db.storage
-                .from(AVATAR_BUCKET)
-                .remove([oldPath]);
-
-            if (error) {
-                console.warn('[UserProfile] Old avatar delete warning (non-blocking):', error.message);
-            } else {
-                console.log('[UserProfile] Old avatar deleted successfully.');
-            }
+            const { error } = await db.storage.from(AVATAR_BUCKET).remove([oldPath]);
+            if (error) console.warn('[UserProfile] Old avatar delete warning:', error.message);
         } catch (err) {
-            // Non-blocking — just warn, don't stop the upload
-            console.warn('[UserProfile] deleteOldAvatar exception (non-blocking):', err.message);
+            console.warn('[UserProfile] deleteOldAvatar exception:', err.message);
         }
     }
 
     /* ============================================================
        UPLOAD NEW AVATAR TO STORAGE
-       ─────────────────────────────────────────────────────────────
-       Always saves as:  <userId>/avatar.<ext>
-       Uses upsert:true so if a same-extension file already exists
-       it gets overwritten (extra safety net on top of delete).
-       Returns the permanent public URL with a cache-bust param.
        ============================================================ */
     async function uploadAvatar(userId, file, existingProfileImgUrl) {
-        // Step 1: Delete the old file first (keeps bucket clean)
         await deleteOldAvatar(existingProfileImgUrl);
 
-        // Step 2: Upload the new file
         const ext      = (file.name.split('.').pop() || 'jpg').toLowerCase();
         const filePath = `${userId}/avatar.${ext}`;
-
-        console.log('[UserProfile] Uploading new avatar to:', filePath);
 
         const { error: uploadErr } = await db.storage
             .from(AVATAR_BUCKET)
@@ -233,94 +195,106 @@
                 cacheControl: '3600',
             });
 
-        if (uploadErr) {
-            console.error('[UserProfile] Avatar upload error:', uploadErr);
-            throw new Error('Avatar upload failed: ' + uploadErr.message);
-        }
+        if (uploadErr) throw new Error('Avatar upload failed: ' + uploadErr.message);
 
         const { data } = db.storage.from(AVATAR_BUCKET).getPublicUrl(filePath);
-        const publicUrl = `${data.publicUrl}?v=${Date.now()}`;
-        console.log('[UserProfile] New avatar uploaded. Public URL:', publicUrl);
-        return publicUrl;
+        return `${data.publicUrl}?v=${Date.now()}`;
     }
 
     /* ============================================================
        POPULATE UI FROM FETCHED DATA
+       ─────────────────────────────────────────────────────────────
+       profile  → public.profiles row
+       location → public.customer_location row (may be null)
        ============================================================ */
-    function populateUI(user, profile) {
-        const email     = user.email         || '';
-        const firstName = profile.first_name || '';
-        const lastName  = profile.last_name  || '';
-        const fullName  = [firstName, lastName].filter(Boolean).join(' ') || 'User';
+    function populateUI(user, profile, location) {
+        const email    = user.email       || '';
+        const fullName = profile.full_name || '';
 
-        currentInitials = getInitials(firstName, lastName);
+        // Split full_name into first / last for the two-field form
+        const nameParts = fullName.trim().split(/\s+/);
+        const firstName = nameParts[0]                           || '';
+        const lastName  = nameParts.slice(1).join(' ')           || '';
+
+        currentInitials = getInitials(fullName);
 
         setVal('firstName',   firstName);
         setVal('lastName',    lastName);
         setVal('email',       email);
         setVal('phone',       profile.phone_no    || '');
-        setVal('street',      profile.address     || '');
         setVal('city',        profile.city        || '');
-        setVal('coordinates', profile.coordinates || '');
+        setVal('street',      location?.address   || '');
+        setVal('coordinates', location?.coordinates || '');
 
-        setText('avatarName',       fullName);
+        setText('avatarName',       fullName || 'User');
         setText('avatarEmail',      email);
-        setText('sidebarUserName',  fullName);
+        setText('sidebarUserName',  fullName || 'User');
         setText('sidebarUserEmail', email);
 
-        // Use profile_img from DB if present, else show default avatar
         const customUrl = profile.profile_img || null;
         setMainAvatar(customUrl, currentInitials);
         setSidebarAvatar(customUrl, currentInitials);
-
-        console.log('[UserProfile] UI populated. Name:', fullName, '| Avatar URL:', customUrl || 'default');
     }
 
     /* ============================================================
        AUTH + LOAD
+       ─────────────────────────────────────────────────────────────
+       Reads from public.profiles (full_name, phone_no, city,
+       profile_img) and public.customer_location (address,
+       coordinates). Does NOT touch public.users (avoids
+       infinite-recursion RLS bug).
        ============================================================ */
     let currentUser     = null;
     let originalProfile = null;
+    let originalLocation = null;
 
     async function fetchAndRender(user) {
         currentUser = user;
-        console.log('[UserProfile] Auth user ID:', user.id, '| Email:', user.email);
 
-        const { data: profile, error: dbErr } = await db
-            .from('users')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+        try {
+            // ── Fetch profiles row ──────────────────────────────
+            const { data: profile, error: profileErr } = await db
+                .from('profiles')
+                .select('full_name, phone_no, city, profile_img')
+                .eq('user_id', user.id)
+                .single();
 
-        if (dbErr) {
-            if (dbErr.code === 'PGRST116') {
-                console.warn('[UserProfile] No row in users table for this user yet.');
-                originalProfile = {};
-                populateUI(user, {});
-            } else {
-                console.error('[UserProfile] DB fetch error:', dbErr);
-                showToast('Could not load profile: ' + dbErr.message, 'error');
+            if (profileErr && profileErr.code !== 'PGRST116') {
+                // PGRST116 = "no rows" — that's fine for a new user
+                throw profileErr;
             }
-            return;
-        }
 
-        console.log('[UserProfile] Profile fetched:', profile);
-        originalProfile = profile;
-        populateUI(user, profile);
+            originalProfile  = profile  || {};
+
+            // ── Fetch customer_location row ─────────────────────
+            const { data: location, error: locationErr } = await db
+                .from('customer_location')
+                .select('address, coordinates')
+                .eq('user_id', user.id)
+                .single();
+
+            // location may not exist yet — that's OK
+            if (locationErr && locationErr.code !== 'PGRST116') {
+                console.warn('[UserProfile] Location fetch warning:', locationErr.message);
+            }
+
+            originalLocation = location || null;
+
+            populateUI(user, originalProfile, originalLocation);
+
+        } catch (err) {
+            console.error('[UserProfile] Fetch error:', err.message);
+            showToast('Could not load profile: ' + err.message, 'error');
+        }
     }
 
     function initAuth() {
-        console.log('[UserProfile] Initialising auth listener...');
         const { data: { subscription } } = db.auth.onAuthStateChange((event, session) => {
-            console.log('[UserProfile] Auth event:', event, '| Has session:', !!session);
             subscription.unsubscribe();
-
-            if (!session || !session.user) {
-                console.warn('[UserProfile] No session — redirecting to Login.html');
+            if (!session?.user) {
                 window.location.href = 'Login.html';
                 return;
             }
-
             fetchAndRender(session.user);
         });
     }
@@ -336,87 +310,106 @@
     /* ============================================================
        SAVE CHANGES
        ─────────────────────────────────────────────────────────────
-       Step 1: Delete old avatar + upload new one (if changed)
-       Step 2: Upsert all fields + profile_img into users table
-       Step 3: Change password (if old + new both provided)
+       Step 1: Upload new avatar to storage (if selected)
+       Step 2: Upsert public.profiles
+               (full_name, phone_no, city, profile_img)
+       Step 3: Upsert public.customer_location
+               (address, coordinates)
+       Step 4: Change password (if both old + new provided)
        ============================================================ */
     const saveBtn = $('saveBtn');
 
     async function saveProfile() {
-        if (!currentUser) {
-            console.warn('[UserProfile] saveProfile called but currentUser is null');
-            return;
-        }
+        if (!currentUser) return;
 
-        console.log('[UserProfile] Save started for user:', currentUser.id);
         saveBtn.disabled  = true;
         saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
 
         let hasError     = false;
         let newAvatarUrl = null;
 
-        /* ── Step 1: Delete old + upload new avatar if selected ── */
+        /* ── Step 1: Avatar upload ── */
         if (pendingAvatarFile) {
             try {
-                // Pass existing URL so old file gets deleted before new upload
                 const existingUrl = originalProfile?.profile_img || null;
                 newAvatarUrl      = await uploadAvatar(currentUser.id, pendingAvatarFile, existingUrl);
                 pendingAvatarFile = null;
             } catch (err) {
-                console.error('[UserProfile] Avatar upload failed:', err.message);
                 showToast(err.message, 'error');
                 hasError = true;
             }
         }
 
-        /* ── Step 2: Upsert profile fields ── */
+        /* ── Step 2: Upsert profiles ── */
         if (!hasError) {
-            const payload = {
-                id:          currentUser.id,
-                first_name:  val('firstName')   || null,
-                last_name:   val('lastName')    || null,
-                phone_no:    val('phone')       || null,
-                address:     val('street')      || null,
-                city:        val('city')        || null,
-                coordinates: val('coordinates') || null,
+            const firstName = val('firstName');
+            const lastName  = val('lastName');
+            const fullName  = [firstName, lastName].filter(Boolean).join(' ') || null;
+
+            const profilePayload = {
+                user_id:   currentUser.id,
+                full_name: fullName,
+                phone_no:  val('phone')       || null,
+                city:      val('city')        || null,
             };
 
             if (newAvatarUrl) {
-                payload.profile_img = newAvatarUrl;
+                profilePayload.profile_img = newAvatarUrl;
             }
 
-            console.log('[UserProfile] Upserting payload:', payload);
+            const { error: profileErr } = await db
+                .from('profiles')
+                .upsert(profilePayload, { onConflict: 'user_id' });
 
-            const { data: upsertData, error: upsertErr } = await db
-                .from('users')
-                .upsert(payload, { onConflict: 'id' })
-                .select();
-
-            if (upsertErr) {
-                console.error('[UserProfile] Upsert error:', upsertErr);
-                showToast('Save failed: ' + upsertErr.message, 'error');
+            if (profileErr) {
+                showToast('Profile save failed: ' + profileErr.message, 'error');
                 hasError = true;
             } else {
-                console.log('[UserProfile] Upsert success. Returned:', upsertData);
+                // Keep originalProfile in sync so Cancel restores correctly
+                originalProfile = { ...originalProfile, ...profilePayload };
+                if (newAvatarUrl) originalProfile.profile_img = newAvatarUrl;
 
-                originalProfile = { ...originalProfile, ...payload };
-
-                const fullName = [payload.first_name, payload.last_name]
-                    .filter(Boolean).join(' ') || 'User';
-                currentInitials = getInitials(payload.first_name, payload.last_name);
-
-                setText('avatarName',      fullName);
-                setText('sidebarUserName', fullName);
+                // Update UI name display
+                const displayName = fullName || 'User';
+                currentInitials   = getInitials(displayName);
+                setText('avatarName',      displayName);
+                setText('sidebarUserName', displayName);
 
                 if (newAvatarUrl) {
-                    originalProfile.profile_img = newAvatarUrl;
                     setMainAvatar(newAvatarUrl, currentInitials);
                     setSidebarAvatar(newAvatarUrl, currentInitials);
                 }
             }
         }
 
-        /* ── Step 3: Password change ── */
+        /* ── Step 3: Upsert customer_location ── */
+        if (!hasError) {
+            const address     = val('street')      || null;
+            const coordinates = val('coordinates') || null;
+
+            // Only write if at least one field has a value
+            if (address || coordinates) {
+                const locationPayload = {
+                    user_id:     currentUser.id,
+                    address:     address,
+                    coordinates: coordinates,
+                };
+
+                const { error: locationErr } = await db
+                    .from('customer_location')
+                    .upsert(locationPayload, { onConflict: 'user_id' });
+
+                if (locationErr) {
+                    console.warn('[UserProfile] Location save warning:', locationErr.message);
+                    // Non-fatal — profile already saved, just warn
+                    showToast('Profile saved, but location update failed: ' + locationErr.message, 'info');
+                } else {
+                    originalLocation = { ...originalLocation, address, coordinates };
+                }
+            }
+        }
+
+        /* ── Step 4: Password change ── */
         const oldPw = val('oldPassword');
         const newPw = val('newPassword');
 
@@ -434,23 +427,19 @@
                 showToast('New password must be different from the old one.', 'error');
                 hasError = true;
             } else {
-                console.log('[UserProfile] Re-authenticating to verify old password...');
                 const { error: reAuthErr } = await db.auth.signInWithPassword({
                     email:    currentUser.email,
                     password: oldPw,
                 });
                 if (reAuthErr) {
-                    console.error('[UserProfile] Re-auth failed:', reAuthErr.message);
                     showToast('Old password is incorrect.', 'error');
                     hasError = true;
                 } else {
                     const { error: pwErr } = await db.auth.updateUser({ password: newPw });
                     if (pwErr) {
-                        console.error('[UserProfile] Password update failed:', pwErr.message);
                         showToast('Password update failed: ' + pwErr.message, 'error');
                         hasError = true;
                     } else {
-                        console.log('[UserProfile] Password updated successfully.');
                         setVal('oldPassword', '');
                         setVal('newPassword', '');
                     }
@@ -458,13 +447,10 @@
             }
         }
 
-        if (!hasError) {
-            showToast('✓ Profile saved successfully!', 'success');
-        }
+        if (!hasError) showToast('✓ Profile saved successfully!', 'success');
 
         saveBtn.disabled  = false;
         saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
-        console.log('[UserProfile] Save complete. hasError:', hasError);
     }
 
     saveBtn && saveBtn.addEventListener('click', saveProfile);
@@ -475,7 +461,9 @@
     $('cancelBtn') && $('cancelBtn').addEventListener('click', () => {
         pendingAvatarFile = null;
         showAvatarError('');
-        if (currentUser && originalProfile) populateUI(currentUser, originalProfile);
+        if (currentUser && originalProfile !== null) {
+            populateUI(currentUser, originalProfile, originalLocation);
+        }
         setVal('oldPassword', '');
         setVal('newPassword', '');
         showToast('Changes discarded.', 'info');
