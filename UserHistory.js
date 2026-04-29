@@ -523,7 +523,6 @@
     /* =============================================
        12. UTILITY HELPERS
        ============================================= */
-
     /* Format ISO date → "Oct 24, 2024" */
     function formatDate(isoString) {
         if (!isoString) return '—';
@@ -543,7 +542,6 @@
         }
         return name.slice(0, maxLen) + '…';
     }
-
     /* Prevent XSS when injecting user/DB data into innerHTML */
     function escapeHtml(str) {
         return String(str)
