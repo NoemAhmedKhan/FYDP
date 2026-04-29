@@ -55,17 +55,18 @@
 
         // Load sidebar profile details
         try {
+            // profiles table stores full_name and profile_img (users table only has id/email/role)
             const { data: profile } = await supabaseClient
-                .from('users')
-                .select('first_name, last_name, profile_img')
-                .eq('id', session.user.id)
+                .from('profiles')
+                .select('full_name, profile_img')
+                .eq('user_id', session.user.id)
                 .single();
 
             if (profile) {
-                const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+                const fullName = profile.full_name || 'User';
                 const nameEl   = document.getElementById('sidebarUserName');
                 const emailEl  = document.getElementById('sidebarUserEmail');
-                if (nameEl)  nameEl.textContent  = fullName || 'User';
+                if (nameEl)  nameEl.textContent  = fullName;
                 if (emailEl) emailEl.textContent = session.user.email || '';
                 renderSidebarAvatar(profile.profile_img || null);
             }
