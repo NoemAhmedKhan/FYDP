@@ -1,22 +1,26 @@
 document.addEventListener('DOMContentLoaded', function () {
 
-    /* ── Password toggles ── */
+    // ════════════════════════════════════════
+    // PASSWORD TOGGLES
+    // ════════════════════════════════════════
     document.querySelectorAll('.toggle-password').forEach((icon) => {
         icon.addEventListener('click', function () {
             const input = this.parentElement.querySelector('input');
-            const isPassword = input.getAttribute('type') === 'password';
-            input.setAttribute('type', isPassword ? 'text' : 'password');
+            const show  = input.getAttribute('type') === 'password';
+            input.setAttribute('type', show ? 'text' : 'password');
             this.classList.toggle('fa-eye-slash');
             this.classList.toggle('fa-eye');
         });
     });
 
-    /* ── Real-time password strength ── */
+    // ════════════════════════════════════════
+    // PASSWORD STRENGTH INDICATOR
+    // ════════════════════════════════════════
     const passwordInput = document.getElementById('password');
     if (passwordInput) {
         passwordInput.addEventListener('input', function () {
             const helper = document.getElementById('pass-helper');
-            const len = this.value.length;
+            const len    = this.value.length;
             if (len === 0) {
                 helper.textContent = 'Must be at least 8 characters.';
                 helper.style.color = 'var(--color-gray)';
@@ -30,7 +34,112 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    /* ── Auto-detect coordinates ── */
+    // ════════════════════════════════════════
+    // PHONE NUMBER VALIDATION & FORMATTING
+    // Rules:
+    //   • Only digits and leading + allowed
+    //   • Starts with +92  → exactly 13 chars total (+923XXXXXXXXX)
+    //   • Starts with 0    → exactly 11 digits (03XXXXXXXXX)
+    //   • No spaces, dashes, or other characters at any point
+    // ════════════════════════════════════════
+    const phoneInput  = document.getElementById('phone');
+    const phoneHelper = document.getElementById('phone-helper');
+
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function (e) {
+            let val = this.value;
+
+            // Allow only + at start and digits everywhere else
+            // Remove any character that is not a digit or a leading +
+            val = val.replace(/(?!^\+)[^\d]/g, '');   // keep leading +, remove all non-digits elsewhere
+            val = val.replace(/\s/g, '');              // remove any spaces just in case
+
+            this.value = val;
+            validatePhone(val);
+        });
+
+        phoneInput.addEventListener('keydown', function (e) {
+            const allowedKeys = ['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'];
+            if (allowedKeys.includes(e.key)) return;
+
+            const val = this.value;
+            const pos = this.selectionStart;
+
+            // Only allow + as the very first character
+            if (e.key === '+') {
+                if (pos === 0 && val.indexOf('+') === -1) return; // allow
+                e.preventDefault();
+                return;
+            }
+
+            // Only allow digits
+            if (!/^\d$/.test(e.key)) {
+                e.preventDefault();
+                return;
+            }
+
+            // Enforce max length based on prefix
+            if (val.startsWith('+92') && val.length >= 13) { e.preventDefault(); return; }
+            if (val.startsWith('0')   && val.length >= 11) { e.preventDefault(); return; }
+            if (!val.startsWith('+') && !val.startsWith('0') && val.length >= 11) {
+                e.preventDefault(); return;
+            }
+        });
+
+        // Paste handler — strip bad characters
+        phoneInput.addEventListener('paste', function (e) {
+            e.preventDefault();
+            let pasted = (e.clipboardData || window.clipboardData).getData('text');
+            pasted = pasted.replace(/\s/g, '');
+            pasted = pasted.replace(/(?!^\+)[^\d]/g, '');
+            this.value = pasted;
+            validatePhone(pasted);
+        });
+    }
+
+    function validatePhone(val) {
+        if (!phoneHelper) return;
+
+        if (!val) {
+            phoneHelper.textContent = 'Start with +92 (13 digits) or 0 (11 digits). Digits only.';
+            phoneHelper.style.color = 'var(--color-gray)';
+            return;
+        }
+
+        if (val.startsWith('+92')) {
+            const remaining = 13 - val.length;
+            if (remaining > 0) {
+                phoneHelper.textContent = `${remaining} more digit${remaining > 1 ? 's' : ''} needed.`;
+                phoneHelper.style.color = '#dc2626';
+            } else {
+                phoneHelper.textContent = 'Valid number ✓';
+                phoneHelper.style.color = 'var(--color-forest-green)';
+            }
+        } else if (val.startsWith('0')) {
+            const remaining = 11 - val.length;
+            if (remaining > 0) {
+                phoneHelper.textContent = `${remaining} more digit${remaining > 1 ? 's' : ''} needed.`;
+                phoneHelper.style.color = '#dc2626';
+            } else {
+                phoneHelper.textContent = 'Valid number ✓';
+                phoneHelper.style.color = 'var(--color-forest-green)';
+            }
+        } else {
+            phoneHelper.textContent = 'Must start with +92 or 0.';
+            phoneHelper.style.color = '#dc2626';
+        }
+    }
+
+    function isPhoneValid(val) {
+        if (!val) return false;
+        if (val.startsWith('+92') && val.length === 13 && /^\+92\d{10}$/.test(val)) return true;
+        if (val.startsWith('0')   && val.length === 11 && /^0\d{10}$/.test(val))    return true;
+        return false;
+    }
+
+    // ════════════════════════════════════════
+    // GPS COORDINATES DETECTION
+    // ════════════════════════════════════════
     const btnLocate   = document.getElementById('btn-locate');
     const coordInput  = document.getElementById('coordinates');
     const coordHelper = document.getElementById('coord-helper');
@@ -49,100 +158,104 @@ document.addEventListener('DOMContentLoaded', function () {
 
             navigator.geolocation.getCurrentPosition(
                 function (position) {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-
-                    function toDMS(deg, posLabel, negLabel) {
-                        const dir = deg >= 0 ? posLabel : negLabel;
-                        const abs = Math.abs(deg);
-                        const d   = Math.floor(abs);
-                        const mf  = (abs - d) * 60;
-                        const m   = Math.floor(mf);
-                        const s   = ((mf - m) * 60).toFixed(1);
-                        return `${d}°${String(m).padStart(2,'0')}'${String(s).padStart(4,'0')}"${dir}`;
-                    }
-
-                    coordInput.value        = `${toDMS(lat,'N','S')} ${toDMS(lng,'E','W')}`;
+                    const lat = position.coords.latitude.toFixed(6);
+                    const lng = position.coords.longitude.toFixed(6);
+                    coordInput.value        = `${lat}, ${lng}`;
                     coordHelper.textContent = 'Location detected ✓';
                     coordHelper.style.color = 'var(--color-forest-green)';
                     btnLocate.innerHTML     = '<i class="fa-solid fa-location-crosshairs"></i> Detect';
                     btnLocate.disabled      = false;
                 },
                 function () {
-                    coordHelper.textContent  = 'Could not detect location. Please enter manually.';
+                    coordHelper.textContent  = 'Could not detect location. You may enter coordinates manually.';
                     coordHelper.style.color  = '#dc2626';
                     coordInput.removeAttribute('readonly');
-                    coordInput.placeholder   = 'e.g. 33°41\'00"N 73°03\'00"E';
-                    btnLocate.innerHTML      = '<i class="fa-solid fa-location-crosshairs"></i> Detect';
+                    coordInput.placeholder   = 'e.g. 24.8607, 67.0011';
+                    btnLocate.innerHTML      = '<i class="fa-solid fa-location-crosshairs"></i> Retry';
                     btnLocate.disabled       = false;
                 }
             );
         });
     }
 
-    /* ── Form Submission ── */
+    // ════════════════════════════════════════
+    // FORM SUBMISSION
+    // Writes to: users, profiles, customer_location
+    // ════════════════════════════════════════
     document.getElementById('signup-form').addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        const firstName   = document.getElementById('first-name').value.trim();
-        const lastName    = document.getElementById('last-name').value.trim();
+        const fullName    = document.getElementById('full-name').value.trim();
         const email       = document.getElementById('email').value.trim();
+        const city        = document.getElementById('city').value;
+        const phone       = document.getElementById('phone').value.trim();
         const coordinates = document.getElementById('coordinates').value.trim();
+        const address     = document.getElementById('address').value.trim();
         const password    = document.getElementById('password').value;
         const confirm     = document.getElementById('confirm-password').value;
         const terms       = document.getElementById('terms').checked;
-        const city        = document.getElementById('city').value;
-        const phone       = document.getElementById('phone').value.trim();
-        const address     = document.getElementById('address').value.trim();
 
-        // ── Validation ──
-        if (!firstName) {
-            alert('First Name is required.');
-            document.getElementById('first-name').focus();
+        // ── Validation ────────────────────────────────────────────────────
+
+        if (!fullName) {
+            showError('full-name', 'Full Name is required.');
             return;
         }
-        if (!email) {
-            alert('Email is required.');
-            document.getElementById('email').focus();
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            showError('email', 'Please enter a valid email address.');
             return;
         }
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            alert('Please enter a valid email address.');
-            document.getElementById('email').focus();
+
+        if (!city) {
+            alert('Please select your City.');
+            document.getElementById('city').focus();
             return;
         }
+
+        if (!phone) {
+            showError('phone', 'Phone number is required.');
+            return;
+        }
+
+        if (!isPhoneValid(phone)) {
+            if (phone.startsWith('+92')) {
+                showError('phone', 'Phone starting with +92 must be exactly 13 digits total (+92XXXXXXXXXX).');
+            } else if (phone.startsWith('0')) {
+                showError('phone', 'Phone starting with 0 must be exactly 11 digits (0XXXXXXXXXX).');
+            } else {
+                showError('phone', 'Phone must start with +92 (13 digits) or 0 (11 digits).');
+            }
+            return;
+        }
+
         if (!coordinates) {
             alert('Coordinates are required. Click "Detect" to auto-fill your location.');
             return;
         }
-        if (!password) {
-            alert('Password is required.');
-            document.getElementById('password').focus();
-            return;
-        }
-        if (password.length < 8) {
-            alert('Password must be at least 8 characters long.');
-            document.getElementById('password').focus();
-            return;
-        }
-        if (password !== confirm) {
-            alert('Passwords do not match.');
-            document.getElementById('confirm-password').focus();
-            return;
-        }
-        if (!terms) {
-            alert('Please accept the Terms of Service and Privacy Policy.');
+
+        if (!password || password.length < 8) {
+            showError('password', 'Password must be at least 8 characters long.');
             return;
         }
 
-        // ── Disable button ──
+        if (password !== confirm) {
+            showError('confirm-password', 'Passwords do not match.');
+            return;
+        }
+
+        if (!terms) {
+            alert('Please accept the Terms of Service and Privacy Policy to continue.');
+            return;
+        }
+
+        // ── Loading state ─────────────────────────────────────────────────
         const submitBtn = document.querySelector('.btn-submit');
-        submitBtn.disabled     = true;
-        submitBtn.textContent  = 'Creating Account…';
+        submitBtn.disabled    = true;
+        submitBtn.textContent = 'Creating Account…';
 
         try {
-            // ── STEP 1: Create auth account → triggers verification email ──
+            // ── STEP 1: Create auth account (Supabase Auth) ───────────────
             const { data, error: signUpError } = await supabaseClient.auth.signUp({
                 email,
                 password,
@@ -153,32 +266,69 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (signUpError) throw signUpError;
 
-            // ── STEP 2: Insert profile into users table ──
-            // Note: phone_no is numeric in your table so we parse it
-            const phoneNumeric = phone ? parseInt(phone.replace(/\D/g, ''), 10) : null;
+            const userId = data.user.id;
 
-            const { error: insertError } = await supabaseClient
+            // ── STEP 2: Insert into public.users ──────────────────────────
+            const { error: userError } = await supabaseClient
                 .from('users')
                 .insert([{
-                    id:          data.user.id,
-                    first_name:  firstName,
-                    last_name:   lastName || null,
-                    city:        city     || null,
-                    phone_no:    phoneNumeric,
-                    address:     address  || null,
+                    id:    userId,
+                    email: email,
+                    role:  'user'
+                }]);
+
+            // Ignore duplicate key error (user already exists from a previous attempt)
+            if (userError && !userError.message.includes('duplicate')) {
+                throw userError;
+            }
+
+            // ── STEP 3: Insert into public.profiles ───────────────────────
+            const { error: profileError } = await supabaseClient
+                .from('profiles')
+                .insert([{
+                    user_id:   userId,
+                    full_name: fullName,
+                    city:      city,
+                    phone_no:  phone
+                }]);
+
+            if (profileError && !profileError.message.includes('duplicate')) {
+                throw profileError;
+            }
+
+            // ── STEP 4: Insert into public.customer_location ──────────────
+            const { error: locationError } = await supabaseClient
+                .from('customer_location')
+                .insert([{
+                    user_id:     userId,
+                    address:     address || null,
                     coordinates: coordinates
                 }]);
 
-            if (insertError) throw insertError;
+            if (locationError && !locationError.message.includes('duplicate')) {
+                throw locationError;
+            }
 
-            // ── STEP 3: Success ──
-            alert('Account created successfully!\n\nPlease check your email inbox and click the verification link before logging in.');
+            // ── STEP 5: Success ───────────────────────────────────────────
+            alert(
+                'Account created successfully! 🎉\n\n' +
+                'Please check your email inbox and click the verification link before logging in.'
+            );
             window.location.href = 'Login.html';
 
         } catch (err) {
-            alert('Error: ' + err.message);
+            console.error('Signup error:', err);
+            alert('Error: ' + (err.message || 'Something went wrong. Please try again.'));
             submitBtn.disabled    = false;
             submitBtn.textContent = 'Create Account';
         }
     });
+
+    // ── Helper: show inline error & focus ────────────────────────────────
+    function showError(fieldId, message) {
+        const el = document.getElementById(fieldId);
+        alert(message);
+        if (el) el.focus();
+    }
+
 });
