@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="UserProfile.css">
 </head>
 <body>
+
     <!-- ===================== SIDEBAR ===================== -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -132,20 +133,12 @@
             </div>
 
             <form class="profile-form" id="profileForm" novalidate>
-                <!-- Row 1: First + Last Name (stored together as full_name in profiles table) -->
-                <div class="form-row">
+                <!-- Row 1: Full Name -->
+                <div class="form-row form-row--full">
                     <div class="form-group">
-                        <label class="form-label" for="firstName">
-                            First Name
-                            <span class="form-label__note">(saved as part of full name)</span>
-                        </label>
-                        <input type="text" id="firstName" class="form-input"
-                               placeholder="Enter first name" autocomplete="given-name">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" for="lastName">Last Name</label>
-                        <input type="text" id="lastName" class="form-input"
-                               placeholder="Enter last name" autocomplete="family-name">
+                        <label class="form-label" for="fullName">Full Name</label>
+                        <input type="text" id="fullName" class="form-input"
+                               placeholder="Enter your full name" autocomplete="name">
                     </div>
                 </div>
 
@@ -293,6 +286,7 @@
         </div>
 
     </main>
+
     <!--
         LOAD ORDER — do not change:
         1. Supabase SDK  → window.supabase
