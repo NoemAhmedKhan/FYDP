@@ -29,16 +29,17 @@ async function initDashboard() {
     }
 
     try {
+        // profiles table stores full_name and profile_img (users table only has id/email/role)
         const { data: profile, error: profileError } = await supabaseClient
-            .from('users')
-            .select('first_name, last_name, city, profile_img')
-            .eq('id', session.user.id)
+            .from('profiles')
+            .select('full_name, profile_img')
+            .eq('user_id', session.user.id)
             .single();
 
         if (profileError) throw profileError;
 
-        const firstName = profile.first_name || 'User';
-        const fullName  = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+        const fullName  = profile.full_name || 'User';
+        const firstName = fullName.split(' ')[0] || 'User';
         const email     = session.user.email;
 
         /* ── Welcome message ── */
