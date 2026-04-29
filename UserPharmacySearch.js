@@ -1545,7 +1545,6 @@
         const overlay = document.getElementById('scanOverlay');
         if (overlay) overlay.remove();
     }
-
     /* =============================================
        41. XSS PREVENTION HELPER
        ============================================= */
@@ -1557,7 +1556,6 @@
             .replace(/"/g,  '&quot;')
             .replace(/'/g,  '&#39;');
     }
-
     /* ─── INIT ─── */
     initPage();
     autoSearchFromUrl();
