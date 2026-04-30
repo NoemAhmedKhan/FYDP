@@ -1,41 +1,39 @@
-// ============================
-// SUPABASE CLIENT
-// ============================
+// ============================================================
+//  AdminDashboard.js — MediFinder
+//  Approval flow now calls the approve-pharmacy Edge Function
+//  which creates the auth account server-side (secure).
+// ============================================================
+
+// ── Supabase Client (anon key — for reading data only) ──────
 const { createClient } = window.supabase;
 const sb = createClient(
     'https://ktzsshlllyjuzphprzso.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic'
 );
 
-// ============================
-// STATE
-// ============================
-let currentUser          = null;
-let allTables            = [];
-let currentTable         = null;
-let currentPage          = 1;
-const PAGE_SIZE          = 20;
-let totalRows            = 0;
-let currentTableColumns  = [];
-let pendingDeleteId      = null;
-let pendingEditId        = null;
-let pendingRejectId      = null;
-let pendingRejectEmail   = null;
-let pendingRejectName    = null;
+// ── State ────────────────────────────────────────────────────
+let currentUser         = null;
+let allTables           = [];
+let currentTable        = null;
+let currentPage         = 1;
+const PAGE_SIZE         = 20;
+let totalRows           = 0;
+let currentTableColumns = [];
+let pendingDeleteId     = null;
+let pendingEditId       = null;
+let pendingRejectId     = null;
+let pendingRejectEmail  = null;
+let pendingRejectName   = null;
 
-// ============================
-// INIT
-// ============================
+// ============================================================
+//  INIT
+// ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
-        window.location.href = 'AdminLogin.html';
-        return;
-    }
+    if (!session) { window.location.href = 'AdminLogin.html'; return; }
 
     currentUser = session.user;
     setUserInfo(currentUser);
-
     await Promise.all([loadTables(), loadOverviewStats()]);
     hideLoading();
 });
@@ -44,7 +42,6 @@ function setUserInfo(user) {
     const email   = user.email || '';
     const name    = user.user_metadata?.full_name || email.split('@')[0] || 'Admin';
     const initial = name.charAt(0).toUpperCase();
-
     document.getElementById('admin-name').textContent    = name;
     document.getElementById('admin-email').textContent   = email;
     document.getElementById('admin-avatar').textContent  = initial;
@@ -58,9 +55,9 @@ function hideLoading() {
     setTimeout(() => ls.remove(), 500);
 }
 
-// ============================
-// SIDEBAR TOGGLE
-// ============================
+// ============================================================
+//  SIDEBAR
+// ============================================================
 function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
     document.getElementById('sidebar-overlay').classList.toggle('open');
@@ -70,9 +67,9 @@ function closeSidebar() {
     document.getElementById('sidebar-overlay').classList.remove('open');
 }
 
-// ============================
-// NAVIGATION
-// ============================
+// ============================================================
+//  NAVIGATION
+// ============================================================
 function setActiveNav(id) {
     document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
     const el = document.getElementById(id);
@@ -99,9 +96,9 @@ async function showPharmacyRequests() {
     await loadPharmacyRequests();
 }
 
-// ============================
-// LOAD TABLES (sidebar list)
-// ============================
+// ============================================================
+//  SIDEBAR TABLE LIST
+// ============================================================
 async function loadTables() {
     try {
         const { data, error } = await sb
@@ -141,10 +138,7 @@ async function loadTablesFallback() {
 
 function renderTableList() {
     const list = document.getElementById('table-list');
-    if (!allTables.length) {
-        list.innerHTML = '<div class="sidebar-loading">No tables found</div>';
-        return;
-    }
+    if (!allTables.length) { list.innerHTML = '<div class="sidebar-loading">No tables found</div>'; return; }
     list.innerHTML = allTables.map(t => `
         <a class="sidebar-link" id="nav-table-${t}" onclick="loadTableView('${t}')">
             <i class="fa-solid fa-table"></i>
@@ -157,9 +151,9 @@ function formatTableName(name) {
     return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// ============================
-// TABLE VIEW
-// ============================
+// ============================================================
+//  TABLE VIEW
+// ============================================================
 async function loadTableView(tableName) {
     currentTable = tableName;
     currentPage  = 1;
@@ -167,10 +161,9 @@ async function loadTableView(tableName) {
     setActiveNav(`nav-table-${tableName}`);
 
     const formatted = formatTableName(tableName);
-    document.getElementById('table-view-title').innerHTML    = `<i class="fa-solid fa-table"></i> ${formatted}`;
+    document.getElementById('table-view-title').innerHTML      = `<i class="fa-solid fa-table"></i> ${formatted}`;
     document.getElementById('table-view-subtitle').textContent = `Manage records in "${tableName}"`;
-    document.getElementById('breadcrumb').innerHTML           = `<i class="fa-solid fa-table"></i> ${formatted}`;
-
+    document.getElementById('breadcrumb').innerHTML            = `<i class="fa-solid fa-table"></i> ${formatted}`;
     await fetchTableData();
 }
 
@@ -182,7 +175,6 @@ async function fetchTableData() {
     try {
         const from = (currentPage - 1) * PAGE_SIZE;
         const to   = from + PAGE_SIZE - 1;
-
         const { data, error, count } = await sb
             .from(currentTable)
             .select('*', { count: 'exact' })
@@ -213,12 +205,8 @@ function renderTable(rows) {
         <tr>
             ${cols.map(c => {
                 const v = row[c];
-                // Render URL columns as clickable links
                 if (typeof v === 'string' && (v.startsWith('http://') || v.startsWith('https://'))) {
-                    return `<td><a href="${v}" target="_blank" style="color:var(--green);font-size:12px;" title="${v}">View Doc</a></td>`;
-                }
-                if (Array.isArray(v)) {
-                    return `<td title="${v.join(', ')}">${v.map((u, i) => `<a href="${u}" target="_blank" style="color:var(--green);font-size:12px;">Doc ${i+1}</a>`).join(' ')}</td>`;
+                    return `<td><a href="${v}" target="_blank" style="color:var(--green);font-size:12px;">View</a></td>`;
                 }
                 return `<td title="${v ?? ''}">${v !== null && v !== undefined ? String(v).substring(0, 80) : '<span class="null-badge">null</span>'}</td>`;
             }).join('')}
@@ -247,16 +235,13 @@ function renderPagination() {
     if (totalPages <= 1) return;
 
     let html = `<button class="page-btn" onclick="gotoPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>`;
-
     let start = Math.max(1, currentPage - 2);
     let end   = Math.min(totalPages, start + 4);
     if (end - start < 4) start = Math.max(1, end - 4);
-
     for (let i = start; i <= end; i++) {
         html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="gotoPage(${i})">${i}</button>`;
     }
     html += `<button class="page-btn" onclick="gotoPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>`;
-
     document.getElementById('pagination').innerHTML = html;
 }
 
@@ -267,13 +252,11 @@ function gotoPage(page) {
     fetchTableData();
 }
 
-function refreshTable() {
-    if (currentTable) fetchTableData();
-}
+function refreshTable() { if (currentTable) fetchTableData(); }
 
-// ============================
-// OVERVIEW STATS
-// ============================
+// ============================================================
+//  OVERVIEW STATS
+// ============================================================
 async function loadOverviewStats() {
     try {
         const { count } = await sb.from('pharmacies').select('*', { count: 'exact', head: true });
@@ -287,14 +270,11 @@ async function loadOverviewStats() {
     } catch { document.getElementById('stat-pending').textContent = '—'; }
 
     try {
-        const { count } = await sb.from('users')
-            .select('*', { count: 'exact', head: true })
-            .eq('role', 'user');
+        const { count } = await sb.from('users').select('*', { count: 'exact', head: true }).eq('role', 'user');
         document.getElementById('stat-users').textContent = count ?? '—';
     } catch { document.getElementById('stat-users').textContent = '—'; }
 
     document.getElementById('stat-tables').textContent = allTables.length || '—';
-
     await loadRecentRequests();
 }
 
@@ -327,9 +307,9 @@ async function loadRecentRequests() {
     }
 }
 
-// ============================
-// PHARMACY REQUESTS
-// ============================
+// ============================================================
+//  PHARMACY REQUESTS — Load & Render
+// ============================================================
 async function loadPharmacyRequests() {
     const container = document.getElementById('requests-container');
     container.innerHTML = '<div class="loading-indicator"><div class="spinner"></div> Loading pharmacy requests...</div>';
@@ -357,15 +337,12 @@ async function loadPharmacyRequests() {
             <div class="empty-state">
                 <i class="fa-solid fa-circle-exclamation" style="color:#ef4444"></i>
                 <p>Error loading requests: ${e.message}</p>
-                <p style="font-size:12px;margin-top:8px">Make sure the "pharmacy_requests" table exists with the correct schema.</p>
             </div>`;
     }
 }
 
 function renderRequestCard(r) {
-    // Fields to display — skip system/doc fields; doc_folder_path rendered separately
-    const skipInCard = ['id', 'status', 'created_at', 'updated_at',
-                        'rejection_reason', 'doc_folder_path'];
+    const skipInCard = ['id', 'status', 'created_at', 'updated_at', 'rejection_reason', 'doc_folder_path'];
     const displayFields = Object.entries(r)
         .filter(([k]) => !skipInCard.includes(k))
         .map(([k, v]) => `
@@ -375,9 +352,6 @@ function renderRequestCard(r) {
             </div>
         `).join('');
 
-    // Documents section: renders a "Load Documents" button.
-    // Clicking it calls loadDocLinks(requestId, folderPath) which
-    // lists all files in the folder from Storage and renders links.
     const folderPath = r.doc_folder_path || '';
     const docsHtml = folderPath
         ? `<div class="request-docs" id="docs-${r.id}">
@@ -422,9 +396,9 @@ function renderRequestCard(r) {
     `;
 }
 
-// ============================
-// LOAD DOC LINKS FROM STORAGE FOLDER
-// ============================
+// ============================================================
+//  LOAD DOCUMENTS FROM STORAGE
+// ============================================================
 async function loadDocLinks(requestId, folderPath, btn) {
     btn.disabled  = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading…';
@@ -439,32 +413,18 @@ async function loadDocLinks(requestId, folderPath, btn) {
         const docsContainer = document.getElementById(`docs-${requestId}`);
 
         if (!files || files.length === 0) {
-            docsContainer.innerHTML = `
-                <span class="docs-label" style="color:#aaa">
-                    <i class="fa-solid fa-triangle-exclamation"></i> Folder exists but contains no files
-                </span>`;
+            docsContainer.innerHTML = `<span class="docs-label" style="color:#aaa"><i class="fa-solid fa-triangle-exclamation"></i> Folder exists but contains no files</span>`;
             return;
         }
 
-        // Build a public URL for each file and render as a link
         const links = files.map((file, i) => {
-            const { data: urlData } = sb.storage
-                .from('pharmacy-docs')
-                .getPublicUrl(`${folderPath}/${file.name}`);
-
-            // Try to guess doc type from filename prefix (doc_0_, doc_1_, etc.)
-            const icon  = getDocIcon(file.name, i);
-            const label = getDocLabel(file.name, i);
-
-            return `<a href="${urlData.publicUrl}" target="_blank" class="doc-link" title="${file.name}">
-                        <i class="fa-solid ${icon}"></i> ${label}
-                    </a>`;
+            const { data: urlData } = sb.storage.from('pharmacy-docs').getPublicUrl(`${folderPath}/${file.name}`);
+            const icon  = file.name.toLowerCase().endsWith('.pdf') ? 'fa-file-pdf' : file.name.match(/\.(jpg|jpeg|png|webp)$/i) ? 'fa-file-image' : 'fa-file';
+            const label = file.name.replace(/^doc_\d+_/, '').replace(/\.[^.]+$/, '').replace(/_/g, ' ') || `Document ${i + 1}`;
+            return `<a href="${urlData.publicUrl}" target="_blank" class="doc-link"><i class="fa-solid ${icon}"></i> ${label}</a>`;
         }).join('');
 
-        docsContainer.innerHTML = `
-            <span class="docs-label"><i class="fa-solid fa-paperclip"></i> Documents (${files.length}):</span>
-            ${links}`;
-
+        docsContainer.innerHTML = `<span class="docs-label"><i class="fa-solid fa-paperclip"></i> Documents (${files.length}):</span>${links}`;
     } catch (e) {
         btn.disabled  = false;
         btn.innerHTML = '<i class="fa-solid fa-folder-open"></i> Retry Load';
@@ -472,95 +432,33 @@ async function loadDocLinks(requestId, folderPath, btn) {
     }
 }
 
-function getDocIcon(filename, index) {
-    const lower = filename.toLowerCase();
-    if (lower.endsWith('.pdf'))                    return 'fa-file-pdf';
-    if (lower.match(/\.(jpg|jpeg|png|webp)$/))     return 'fa-file-image';
-    return 'fa-file';
-}
-
-function getDocLabel(filename, index) {
-    // Filenames are like: doc_0_DrugLicense.pdf  doc_1_CNIC.jpg  doc_2_Extra.pdf
-    // Strip the "doc_N_" prefix and extension for a readable label
-    const clean = filename.replace(/^doc_\d+_/, '').replace(/\.[^.]+$/, '');
-    const labels = { 0: 'Drug License', 1: 'CNIC' };
-    return clean.length > 0 ? clean.replace(/_/g, ' ') : (labels[index] || `Document ${index + 1}`);
-}
-
-// ============================
-// APPROVE REQUEST — Normalized Schema
-// Creates: users row + profiles row + pharmacies row
-// Deletes: pharmacy_requests row
-// ============================
+// ============================================================
+//  APPROVE REQUEST
+//  Delegates to the approve-pharmacy Edge Function which:
+//  • Creates auth account with temp password
+//  • Inserts users / profiles / pharmacies rows
+//  • Deletes from pharmacy_requests
+//  • Sends approval email with login credentials
+// ============================================================
 async function approveRequest(requestId, btn) {
     btn.disabled  = true;
     btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:rgba(255,255,255,0.4);border-top-color:white"></div> Approving...';
 
     try {
-        // 1. Fetch the full request row
-        const { data: req, error: fetchErr } = await sb
-            .from('pharmacy_requests')
-            .select('*')
-            .eq('id', requestId)
-            .single();
-        if (fetchErr) throw fetchErr;
+        const { data, error } = await sb.functions.invoke('approve-pharmacy', {
+            body: { requestId }
+        });
 
-        const now           = new Date().toISOString();
-        const pharmacistId  = crypto.randomUUID(); // stable UUID for all 3 tables
+        if (error) throw error;
+        if (!data?.success) throw new Error(data?.error || 'Approval failed.');
 
-        // 2. Insert into public.users (role = pharmacist)
-        const { error: userErr } = await sb.from('users').insert([{
-            id:    pharmacistId,
-            email: req.email,
-            role:  'pharmacist'
-        }]);
-        if (userErr && !userErr.message.includes('duplicate')) throw userErr;
+        // Get pharmacy name for the toast (card still exists in DOM)
+        const card = document.getElementById(`req-card-${requestId}`);
+        const nameEl = card?.querySelector('.request-pharmacy-name');
+        const pharmacyName = nameEl?.childNodes[1]?.textContent?.trim() || 'Pharmacy';
 
-        // 3. Insert into public.profiles (owner contact details)
-        const { error: profileErr } = await sb.from('profiles').insert([{
-            user_id:   pharmacistId,
-            full_name: req.full_name,
-            city:      req.city,
-            phone_no:  req.phone_no
-        }]);
-        if (profileErr && !profileErr.message.includes('duplicate')) throw profileErr;
-
-        // 4. Insert into public.pharmacies (pharmacy details only)
-        const { error: pharmacyErr } = await sb.from('pharmacies').insert([{
-            user_id:         pharmacistId,
-            pharmacy_name:   req.pharmacy_name,
-            drug_license_no: req.drug_license_no,
-            reg_no:          req.reg_no,
-            cnic:            req.cnic,
-            pharmacy_type:   req.pharmacy_type,
-            operating_hours: req.operating_hours,
-            delivery:        req.delivery,
-            province:        req.province,
-            city:            req.city,
-            address:         req.address,
-            landmark:        req.landmark || null,
-            coordinates:     req.coordinates,
-            doc_folder_path: req.doc_folder_path || null,
-            status:          'active',
-            approved_at:     now
-        }]);
-        if (pharmacyErr) throw pharmacyErr;
-
-        // 5. Delete from pharmacy_requests
-        const { error: deleteErr } = await sb
-            .from('pharmacy_requests').delete().eq('id', requestId);
-        if (deleteErr) throw deleteErr;
-
-        // 6. Send approval email (non-blocking)
-        sendEmail({
-            to:           req.email,
-            type:         'approval',
-            pharmacyName: req.pharmacy_name
-        }).catch(err => console.warn('Approval email failed (non-critical):', err));
-
-        // 7. Animate card out
         animateCardOut(`req-card-${requestId}`, 'right');
-        showToast(`${req.pharmacy_name} approved and added to pharmacies!`, 'success');
+        showToast(`✓ ${pharmacyName} approved! Login credentials sent to pharmacist.`, 'success');
         await updatePendingBadge();
 
     } catch (e) {
@@ -570,9 +468,11 @@ async function approveRequest(requestId, btn) {
     }
 }
 
-// ============================
-// REJECT REQUEST
-// ============================
+// ============================================================
+//  REJECT REQUEST
+//  Sends rejection email via existing send-email Edge Function,
+//  then deletes the pharmacy_requests row.
+// ============================================================
 function openRejectModal(requestId, email, pharmacyName) {
     pendingRejectId    = requestId;
     pendingRejectEmail = email;
@@ -584,35 +484,31 @@ function openRejectModal(requestId, email, pharmacyName) {
 
 async function confirmReject() {
     const reason = document.getElementById('reject-reason').value.trim();
-    if (!reason) {
-        showToast('Please enter a rejection reason.', 'error');
-        return;
-    }
+    if (!reason) { showToast('Please enter a rejection reason.', 'error'); return; }
 
-    const btn = document.querySelector('#reject-modal .btn-modal-danger');
+    const btn     = document.querySelector('#reject-modal .btn-modal-danger');
     btn.disabled  = true;
     btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:rgba(255,255,255,0.4);border-top-color:white"></div> Processing...';
 
     try {
-        // 1. Send rejection email (non-blocking, fire first)
-        sendEmail({
-            to:           pendingRejectEmail,
-            type:         'rejection',
-            pharmacyName: pendingRejectName,
-            reason
-        }).catch(err => console.warn('Rejection email failed (non-critical):', err));
+        // 1. Send rejection email via send-email Edge Function
+        await sb.functions.invoke('send-email', {
+            body: {
+                to:           pendingRejectEmail,
+                subject:      'MediFinder — Pharmacy Registration Update',
+                type:         'rejection',
+                pharmacyName: pendingRejectName,
+                reason
+            }
+        });
 
         // 2. Delete from pharmacy_requests
-        const { error } = await sb
-            .from('pharmacy_requests')
-            .delete()
-            .eq('id', pendingRejectId);
+        const { error } = await sb.from('pharmacy_requests').delete().eq('id', pendingRejectId);
         if (error) throw error;
 
-        // 3. Animate card out
         animateCardOut(`req-card-${pendingRejectId}`, 'left');
         closeModal('reject-modal');
-        showToast('Request rejected and pharmacy notified.', 'success');
+        showToast('Request rejected and pharmacy notified by email.', 'success');
         await updatePendingBadge();
 
     } catch (e) {
@@ -623,34 +519,18 @@ async function confirmReject() {
     }
 }
 
-// ============================
-// EMAIL HELPER
-// ============================
-async function sendEmail({ to, type, pharmacyName, reason }) {
-    const subjects = {
-        approval:  'MediFinder — Your Pharmacy Registration is Approved! 🎉',
-        rejection: 'MediFinder — Pharmacy Registration Update'
-    };
-    return sb.functions.invoke('send-email', {
-        body: { to, subject: subjects[type], type, pharmacyName, reason }
-    });
-}
-
-// ============================
-// CARD ANIMATION HELPER
-// ============================
+// ============================================================
+//  HELPERS
+// ============================================================
 function animateCardOut(cardId, direction = 'right') {
     const card = document.getElementById(cardId);
     if (!card) return;
-    const tx = direction === 'right' ? '30px' : '-30px';
     card.style.transition = 'all 0.4s ease';
     card.style.opacity    = '0';
-    card.style.transform  = `translateX(${tx})`;
+    card.style.transform  = `translateX(${direction === 'right' ? '30px' : '-30px'})`;
     setTimeout(() => {
         card.remove();
-        // If no cards left, show empty state
-        const remaining = document.querySelectorAll('.request-card');
-        if (remaining.length === 0) {
+        if (!document.querySelectorAll('.request-card').length) {
             document.getElementById('requests-container').innerHTML =
                 '<div class="empty-state"><i class="fa-solid fa-check-circle"></i><p>No pending pharmacy requests. All caught up!</p></div>';
         }
@@ -665,26 +545,19 @@ async function updatePendingBadge() {
     } catch {}
 }
 
-// ============================
-// DELETE ROW
-// ============================
-function openDeleteModal(rowId) {
-    pendingDeleteId = rowId;
-    openModal('delete-modal');
-}
+// ── Delete ──────────────────────────────────────────────────
+function openDeleteModal(rowId) { pendingDeleteId = rowId; openModal('delete-modal'); }
 
 async function confirmDelete() {
-    const btn = document.querySelector('#delete-modal .btn-modal-danger');
+    const btn     = document.querySelector('#delete-modal .btn-modal-danger');
     btn.disabled  = true;
     btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:rgba(255,255,255,0.4);border-top-color:white"></div> Deleting...';
-
     try {
         const pkColumn = currentTableColumns.includes('id') ? 'id' : currentTableColumns[0];
         const { error } = await sb.from(currentTable).delete().eq(pkColumn, pendingDeleteId);
         if (error) throw error;
-
         closeModal('delete-modal');
-        showToast('Record deleted successfully.', 'success');
+        showToast('Record deleted.', 'success');
         await fetchTableData();
     } catch (e) {
         showToast(`Delete failed: ${e.message}`, 'error');
@@ -694,48 +567,39 @@ async function confirmDelete() {
     }
 }
 
-// ============================
-// EDIT ROW
-// ============================
+// ── Edit ────────────────────────────────────────────────────
 function openEditModal(row) {
     const pkColumn = 'id' in row ? 'id' : Object.keys(row)[0];
     pendingEditId  = row[pkColumn];
-
-    const skip   = ['id', 'created_at', 'approved_at'];
-    const fields = Object.entries(row)
+    const skip     = ['id', 'created_at', 'approved_at'];
+    const fields   = Object.entries(row)
         .filter(([k]) => !skip.includes(k))
         .map(([k, v]) => {
-            // Render arrays as comma-separated for easy editing
-            const val = Array.isArray(v) ? (v || []).join(', ') : (v !== null && v !== undefined ? String(v) : '');
+            const val = Array.isArray(v) ? v.join(', ') : (v !== null && v !== undefined ? String(v) : '');
             return `
                 <div class="form-group">
                     <label>${k.replace(/_/g, ' ')}</label>
                     <input type="text" class="modal-input" id="edit-field-${k}" name="${k}" value="${val.replace(/"/g, '&quot;')}">
                 </div>`;
         }).join('');
-
     document.getElementById('edit-modal-body').innerHTML = `<div class="modal-fields-grid">${fields}</div>`;
     openModal('edit-modal');
 }
 
 async function confirmEdit() {
-    const btn = document.querySelector('#edit-modal .btn-modal-primary');
+    const btn     = document.querySelector('#edit-modal .btn-modal-primary');
     btn.disabled  = true;
     btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:rgba(255,255,255,0.4);border-top-color:white"></div> Saving...';
-
     try {
-        const inputs  = document.querySelectorAll('#edit-modal-body input');
         const updates = {};
-        inputs.forEach(inp => {
+        document.querySelectorAll('#edit-modal-body input').forEach(inp => {
             updates[inp.name] = inp.value === '' ? null : inp.value;
         });
-
         const pkColumn = currentTableColumns.includes('id') ? 'id' : currentTableColumns[0];
         const { error } = await sb.from(currentTable).update(updates).eq(pkColumn, pendingEditId);
         if (error) throw error;
-
         closeModal('edit-modal');
-        showToast('Record updated successfully.', 'success');
+        showToast('Record updated.', 'success');
         await fetchTableData();
     } catch (e) {
         showToast(`Update failed: ${e.message}`, 'error');
@@ -745,9 +609,7 @@ async function confirmEdit() {
     }
 }
 
-// ============================
-// ADD ROW
-// ============================
+// ── Add Row ─────────────────────────────────────────────────
 function showAddRowModal() {
     if (!currentTableColumns.length) return;
     const skip   = ['id', 'created_at', 'updated_at', 'approved_at'];
@@ -758,26 +620,23 @@ function showAddRowModal() {
                 <label>${c.replace(/_/g, ' ')}</label>
                 <input type="text" class="modal-input" id="add-field-${c}" name="${c}" placeholder="Enter ${c}">
             </div>`).join('');
-
     document.getElementById('add-modal-body').innerHTML = `<div class="modal-fields-grid">${fields}</div>`;
     openModal('add-modal');
 }
 
 async function confirmAdd() {
-    const btn = document.querySelector('#add-modal .btn-modal-primary');
+    const btn     = document.querySelector('#add-modal .btn-modal-primary');
     btn.disabled  = true;
     btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:rgba(255,255,255,0.4);border-top-color:white"></div> Adding...';
-
     try {
-        const inputs = document.querySelectorAll('#add-modal-body input');
         const newRow = {};
-        inputs.forEach(inp => { if (inp.value !== '') newRow[inp.name] = inp.value; });
-
+        document.querySelectorAll('#add-modal-body input').forEach(inp => {
+            if (inp.value !== '') newRow[inp.name] = inp.value;
+        });
         const { error } = await sb.from(currentTable).insert([newRow]);
         if (error) throw error;
-
         closeModal('add-modal');
-        showToast('Row added successfully.', 'success');
+        showToast('Row added.', 'success');
         await fetchTableData();
     } catch (e) {
         showToast(`Insert failed: ${e.message}`, 'error');
@@ -787,47 +646,23 @@ async function confirmAdd() {
     }
 }
 
-// ============================
-// MODAL HELPERS
-// ============================
-function openModal(id) {
-    document.getElementById(id).classList.add('open');
-    document.body.style.overflow = 'hidden';
-}
-function closeModal(id) {
-    document.getElementById(id).classList.remove('open');
-    document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        ['reject-modal', 'delete-modal', 'edit-modal', 'add-modal'].forEach(closeModal);
-    }
+// ── Modals ──────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') ['reject-modal','delete-modal','edit-modal','add-modal'].forEach(closeModal);
 });
 
-// ============================
-// TOAST NOTIFICATIONS
-// ============================
+// ── Toast ───────────────────────────────────────────────────
 function showToast(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    const icons     = { success: 'fa-circle-check', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation' };
-
-    const toast     = document.createElement('div');
+    const icons   = { success: 'fa-circle-check', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation' };
+    const toast   = document.createElement('div');
     toast.className = `toast toast--${type}`;
     toast.innerHTML = `<i class="fa-solid ${icons[type] || icons.success}"></i><span>${message}</span>`;
     toast.onclick   = () => toast.remove();
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.animation = 'toastOut 0.3s ease forwards';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+    document.getElementById('toast-container').appendChild(toast);
+    setTimeout(() => { toast.style.animation = 'toastOut 0.3s ease forwards'; setTimeout(() => toast.remove(), 300); }, 4000);
 }
 
-// ============================
-// LOGOUT
-// ============================
-async function handleLogout() {
-    await sb.auth.signOut();
-    window.location.href = 'AdminLogin.html';
-}
+// ── Logout ──────────────────────────────────────────────────
+async function handleLogout() { await sb.auth.signOut(); window.location.href = 'AdminLogin.html'; }
