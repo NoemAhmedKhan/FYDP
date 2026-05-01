@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const destination = DASHBOARD[role];
             if (!destination) throw new Error(`Unknown role: ${role}`);
 
-            window.location.href = destination;
+            window.location.href = {destination};
 
         } catch (err) {
             console.error('Login error:', err);
