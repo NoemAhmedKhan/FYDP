@@ -1,133 +1,159 @@
 document.addEventListener('DOMContentLoaded', function () {
 
+    // Role → Dashboard mapping
+    const DASHBOARD = {
+        user:        'UserDashboard.html',
+        pharmacist:  'PharmDashboard.html',
+        admin:       'AdminDashboard.html'
+    };
+
     /* ── Password Toggle ── */
     const togglePassword = document.querySelector('.toggle-password');
     const passwordInput  = document.querySelector('#password');
     if (togglePassword && passwordInput) {
         togglePassword.addEventListener('click', function () {
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
             this.classList.toggle('fa-eye-slash');
             this.classList.toggle('fa-eye');
         });
     }
 
     /* ── Login Form Submit ── */
-    const loginForm = document.querySelector('.login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
+    const loginForm  = document.querySelector('.login-form');
+    const submitBtn  = document.querySelector('.btn-submit');
 
-            const email    = document.querySelector('#email').value.trim();
-            const password = document.querySelector('#password').value;
+    if (!loginForm) return;
 
-            // ── Basic Validation ──
-            if (!email || !password) {
-                alert('Please fill in all fields.');
+    loginForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const email    = document.querySelector('#email').value.trim();
+        const password = document.querySelector('#password').value;
+
+        // ── Validation ──────────────────────────────────────────────────
+        if (!email || !password) {
+            alert('Please fill in all fields.');
+            return;
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert('Please enter a valid email address.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // ── STEP 1: Sign In ──────────────────────────────────────────
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+
+            const user = data.user;
+
+            // ── STEP 2: Email verification check ────────────────────────
+            // Skip for pharmacists & admins — their accounts are pre-confirmed
+            // by the approve-pharmacy Edge Function or manually by admin.
+            if (!user.email_confirmed_at) {
+                alert(
+                    'Your email is not verified yet.\n\n' +
+                    'Please check your inbox and click the verification link.\n\n' +
+                    'Did not receive it? Check your spam folder.'
+                );
+                await supabaseClient.auth.signOut();
+                setLoading(false);
                 return;
             }
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                alert('Please enter a valid email address.');
-                return;
+
+            // ── STEP 3: Get role from public.users ───────────────────────
+            const { data: userRow, error: roleErr } = await supabaseClient
+                .from('users')
+                .select('role')
+                .eq('id', user.id)
+                .single();
+
+            if (roleErr || !userRow) {
+                // Row missing — shouldn't happen but handle gracefully
+                await supabaseClient.auth.signOut();
+                throw new Error('Account not found in system. Please contact support.');
             }
 
-            // ── Disable button ──
-            const submitBtn       = document.querySelector('.btn-submit');
-            submitBtn.disabled    = true;
-            submitBtn.textContent = 'Logging in…';
+            const role = userRow.role; // 'user' | 'pharmacist' | 'admin'
 
-            try {
-                // ── STEP 1: Sign In ──────────────────────────────────────
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email,
-                    password
-                });
-
-                if (error) throw error;
-
-                // ── STEP 2: Check email verified ─────────────────────────
-                if (!data.user.email_confirmed_at) {
-                    alert(
-                        'Your email is not verified yet.\n\n' +
-                        'Please check your inbox and click the verification link first.\n\n' +
-                        'Did not receive it? Check your spam folder.'
-                    );
-                    await supabaseClient.auth.signOut();
-                    submitBtn.disabled    = false;
-                    submitBtn.textContent = 'Log In';
-                    return;
-                }
-
-                const userId = data.user.id;
-
-                // ── STEP 3: Flush pendingProfile if present ──────────────
-                // This data was saved by SignUp.js before email verification.
-                // Now that the user has a valid session we can write to DB.
-                const pending = localStorage.getItem('pendingProfile');
-                if (pending) {
-                    try {
-                        const profile = JSON.parse(pending);
-
-                        // Insert into public.profiles
-                        // ON CONFLICT DO NOTHING — safe if already exists
-                        const { error: profileErr } = await supabaseClient
-                            .from('profiles')
-                            .insert([{
-                                user_id:   userId,
-                                full_name: profile.full_name,
-                                city:      profile.city,
-                                phone_no:  profile.phone_no
-                            }]);
-
-                        // "duplicate" or "already exists" is fine — user may have logged in twice
-                        if (profileErr && !profileErr.message?.toLowerCase().includes('duplicate')) {
-                            console.warn('Profile insert warning:', profileErr.message);
-                        }
-
-                        // Insert into public.customer_location
-                        const { error: locationErr } = await supabaseClient
-                            .from('customer_location')
-                            .insert([{
-                                user_id:     userId,
-                                address:     profile.address     || null,
-                                coordinates: profile.coordinates
-                            }]);
-
-                        if (locationErr && !locationErr.message?.toLowerCase().includes('duplicate')) {
-                            console.warn('Location insert warning:', locationErr.message);
-                        }
-
-                        // Clear the pending data — whether inserts succeeded or not
-                        // (don't leave stale data for the next login)
-                        localStorage.removeItem('pendingProfile');
-
-                    } catch (parseErr) {
-                        // Corrupted localStorage entry — just clear it
-                        console.warn('Could not parse pendingProfile:', parseErr);
-                        localStorage.removeItem('pendingProfile');
-                    }
-                }
-
-                // ── STEP 4: Redirect to dashboard ────────────────────────
-                window.location.href = 'UserDashboard.html';
-
-            } catch (err) {
-                console.error('Login error:', err);
-
-                let msg = 'Login failed. Please check your email and password.';
-                if (err.message?.toLowerCase().includes('email not confirmed')) {
-                    msg = 'Your email is not verified yet. Please check your inbox.';
-                } else if (err.message?.toLowerCase().includes('invalid login credentials')) {
-                    msg = 'Incorrect email or password. Please try again.';
-                } else if (err.message) {
-                    msg = err.message;
-                }
-
-                alert(msg);
-                submitBtn.disabled    = false;
-                submitBtn.textContent = 'Log In';
+            // ── STEP 4: Flush pendingProfile (new user signups only) ─────
+            // SignUp.js parks profile data here before email verification.
+            // Only relevant for role='user' — pharmacists are handled server-side.
+            if (role === 'user') {
+                await flushPendingProfile(user.id);
             }
-        });
+
+            // ── STEP 5: Redirect based on role ──────────────────────────
+            const destination = DASHBOARD[role];
+            if (!destination) throw new Error(`Unknown role: ${role}`);
+
+            window.location.href = destination;
+
+        } catch (err) {
+            console.error('Login error:', err);
+            alert(friendlyError(err.message));
+            setLoading(false);
+        }
+    });
+
+    // ── Flush pending profile data saved by SignUp.js ──────────────────
+    async function flushPendingProfile(userId) {
+        const raw = localStorage.getItem('pendingProfile');
+        if (!raw) return;
+
+        try {
+            const profile = JSON.parse(raw);
+
+            // Insert into public.profiles (ignore duplicate — safe on re-login)
+            const { error: profileErr } = await supabaseClient
+                .from('profiles')
+                .insert([{
+                    user_id:   userId,
+                    full_name: profile.full_name,
+                    city:      profile.city,
+                    phone_no:  profile.phone_no
+                }]);
+
+            if (profileErr && !profileErr.message?.toLowerCase().includes('duplicate')) {
+                console.warn('Profile insert warning:', profileErr.message);
+            }
+
+            // Insert into public.customer_location
+            const { error: locationErr } = await supabaseClient
+                .from('customer_location')
+                .insert([{
+                    user_id:     userId,
+                    address:     profile.address || null,
+                    coordinates: profile.coordinates
+                }]);
+
+            if (locationErr && !locationErr.message?.toLowerCase().includes('duplicate')) {
+                console.warn('Location insert warning:', locationErr.message);
+            }
+
+        } catch (parseErr) {
+            console.warn('Could not parse pendingProfile:', parseErr);
+        } finally {
+            // Always clear — don't leave stale data on the next login
+            localStorage.removeItem('pendingProfile');
+        }
+    }
+
+    // ── Button loading state ───────────────────────────────────────────
+    function setLoading(loading) {
+        submitBtn.disabled    = loading;
+        submitBtn.textContent = loading ? 'Logging in…' : 'Log In';
+    }
+
+    // ── User-friendly error messages ───────────────────────────────────
+    function friendlyError(message = '') {
+        const msg = message.toLowerCase();
+        if (msg.includes('email not confirmed'))       return 'Your email is not verified yet. Please check your inbox.';
+        if (msg.includes('invalid login credentials')) return 'Incorrect email or password. Please try again.';
+        if (msg.includes('too many requests'))         return 'Too many attempts. Please wait a moment and try again.';
+        return message || 'Login failed. Please try again.';
     }
 });
