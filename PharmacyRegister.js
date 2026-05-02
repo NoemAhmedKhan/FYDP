@@ -477,6 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const landmark      = document.getElementById('landmark').value.trim();
         const coordinates   = document.getElementById('coordinates').value.trim();
         const email         = document.getElementById('email').value.trim();
+        const password      = document.getElementById('password')?.value || '';
 
         let operatingHours = opHoursVal;
         if (opHoursVal === 'custom') {
@@ -539,9 +540,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 coordinates,
                 doc_folder_path: docFolderPath,
                 // Owner / profile fields (stored here for admin review)
-                full_name:       ownerName,        // renamed from owner_name
-                phone_no:        phone,            // renamed from phone
+                full_name:       ownerName,
+                phone_no:        phone,
                 email,
+                password,                          // stored for use on approval
                 status:          'pending'
             }]);
 
