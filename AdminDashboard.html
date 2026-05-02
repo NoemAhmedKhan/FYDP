@@ -30,7 +30,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo">
-                <div class="sidebar-logo-icon"><img src="./Images/Logo.png" alt="MediFinder Logo" style="width:32px;height:32px;object-fit:contain;border-radius:6px;"></div>
+                <div class="sidebar-logo-icon sidebar-logo-icon--plain"><img src="./Images/Logo.png" alt="MediFinder Logo" style="width:36px;height:36px;object-fit:contain;border-radius:6px;"></div>
                 <div>
                     <div class="sidebar-logo-text">MediFinder</div>
                     <div class="sidebar-logo-sub">Admin Panel</div>
@@ -41,15 +41,7 @@
             </button>
         </div>
 
-        <div class="sidebar-admin-info">
-            <div class="admin-avatar" id="admin-avatar">A</div>
-            <div class="admin-details">
-                <div class="admin-name" id="admin-name">Admin</div>
-                <div class="admin-email" id="admin-email">supportmedifinder@gmail.com</div>
-            </div>
-        </div>
 
-        <nav class="sidebar-nav">
             <div class="nav-section-label">Overview</div>
             <a class="sidebar-link active" id="nav-overview" onclick="showOverview()">
                 <i class="fa-solid fa-gauge-high"></i>
@@ -72,8 +64,14 @@
         </nav>
 
         <div class="sidebar-footer">
-            <div class="admin-email-footer" id="admin-email-footer" style="font-size:11px;color:var(--gray,#888);padding:8px 12px 4px;word-break:break-all;" id="admin-email"></div>
-            <button class="logout-btn" onclick="handleLogout()">
+            <div class="sidebar-admin-info sidebar-admin-info--footer">
+                <div class="admin-avatar" id="admin-avatar">A</div>
+                <div class="admin-details">
+                    <div class="admin-name" id="admin-name">Admin</div>
+                    <div class="admin-email" id="admin-email">supportmedifinder@gmail.com</div>
+                </div>
+            </div>
+<button class="logout-btn" onclick="handleLogout()">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 Sign Out
             </button>
@@ -94,12 +92,7 @@
                     Dashboard
                 </div>
             </div>
-            <div class="topbar-right">
-                <div class="topbar-user">
-                    <div class="topbar-avatar" id="topbar-avatar">A</div>
-                    <span id="topbar-name">Admin</span>
-                </div>
-            </div>
+
         </header>
 
         <!-- CONTENT AREA -->
