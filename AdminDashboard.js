@@ -24,6 +24,7 @@ let pendingEditId       = null;
 let pendingRejectId     = null;
 let pendingRejectEmail  = null;
 let pendingRejectName   = null;
+let pendingRejectFolder = null;   // doc_folder_path for storage cleanup on reject
 
 // ============================================================
 //  INIT
@@ -395,7 +396,7 @@ function renderRequestCard(r) {
                     <button class="btn-approve" onclick="approveRequest('${r.id}', this)">
                         <i class="fa-solid fa-check"></i> Approve
                     </button>
-                    <button class="btn-reject" onclick="openRejectModal('${r.id}', '${safeEmail}', '${safeName}')">
+                    <button class="btn-reject" onclick="openRejectModal('${r.id}', '${safeEmail}', '${safeName}', '${r.doc_folder_path || ''}')">
                         <i class="fa-solid fa-times"></i> Reject
                     </button>
                 </div>
@@ -481,10 +482,11 @@ async function approveRequest(requestId, btn) {
 //  Sends rejection email via existing send-email Edge Function,
 //  then deletes the pharmacy_requests row.
 // ============================================================
-function openRejectModal(requestId, email, pharmacyName) {
-    pendingRejectId    = requestId;
-    pendingRejectEmail = email;
-    pendingRejectName  = pharmacyName;
+function openRejectModal(requestId, email, pharmacyName, docFolderPath) {
+    pendingRejectId     = requestId;
+    pendingRejectEmail  = email;
+    pendingRejectName   = pharmacyName;
+    pendingRejectFolder = docFolderPath || null;
     document.getElementById('reject-pharmacy-name').value = pharmacyName;
     document.getElementById('reject-reason').value        = '';
     openModal('reject-modal');
@@ -499,14 +501,15 @@ async function confirmReject() {
     btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;border-color:rgba(255,255,255,0.4);border-top-color:white"></div> Processing...';
 
     try {
-        // 1. Send rejection email via send-email Edge Function
-        const { data: emailData, error: emailErr } = await sb.functions.invoke('send-email', {
+        // 1. Send rejection email + cleanup docs via send-reject-email Edge Function
+        const { data: emailData, error: emailErr } = await sb.functions.invoke('send-reject-email', {
             body: {
-                to:           pendingRejectEmail,
-                subject:      'MediFinder — Pharmacy Registration Update',
-                type:         'rejection',
-                pharmacyName: pendingRejectName,
-                reason
+                to:            pendingRejectEmail,
+                subject:       'MediFinder — Pharmacy Registration Update',
+                type:          'rejection',
+                pharmacyName:  pendingRejectName,
+                reason,
+                docFolderPath: pendingRejectFolder  // Edge Function will delete these files
             }
         });
 
