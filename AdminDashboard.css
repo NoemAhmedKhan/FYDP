@@ -197,6 +197,8 @@ body {
     border-top: 1px solid var(--light-gray);
     padding: 12px 8px 12px 8px;
     margin-bottom: 8px;
+    margin-left: -4px;
+    margin-right: -4px;
 }
 
 .admin-avatar {
@@ -308,8 +310,9 @@ body {
 
 .sidebar-footer {
     padding: 16px 12px;
-    border-top: 1px solid var(--light-gray);
+    border-top: none;
     flex-shrink: 0;
+    margin-top: auto;
 }
 
 .logout-btn {
