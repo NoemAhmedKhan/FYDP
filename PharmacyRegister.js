@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
     ───────────────────────────────────────── */
     ['pharmacy-name','owner-name','phone','license-no','reg-no','cnic',
      'pharmacy-type','operating-hours','province','city','address',
-     'email'].forEach(id => {
+     'email','password','confirm-password'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', () => clearError(id));
     });
@@ -214,17 +214,39 @@ document.addEventListener('DOMContentLoaded', function () {
         clearAllErrors();
         let valid = true;
 
-        const email   = document.getElementById('email').value.trim();
-        const terms   = document.getElementById('terms').checked;
+        const email    = document.getElementById('email').value.trim();
+        const password = document.getElementById('password') ? document.getElementById('password').value : '';
+        const confirmPw = document.getElementById('confirm-password') ? document.getElementById('confirm-password').value : '';
+        const terms    = document.getElementById('terms').checked;
         const allFiles = document.getElementById('all-docs').files;
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        // ── Email: must be a valid Gmail address ──────────────────────────
+        const gmailRegex = /^[a-zA-Z0-9._%+\-]+@gmail\.com$/i;
         if (!email) {
             showError('email', 'Email address is required.');
             valid = false;
-        } else if (!emailRegex.test(email)) {
-            showError('email', 'Enter a valid email address (e.g. name@example.com).');
+        } else if (!gmailRegex.test(email)) {
+            showError('email', 'Only Gmail addresses are accepted (e.g. name@gmail.com).');
             valid = false;
+        }
+
+        // ── Password: minimum 8 characters ───────────────────────────────
+        if (document.getElementById('password')) {
+            if (!password) {
+                showError('password', 'Password is required.');
+                valid = false;
+            } else if (password.length < 8) {
+                showError('password', 'Password must be at least 8 characters.');
+                valid = false;
+            }
+
+            if (!confirmPw) {
+                showError('confirm-password', 'Please confirm your password.');
+                valid = false;
+            } else if (password && confirmPw !== password) {
+                showError('confirm-password', 'Passwords do not match.');
+                valid = false;
+            }
         }
 
         // At least 2 files required: license + CNIC
@@ -538,6 +560,70 @@ document.addEventListener('DOMContentLoaded', function () {
             submitBtn.disabled = false;
             submitBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Register Pharmacy';
         }
+    });
+
+    /* ─────────────────────────────────────────
+       PASSWORD — Strength indicator & real-time feedback
+    ───────────────────────────────────────── */
+    const pwInput  = document.getElementById('password');
+    const cpwInput = document.getElementById('confirm-password');
+
+    if (pwInput) {
+        pwInput.addEventListener('input', function () {
+            clearError('password');
+            const len = this.value.length;
+            const strengthEl = document.getElementById('pw-strength');
+            if (strengthEl) {
+                if (len === 0) {
+                    strengthEl.textContent = '';
+                } else if (len < 8) {
+                    strengthEl.textContent = `Too short — ${8 - len} more character${8 - len > 1 ? 's' : ''} needed.`;
+                    strengthEl.style.color = '#ef4444';
+                } else if (len < 12) {
+                    strengthEl.textContent = 'Acceptable password.';
+                    strengthEl.style.color = '#f59e0b';
+                } else {
+                    strengthEl.textContent = 'Strong password ✓';
+                    strengthEl.style.color = 'var(--color-forest-green, #208B3A)';
+                }
+            }
+            // Also re-validate confirm field live
+            if (cpwInput && cpwInput.value) {
+                if (cpwInput.value !== this.value) {
+                    showError('confirm-password', 'Passwords do not match.');
+                } else {
+                    clearError('confirm-password');
+                }
+            }
+        });
+    }
+
+    if (cpwInput) {
+        cpwInput.addEventListener('input', function () {
+            clearError('confirm-password');
+            if (pwInput && this.value && this.value !== pwInput.value) {
+                showError('confirm-password', 'Passwords do not match.');
+            }
+        });
+    }
+
+    /* ─────────────────────────────────────────
+       EYE TOGGLE — Password visibility
+    ───────────────────────────────────────── */
+    document.querySelectorAll('.eye-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const targetId = this.dataset.target;
+            const input    = document.getElementById(targetId);
+            if (!input) return;
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            // Swap icon
+            const icon = this.querySelector('i') || this;
+            if (icon && icon.classList) {
+                icon.classList.toggle('fa-eye',       !isHidden);
+                icon.classList.toggle('fa-eye-slash',  isHidden);
+            }
+        });
     });
 
     function showFormError(msg) {
