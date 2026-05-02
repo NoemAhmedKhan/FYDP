@@ -1052,3 +1052,25 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     .step-circle { width: 30px; height: 30px; font-size: 0.78rem; }
     .benefit-list li { font-size: 0.82rem; padding: 8px 12px; }
 }
+
+/* ── Password Strength Indicator ── */
+.pw-strength-msg {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 5px;
+    min-height: 18px;
+    transition: color 0.2s;
+}
+
+.pw-strength--weak {
+    color: #ef4444;
+}
+
+.pw-strength--strong {
+    color: var(--color-forest-green, #208B3A);
+}
+
+.pw-strength--strong i {
+    margin-right: 4px;
+}
