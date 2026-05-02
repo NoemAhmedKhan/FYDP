@@ -30,7 +30,7 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <div class="sidebar-logo">
-                <div class="sidebar-logo-icon"><i class="fa-solid fa-pills"></i></div>
+                <div class="sidebar-logo-icon"><img src="./Images/Logo.png" alt="MediFinder Logo" style="width:32px;height:32px;object-fit:contain;border-radius:6px;"></div>
                 <div>
                     <div class="sidebar-logo-text">MediFinder</div>
                     <div class="sidebar-logo-sub">Admin Panel</div>
@@ -64,7 +64,7 @@
             </a>
 
             <div class="nav-section-label">Database</div>
-            <div id="table-list">
+            <div id="table-list" style="max-height:220px;overflow-y:auto;overflow-x:hidden;">
                 <div class="sidebar-loading">
                     <div class="spinner-sm"></div> Loading tables...
                 </div>
@@ -72,6 +72,7 @@
         </nav>
 
         <div class="sidebar-footer">
+            <div class="admin-email-footer" id="admin-email-footer" style="font-size:11px;color:var(--gray,#888);padding:8px 12px 4px;word-break:break-all;" id="admin-email"></div>
             <button class="logout-btn" onclick="handleLogout()">
                 <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 Sign Out
