@@ -678,4 +678,4 @@ function showToast(message, type = 'success') {
     setTimeout(() => { toast.style.animation = 'toastOut 0.3s ease forwards'; setTimeout(() => toast.remove(), 300); }, 4000);
 }
 // ── Logout ──────────────────────────────────────────────────
-async function handleLogout() { await sb.auth.signOut(); window.location.href = 'AdminLogin.html'; }
+async function handleLogout() { await sb.auth.signOut(); window.location.href = 'Login.html'; }
