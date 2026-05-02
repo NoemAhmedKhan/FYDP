@@ -152,7 +152,7 @@ body {
 .sidebar-logo-icon {
     width: 36px;
     height: 36px;
-    background: var(--green);
+    background: transparent;
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -192,6 +192,13 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+.sidebar-admin-info--footer {
+    border-bottom: none;
+    border-top: 1px solid var(--light-gray);
+    padding: 12px 8px 12px 8px;
+    margin-bottom: 8px;
 }
 
 .admin-avatar {
