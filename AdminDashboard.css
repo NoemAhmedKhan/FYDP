@@ -117,13 +117,11 @@ body {
     flex-direction: column;
     z-index: 1000;
     transition: transform 0.3s ease;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--light-gray) transparent;
+    overflow: hidden;
 }
 
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-thumb { background: var(--light-gray); border-radius: 2px; }
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: var(--light-gray); border-radius: 2px; }
 
 .sidebar-overlay {
     display: none;
@@ -236,6 +234,8 @@ body {
     flex: 1;
     padding: 12px 12px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--light-gray) transparent;
 }
 
 .nav-section-label {
