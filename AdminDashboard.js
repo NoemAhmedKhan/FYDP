@@ -30,7 +30,7 @@ let pendingRejectName   = null;
 // ============================================================
 document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await sb.auth.getSession();
-    if (!session) { window.location.href = 'AdminLogin.html'; return; }
+    if (!session) { window.location.href = 'Login.html'; return; }
 
     currentUser = session.user;
     setUserInfo(currentUser);
