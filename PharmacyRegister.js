@@ -576,15 +576,14 @@ document.addEventListener('DOMContentLoaded', function () {
             if (strengthEl) {
                 if (len === 0) {
                     strengthEl.textContent = '';
+                    strengthEl.className   = 'pw-strength-msg';
                 } else if (len < 8) {
-                    strengthEl.textContent = `Too short — ${8 - len} more character${8 - len > 1 ? 's' : ''} needed.`;
-                    strengthEl.style.color = '#ef4444';
-                } else if (len < 12) {
-                    strengthEl.textContent = 'Acceptable password.';
-                    strengthEl.style.color = '#f59e0b';
+                    const missing = 8 - len;
+                    strengthEl.textContent = `Password Characters ${missing} Missing`;
+                    strengthEl.className   = 'pw-strength-msg pw-strength--weak';
                 } else {
-                    strengthEl.textContent = 'Strong password ✓';
-                    strengthEl.style.color = 'var(--color-forest-green, #208B3A)';
+                    strengthEl.innerHTML = '<i class="fa-solid fa-circle-check"></i> Strong';
+                    strengthEl.className = 'pw-strength-msg pw-strength--strong';
                 }
             }
             // Also re-validate confirm field live
@@ -610,21 +609,20 @@ document.addEventListener('DOMContentLoaded', function () {
     /* ─────────────────────────────────────────
        EYE TOGGLE — Password visibility
     ───────────────────────────────────────── */
-    document.querySelectorAll('.eye-toggle').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            const targetId = this.dataset.target;
-            const input    = document.getElementById(targetId);
-            if (!input) return;
-            const isHidden = input.type === 'password';
-            input.type = isHidden ? 'text' : 'password';
-            // Swap icon
-            const icon = this.querySelector('i') || this;
-            if (icon && icon.classList) {
-                icon.classList.toggle('fa-eye',       !isHidden);
-                icon.classList.toggle('fa-eye-slash',  isHidden);
-            }
+    function setupEyeToggle(toggleId, inputId) {
+        const toggleIcon = document.getElementById(toggleId);
+        const inputEl    = document.getElementById(inputId);
+        if (!toggleIcon || !inputEl) return;
+        toggleIcon.style.cursor = 'pointer';
+        toggleIcon.addEventListener('click', function () {
+            const isHidden = inputEl.type === 'password';
+            inputEl.type = isHidden ? 'text' : 'password';
+            this.classList.toggle('fa-eye-slash', !isHidden);
+            this.classList.toggle('fa-eye',        isHidden);
         });
-    });
+    }
+    setupEyeToggle('toggle-pass',    'password');
+    setupEyeToggle('toggle-confirm', 'confirm-password');
 
     function showFormError(msg) {
         let errDiv = document.getElementById('form-global-error');
