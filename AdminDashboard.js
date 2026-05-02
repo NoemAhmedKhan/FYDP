@@ -258,9 +258,17 @@ function refreshTable() { if (currentTable) fetchTableData(); }
 //  OVERVIEW STATS
 // ============================================================
 async function loadOverviewStats() {
+    // Total Pharmacies = users with role 'pharmacist'
+    // NOTE: Requires RLS policy on public.users allowing admin to SELECT all rows.
+    // If count returns 0 unexpectedly, add this policy in Supabase:
+    //   CREATE POLICY "admin_read_all_users" ON public.users FOR SELECT
+    //   TO authenticated USING (EXISTS (
+    //     SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'
+    //   ));
     try {
-        const { count } = await sb.from('pharmacies').select('*', { count: 'exact', head: true });
-        document.getElementById('stat-pharmacies').textContent = count ?? '—';
+        const { count, error } = await sb.from('users').select('*', { count: 'exact', head: true }).eq('role', 'pharmacist');
+        if (error) throw error;
+        document.getElementById('stat-pharmacies').textContent = count ?? '0';
     } catch { document.getElementById('stat-pharmacies').textContent = '—'; }
 
     try {
@@ -269,9 +277,11 @@ async function loadOverviewStats() {
         document.getElementById('stat-pending').textContent  = count ?? '—';
     } catch { document.getElementById('stat-pending').textContent = '—'; }
 
+    // Registered Users = users with role 'user' (patients)
     try {
-        const { count } = await sb.from('users').select('*', { count: 'exact', head: true }).eq('role', 'user');
-        document.getElementById('stat-users').textContent = count ?? '—';
+        const { count, error } = await sb.from('users').select('*', { count: 'exact', head: true }).eq('role', 'user');
+        if (error) throw error;
+        document.getElementById('stat-users').textContent = count ?? '0';
     } catch { document.getElementById('stat-users').textContent = '—'; }
 
     document.getElementById('stat-tables').textContent = allTables.length || '—';
@@ -492,7 +502,7 @@ async function confirmReject() {
 
     try {
         // 1. Send rejection email via send-email Edge Function
-        await sb.functions.invoke('send-email', {
+        const { data: emailData, error: emailErr } = await sb.functions.invoke('send-email', {
             body: {
                 to:           pendingRejectEmail,
                 subject:      'MediFinder — Pharmacy Registration Update',
@@ -502,9 +512,13 @@ async function confirmReject() {
             }
         });
 
+        // Check for edge function invocation error or application-level error
+        if (emailErr) throw new Error(`Email failed: ${emailErr.message}`);
+        if (emailData && emailData.error) throw new Error(`Email failed: ${emailData.error}`);
+
         // 2. Delete from pharmacy_requests
-        const { error } = await sb.from('pharmacy_requests').delete().eq('id', pendingRejectId);
-        if (error) throw error;
+        const { error: deleteErr } = await sb.from('pharmacy_requests').delete().eq('id', pendingRejectId);
+        if (deleteErr) throw new Error(`Could not remove request: ${deleteErr.message}`);
 
         animateCardOut(`req-card-${pendingRejectId}`, 'left');
         closeModal('reject-modal');
@@ -663,6 +677,5 @@ function showToast(message, type = 'success') {
     document.getElementById('toast-container').appendChild(toast);
     setTimeout(() => { toast.style.animation = 'toastOut 0.3s ease forwards'; setTimeout(() => toast.remove(), 300); }, 4000);
 }
-
 // ── Logout ──────────────────────────────────────────────────
 async function handleLogout() { await sb.auth.signOut(); window.location.href = 'AdminLogin.html'; }
