@@ -45,8 +45,6 @@ function setUserInfo(user) {
     document.getElementById('admin-name').textContent    = name;
     document.getElementById('admin-email').textContent   = email;
     document.getElementById('admin-avatar').textContent  = initial;
-    document.getElementById('topbar-avatar').textContent = initial;
-    document.getElementById('topbar-name').textContent   = name;
 }
 
 function hideLoading() {
