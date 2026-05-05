@@ -4,12 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MediFinder – Stock Management</title>
-
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
-
   <link rel="stylesheet" href="PharmStockManagement.css" />
 </head>
 <body>
@@ -18,7 +16,6 @@
 <aside class="sidebar" id="sidebar">
   <div class="s-overlay" id="sOverlay"></div>
   <div class="s-inner">
-
     <div class="s-logo">
       <div class="s-logo-icon">
         <img src="Images/Logo.png" alt="MediFinder"
@@ -30,32 +27,16 @@
         <span class="s-portal">Pharmacist Portal</span>
       </div>
     </div>
-
     <nav class="s-nav">
-      <a href="PharmDashboard.html" class="nav-a">
-        <i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span>
-      </a>
-      <a href="PharmInfoUpdate.html" class="nav-a">
-        <i class="fa-solid fa-gear"></i><span>Information Update</span>
-      </a>
-      <a href="PharmStockManagement.html" class="nav-a active">
-        <i class="fa-solid fa-boxes-stacked"></i><span>Stock Management</span>
-      </a>
-      <a href="PharmBillingHistory.html" class="nav-a">
-        <i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span>
-      </a>
-      <a href="PharmExpiryAlerts.html" class="nav-a">
-        <i class="fa-solid fa-bell"></i><span>Expiry Alerts</span>
-      </a>
-      <a href="PharmSalesInsights.html" class="nav-a">
-        <i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span>
-      </a>
-      <a href="PharmAdvancedForecast.html" class="nav-a">
-        <i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span>
-      </a>
+      <a href="PharmDashboard.html" class="nav-a"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a>
+      <a href="PharmInfoUpdate.html" class="nav-a"><i class="fa-solid fa-gear"></i><span>Information Update</span></a>
+      <a href="PharmStockManagement.html" class="nav-a active"><i class="fa-solid fa-boxes-stacked"></i><span>Stock Management</span></a>
+      <a href="PharmBillingHistory.html" class="nav-a"><i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span></a>
+      <a href="PharmExpiryAlerts.html" class="nav-a"><i class="fa-solid fa-bell"></i><span>Expiry Alerts</span></a>
+      <a href="PharmSalesInsights.html" class="nav-a"><i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span></a>
+      <a href="PharmAdvancedForecast.html" class="nav-a"><i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span></a>
     </nav>
-
-    <div class="s-user">
+    <div class="s-user" id="sUserBtn">
       <div class="s-avatar">
         <img src="Images/PharmAvatar.jpg" alt="Pharmacist" onerror="this.style.display='none'">
       </div>
@@ -64,7 +45,6 @@
         <span class="s-urole">Pharmacist</span>
       </div>
     </div>
-
   </div>
 </aside>
 
@@ -81,10 +61,13 @@
       <p>Manage, track, and optimise your pharmaceutical inventory.</p>
     </div>
     <div class="topbar-actions">
-      <button class="btn-secondary" onclick="handleBulkUpload()">
+      <button class="btn-danger-outline" id="btnDeleteAllStock" title="Permanently delete all stock for your pharmacy">
+        <i class="fa-solid fa-trash-can"></i> Delete All Stock
+      </button>
+      <button class="btn-secondary" id="btnBulkUpload">
         <i class="fa-solid fa-upload"></i> Bulk Upload Stock
       </button>
-      <button class="btn-primary" onclick="handleAddItem()">
+      <button class="btn-primary" id="btnAddItem">
         <i class="fa-solid fa-plus"></i> Add New Item
       </button>
     </div>
@@ -92,53 +75,47 @@
 
   <!-- Stat Cards -->
   <div class="stat-grid">
-
     <div class="stat-card">
-      <div class="stat-icon si-green">
-        <i class="fa-solid fa-boxes-stacked"></i>
-      </div>
+      <div class="stat-icon si-green"><i class="fa-solid fa-boxes-stacked"></i></div>
       <p class="stat-label">Total Items</p>
       <p class="stat-val" id="statTotal">—</p>
-      <p class="stat-trend"><i class="fa-solid fa-arrow-up"></i> Live count</p>
+      <p class="stat-trend"><i class="fa-solid fa-circle-dot"></i> Live count</p>
     </div>
-
     <div class="stat-card">
-      <div class="stat-icon si-amber">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-      </div>
-      <p class="stat-label">Out of Stock Items</p>
+      <div class="stat-icon si-amber"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <p class="stat-label">Out of Stock</p>
       <p class="stat-val amber" id="statOOS">—</p>
-      <p class="stat-sub">Requires restocking</p>
+      <p class="stat-sub" id="statLowStock">— low stock items</p>
     </div>
-
     <div class="stat-card">
-      <div class="stat-icon si-blue">
-        <i class="fa-solid fa-sack-dollar"></i>
-      </div>
+      <div class="stat-icon si-blue"><i class="fa-solid fa-sack-dollar"></i></div>
       <p class="stat-label">Stock Value</p>
       <p class="stat-val" id="statValue">—</p>
-      <p class="stat-sub">Estimated total</p>
+      <p class="stat-sub">Estimated retail total</p>
     </div>
-
     <div class="stat-card">
-      <div class="stat-icon si-purple">
-        <i class="fa-regular fa-calendar-xmark"></i>
-      </div>
+      <div class="stat-icon si-purple"><i class="fa-regular fa-calendar-xmark"></i></div>
       <p class="stat-label">Avg. Days to Expiry</p>
       <p class="stat-val" id="statExpiring">—</p>
-      <p class="stat-sub" id="statExpiringLbl">Expiring within 30 days</p>
+      <p class="stat-sub" id="statExpiringLbl">— expiring in 30 days</p>
     </div>
-
   </div>
 
   <!-- Inventory Table -->
   <div class="table-card">
-
     <div class="table-head">
       <h2>Inventory List</h2>
-      <div class="search-wrap">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input type="text" id="searchInput" placeholder="Search drug name…" autocomplete="off" />
+      <div class="table-head-right">
+        <div class="search-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="searchInput" placeholder="Search drug name or generic…" autocomplete="off" />
+        </div>
+        <select id="filterStatus" class="filter-select">
+          <option value="">All Status</option>
+          <option value="oos">Out of Stock</option>
+          <option value="low">Low Stock</option>
+          <option value="expiring">Expiring Soon</option>
+        </select>
       </div>
     </div>
 
@@ -146,14 +123,16 @@
       <thead>
         <tr>
           <th>Drug Name</th>
-          <th>Batch ID</th>
+          <th>Batch No</th>
           <th>Quantity</th>
+          <th>Price (PKR)</th>
           <th>Expiry Date</th>
           <th>Supplier</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="invTbody">
-        <tr><td colspan="5">
+        <tr><td colspan="7">
           <div class="table-state">
             <div class="spinner"></div>
             <p>Loading inventory…</p>
@@ -166,19 +145,414 @@
       <span class="pg-info" id="pgInfo">Loading…</span>
       <div class="pg-controls" id="pgControls"></div>
     </div>
-
   </div>
 
 </main>
 
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  MODAL: ADD SINGLE ITEM                                   -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modalAddBackdrop">
+  <div class="modal modal-lg" id="modalAdd" role="dialog" aria-modal="true" aria-label="Add New Stock Item">
+    <div class="modal-header">
+      <div>
+        <h3>Add New Stock Item</h3>
+        <p>Enter medicine details. Product matching is done automatically by generic name, strength, dosage form, and manufacturer.</p>
+      </div>
+      <button class="modal-close" id="modalAddClose" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Section: Product Info -->
+      <div class="form-section">
+        <h4 class="form-section-title"><i class="fa-solid fa-pills"></i> Product Information</h4>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="f_product_name">Brand / Product Name <span class="req">*</span></label>
+            <input type="text" id="f_product_name" placeholder="e.g. Panadol 500mg Tablet" />
+            <span class="field-err" id="err_product_name"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_generic_name">Generic Name <span class="req">*</span></label>
+            <input type="text" id="f_generic_name" placeholder="e.g. Paracetamol" />
+            <span class="field-err" id="err_generic_name"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_strength">Strength <span class="req">*</span></label>
+            <input type="text" id="f_strength" placeholder="e.g. 500MG" />
+            <span class="field-err" id="err_strength"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_dosage_form">Dosage Form <span class="req">*</span></label>
+            <select id="f_dosage_form">
+              <option value="">Select form…</option>
+              <option>TABLET</option><option>CAPSULE</option><option>SYRUP</option>
+              <option>INJECTION</option><option>DROPS</option><option>CREAM</option>
+              <option>OINTMENT</option><option>INHALER</option><option>PATCH</option>
+              <option>SUPPOSITORY</option><option>POWDER</option><option>SUSPENSION</option>
+            </select>
+            <span class="field-err" id="err_dosage_form"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_release_type">Release Type</label>
+            <select id="f_release_type">
+              <option value="">Select…</option>
+              <option>IMMEDIATE</option><option>EXTENDED</option><option>DELAYED</option><option>SUSTAINED</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="f_manufacturer">Manufacturer <span class="req">*</span></label>
+            <input type="text" id="f_manufacturer" placeholder="e.g. GSK" />
+            <span class="field-err" id="err_manufacturer"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_brand">Brand Name</label>
+            <input type="text" id="f_brand" placeholder="e.g. Panadol" />
+          </div>
+          <div class="form-group">
+            <label for="f_category">Category</label>
+            <input type="text" id="f_category" placeholder="e.g. Analgesic" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Batch & Stock -->
+      <div class="form-section">
+        <h4 class="form-section-title"><i class="fa-solid fa-layer-group"></i> Batch &amp; Stock Details</h4>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="f_batch_no">Batch No <span class="req">*</span></label>
+            <input type="text" id="f_batch_no" placeholder="e.g. BATCH-2024-001" />
+            <span class="field-err" id="err_batch_no"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_supplier_name">Supplier Name</label>
+            <input type="text" id="f_supplier_name" placeholder="e.g. MedSuppliers Pvt" />
+          </div>
+          <div class="form-group">
+            <label for="f_pack_size">Pack Size <span class="req">*</span></label>
+            <input type="number" id="f_pack_size" placeholder="e.g. 10" min="1" />
+            <span class="field-err" id="err_pack_size"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_quantity">Quantity (Units) <span class="req">*</span></label>
+            <input type="number" id="f_quantity" placeholder="e.g. 500" min="0" />
+            <span class="field-err" id="err_quantity"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_reorder_level">Reorder Level <span class="req">*</span></label>
+            <input type="number" id="f_reorder_level" placeholder="e.g. 50" min="0" value="10" />
+            <span class="field-err" id="err_reorder_level"></span>
+          </div>
+          <div class="form-group">
+            <label class="check-label">
+              <input type="checkbox" id="f_prescription_required" />
+              <span>Prescription Required</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Pricing -->
+      <div class="form-section">
+        <h4 class="form-section-title"><i class="fa-solid fa-tag"></i> Pricing (PKR)</h4>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="f_purchase_price">Purchase Price</label>
+            <input type="number" id="f_purchase_price" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="f_original_price">Original Price <span class="req">*</span></label>
+            <input type="number" id="f_original_price" placeholder="0.00" min="0.01" step="0.01" />
+            <span class="field-err" id="err_original_price"></span>
+          </div>
+          <div class="form-group">
+            <label for="f_discounted_price">Discounted Price</label>
+            <input type="number" id="f_discounted_price" placeholder="Leave blank if no discount" min="0" step="0.01" />
+            <span class="field-err" id="err_discounted_price"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Dates -->
+      <div class="form-section">
+        <h4 class="form-section-title"><i class="fa-regular fa-calendar"></i> Dates</h4>
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="f_manufacture_date">Manufacture Date</label>
+            <input type="date" id="f_manufacture_date" />
+          </div>
+          <div class="form-group">
+            <label for="f_expiry_date">Expiry Date <span class="req">*</span></label>
+            <input type="date" id="f_expiry_date" />
+            <span class="field-err" id="err_expiry_date"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form error summary -->
+      <div class="form-error-box" id="addFormError" style="display:none"></div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="modalAddCancel">Cancel</button>
+      <button class="btn-primary" id="btnSubmitAdd">
+        <span id="btnSubmitAddText"><i class="fa-solid fa-plus"></i> Add Item</span>
+        <span id="btnSubmitAddLoader" style="display:none"><div class="spinner-sm"></div> Adding…</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  MODAL: BULK CSV UPLOAD                                   -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modalBulkBackdrop">
+  <div class="modal modal-lg" id="modalBulk" role="dialog" aria-modal="true" aria-label="Bulk CSV Upload">
+    <div class="modal-header">
+      <div>
+        <h3>Bulk Upload Stock</h3>
+        <p>Upload a CSV file with up to 500 rows. All rows must pass validation before any data is saved.</p>
+      </div>
+      <button class="modal-close" id="modalBulkClose" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Step 1: Download template -->
+      <div class="upload-step">
+        <div class="step-badge">1</div>
+        <div class="step-content">
+          <h4>Download Template</h4>
+          <p>Use the official template to ensure correct column headers and format.</p>
+          <button class="btn-secondary btn-sm" id="btnDownloadTemplate">
+            <i class="fa-solid fa-download"></i> Download stock_template.csv
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Upload file -->
+      <div class="upload-step">
+        <div class="step-badge">2</div>
+        <div class="step-content">
+          <h4>Upload Your CSV</h4>
+          <p>Select your completed CSV file. Max 500 rows, headers must match the template exactly.</p>
+          <div class="drop-zone" id="dropZone">
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none" />
+            <i class="fa-solid fa-file-csv"></i>
+            <p class="drop-label">Drop your CSV here or <span class="drop-link">browse</span></p>
+            <p class="drop-hint">Accepted: .csv files only</p>
+          </div>
+          <div class="file-selected" id="fileSelected" style="display:none">
+            <i class="fa-solid fa-file-csv"></i>
+            <span id="fileSelectedName"></span>
+            <span id="fileSelectedSize" class="file-size"></span>
+            <button class="btn-icon" id="btnRemoveFile" aria-label="Remove file"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Validate & Preview -->
+      <div class="upload-step" id="stepValidate" style="display:none">
+        <div class="step-badge step-badge-active">3</div>
+        <div class="step-content">
+          <h4>Validation Results</h4>
+
+          <!-- Validation summary bar -->
+          <div class="val-summary" id="valSummary" style="display:none">
+            <div class="val-chip green" id="valChipValid"></div>
+            <div class="val-chip red" id="valChipInvalid" style="display:none"></div>
+          </div>
+
+          <!-- Error table (inline, highlighted) -->
+          <div class="error-table-wrap" id="errorTableWrap" style="display:none">
+            <div class="error-table-header">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              <span id="errorTableTitle">Rows with errors</span>
+              <span class="error-hint">Fix these rows in your CSV and re-upload. No data will be saved until all errors are resolved.</span>
+            </div>
+            <div class="error-scroll">
+              <table class="error-table">
+                <thead>
+                  <tr>
+                    <th>Row #</th>
+                    <th>Field</th>
+                    <th>Value Provided</th>
+                    <th>Error</th>
+                  </tr>
+                </thead>
+                <tbody id="errorTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Success preview -->
+          <div class="preview-wrap" id="previewWrap" style="display:none">
+            <div class="preview-header">
+              <i class="fa-solid fa-circle-check"></i>
+              <span id="previewTitle"></span>
+            </div>
+            <div class="preview-scroll">
+              <table class="error-table">
+                <thead>
+                  <tr>
+                    <th>Product Name</th>
+                    <th>Generic Name</th>
+                    <th>Strength</th>
+                    <th>Batch No</th>
+                    <th>Qty</th>
+                    <th>Expiry</th>
+                  </tr>
+                </thead>
+                <tbody id="previewTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload progress -->
+      <div class="upload-progress-wrap" id="uploadProgressWrap" style="display:none">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+        <p class="progress-label" id="progressLabel">Uploading…</p>
+      </div>
+
+      <!-- Upload result -->
+      <div class="upload-result" id="uploadResult" style="display:none"></div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="modalBulkCancel">Cancel</button>
+      <button class="btn-primary" id="btnValidateCSV" style="display:none">
+        <i class="fa-solid fa-check-double"></i> Validate CSV
+      </button>
+      <button class="btn-primary" id="btnUploadCSV" style="display:none" disabled>
+        <span id="btnUploadCSVText"><i class="fa-solid fa-upload"></i> Upload to Database</span>
+        <span id="btnUploadCSVLoader" style="display:none"><div class="spinner-sm"></div> Uploading…</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  MODAL: EDIT INVENTORY ITEM                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modalEditBackdrop">
+  <div class="modal" id="modalEdit" role="dialog" aria-modal="true" aria-label="Edit Stock Item">
+    <div class="modal-header">
+      <div>
+        <h3>Edit Stock Item</h3>
+        <p id="editModalSubtitle">Update quantity, pricing, or supplier details.</p>
+      </div>
+      <button class="modal-close" id="modalEditClose" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit_id" />
+      <div class="form-section">
+        <div class="form-grid-3">
+          <div class="form-group">
+            <label for="edit_quantity">Quantity (Units) <span class="req">*</span></label>
+            <input type="number" id="edit_quantity" min="0" />
+            <span class="field-err" id="err_edit_quantity"></span>
+          </div>
+          <div class="form-group">
+            <label for="edit_reorder_level">Reorder Level <span class="req">*</span></label>
+            <input type="number" id="edit_reorder_level" min="0" />
+          </div>
+          <div class="form-group">
+            <label for="edit_supplier_name">Supplier</label>
+            <input type="text" id="edit_supplier_name" />
+          </div>
+          <div class="form-group">
+            <label for="edit_purchase_price">Purchase Price (PKR)</label>
+            <input type="number" id="edit_purchase_price" min="0" step="0.01" />
+          </div>
+          <div class="form-group">
+            <label for="edit_original_price">Original Price (PKR) <span class="req">*</span></label>
+            <input type="number" id="edit_original_price" min="0.01" step="0.01" />
+            <span class="field-err" id="err_edit_original_price"></span>
+          </div>
+          <div class="form-group">
+            <label for="edit_discounted_price">Discounted Price (PKR)</label>
+            <input type="number" id="edit_discounted_price" min="0" step="0.01" />
+            <span class="field-err" id="err_edit_discounted_price"></span>
+          </div>
+        </div>
+      </div>
+      <div class="form-error-box" id="editFormError" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="modalEditCancel">Cancel</button>
+      <button class="btn-primary" id="btnSubmitEdit">
+        <span id="btnSubmitEditText"><i class="fa-solid fa-floppy-disk"></i> Save Changes</span>
+        <span id="btnSubmitEditLoader" style="display:none"><div class="spinner-sm"></div> Saving…</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  MODAL: DELETE ALL STOCK CONFIRMATION                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modalDeleteAllBackdrop">
+  <div class="modal modal-danger" id="modalDeleteAll" role="dialog" aria-modal="true" aria-label="Delete All Stock">
+    <div class="modal-header">
+      <div class="danger-header-icon">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <button class="modal-close" id="modalDeleteAllClose" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="modal-body modal-body-danger">
+      <h3 class="danger-title">Delete All Stock?</h3>
+      <p class="danger-desc">
+        This will permanently delete <strong>every inventory record</strong> belonging to your pharmacy.
+        Products in the master catalogue will not be affected, but all your batch entries,
+        quantities, pricing, and supplier data will be gone.
+      </p>
+      <div class="danger-stat-row" id="deleteStatRow">
+        <div class="danger-stat">
+          <span class="danger-stat-val" id="deleteStatItems">—</span>
+          <span class="danger-stat-lbl">Items</span>
+        </div>
+        <div class="danger-stat-divider"></div>
+        <div class="danger-stat">
+          <span class="danger-stat-val" id="deleteStatValue">—</span>
+          <span class="danger-stat-lbl">Stock Value</span>
+        </div>
+      </div>
+      <div class="danger-confirm-wrap">
+        <label for="deleteConfirmInput" class="danger-confirm-label">
+          Type <strong>DELETE ALL</strong> to confirm:
+        </label>
+        <input
+          type="text"
+          id="deleteConfirmInput"
+          placeholder="DELETE ALL"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+      <div class="form-error-box" id="deleteFormError" style="display:none"></div>
+    </div>
+    <div class="modal-footer modal-footer-danger">
+      <button class="btn-secondary" id="modalDeleteAllCancel">Cancel</button>
+      <button class="btn-danger" id="btnConfirmDeleteAll" disabled>
+        <span id="btnDeleteAllText"><i class="fa-solid fa-trash-can"></i> Delete All Stock</span>
+        <span id="btnDeleteAllLoader" style="display:none"><div class="spinner-sm spinner-sm-red"></div> Deleting…</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="PharmStockManagement.js"></script>
-
-<script>
-  // Placeholder handlers — wire to your modals/pages
-  function handleBulkUpload() { alert('Bulk upload coming soon.'); }
-  function handleAddItem()    { alert('Add item modal coming soon.'); }
-</script>
-
 </body>
 </html>
