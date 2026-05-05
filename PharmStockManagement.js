@@ -608,6 +608,12 @@
     });
 
     $('btnConfirmDeleteAll')?.addEventListener('click', handleDeleteAllStock);
+    $('modalDeleteItemClose')?.addEventListener('click',  () => closeDeleteItemModal());
+    $('modalDeleteItemCancel')?.addEventListener('click', () => closeDeleteItemModal());
+    $('modalDeleteItemBackdrop')?.addEventListener('click', e => {
+      if (e.target === $('modalDeleteItemBackdrop')) closeDeleteItemModal();
+    });
+    $('btnConfirmDeleteItem')?.addEventListener('click', handleDeleteItem);
     $('modalEditClose')?.addEventListener('click',  () => $('modalEditBackdrop')?.classList.remove('open'));
     $('modalEditCancel')?.addEventListener('click', () => $('modalEditBackdrop')?.classList.remove('open'));
     $('modalEditBackdrop')?.addEventListener('click', e => {
