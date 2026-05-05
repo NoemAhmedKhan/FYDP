@@ -136,7 +136,7 @@
     const nameEl = document.querySelector('.s-uname');
     const roleEl = document.querySelector('.s-urole');
     if (nameEl) nameEl.textContent = displayName;
-    if (roleEl) roleEl.textContent = 'Pharmacist';
+    if (roleEl) roleEl.textContent = session.user.email || '';
 
     // Logout
     const sUserBtn = $('sUserBtn');
@@ -287,8 +287,13 @@
             <div class="action-cell">
               <button class="act-btn" title="Edit item"
                 onclick="openEditModal('${m.id}','${esc(m.product_name)}',${m.quantity},${m.reorder_level},
-                  '${esc(m.supplier_name||'')}',${m.purchase_price||'null'},${m.original_price},${m.discounted_price||'null'})">
+                  '${esc(m.supplier_name||'')}',${m.purchase_price||'null'},${m.original_price},${m.discounted_price||'null'},
+                  '${m.expiry_date||''}',${m.prescription_required ? 'true' : 'false'})">
                 <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="act-btn act-btn-danger" title="Delete this item"
+                onclick="openDeleteItemModal('${m.id}','${esc(m.product_name)}','${esc(m.batch_no||'')}')">
+                <i class="fa-solid fa-trash-can"></i>
               </button>
             </div>
           </td>
@@ -1092,7 +1097,7 @@ async function handleValidateCSV() {
   // ══════════════════════════════════════════════════════════════
   //  EDIT INVENTORY ITEM
   // ══════════════════════════════════════════════════════════════
-  window.openEditModal = function(id, name, qty, reorderLvl, supplier, purchPrice, origPrice, discPrice) {
+  window.openEditModal = function(id, name, qty, reorderLvl, supplier, purchPrice, origPrice, discPrice, expiryDate, prescriptionRequired) {
     $('edit_id').value               = id;
     $('editModalSubtitle').textContent = `Editing: ${name}`;
     $('edit_quantity').value         = qty;
@@ -1101,13 +1106,16 @@ async function handleValidateCSV() {
     $('edit_purchase_price').value   = purchPrice === 'null' ? '' : purchPrice;
     $('edit_original_price').value   = origPrice;
     $('edit_discounted_price').value = discPrice === 'null' ? '' : discPrice;
+    $('edit_expiry_date').value      = expiryDate || '';
+    $('edit_prescription_required').checked = prescriptionRequired === 'true' || prescriptionRequired === true;
     $('editFormError').style.display = 'none';
-    $('err_edit_quantity').textContent       = '';
-    $('err_edit_original_price').textContent = '';
+    $('err_edit_quantity').textContent        = '';
+    $('err_edit_original_price').textContent  = '';
     $('err_edit_discounted_price').textContent = '';
+    $('err_edit_expiry_date').textContent      = '';
     openModal('modalEditBackdrop');
   };
-
+  
   async function handleEditSave() {
     const btn     = $('btnSubmitEdit');
     const btnText = $('btnSubmitEditText');
@@ -1121,11 +1129,14 @@ async function handleValidateCSV() {
     const purchPrice   = $('edit_purchase_price').value ? Number($('edit_purchase_price').value) : null;
     const origPrice    = Number($('edit_original_price').value);
     const discPrice    = $('edit_discounted_price').value ? Number($('edit_discounted_price').value) : null;
+    const expiryDate   = norm($('edit_expiry_date').value);
+    const prescReq     = $('edit_prescription_required').checked;
 
     // Reset errors
     $('err_edit_quantity').textContent         = '';
     $('err_edit_original_price').textContent   = '';
     $('err_edit_discounted_price').textContent = '';
+    $('err_edit_expiry_date').textContent       = '';
     errBox.style.display = 'none';
 
     // Validate
@@ -1142,6 +1153,13 @@ async function handleValidateCSV() {
       $('err_edit_discounted_price').textContent = 'Cannot exceed original price';
       hasError = true;
     }
+    if (!expiryDate) {
+      $('err_edit_expiry_date').textContent = 'Required';
+      hasError = true;
+    } else if (new Date(expiryDate) <= new Date()) {
+      $('err_edit_expiry_date').textContent = 'Must be in the future';
+      hasError = true;
+    }
     if (hasError) {
       errBox.textContent   = 'Please fix the errors above.';
       errBox.style.display = 'block';
@@ -1156,15 +1174,17 @@ async function handleValidateCSV() {
       const { error } = await sb
         .from('inventory')
         .update({
-          quantity:         qty,
-          reorder_level:    reorderLvl,
-          supplier_name:    supplier   || null,
-          purchase_price:   purchPrice,
-          original_price:   origPrice,
-          discounted_price: discPrice,
+          quantity:              qty,
+          reorder_level:         reorderLvl,
+          supplier_name:         supplier     || null,
+          purchase_price:        purchPrice,
+          original_price:        origPrice,
+          discounted_price:      discPrice,
+          expiry_date:           expiryDate,
+          prescription_required: prescReq,
         })
         .eq('id', id)
-        .eq('pharmacy_id', pharmacyId);  // RLS double-check
+        .eq('pharmacy_id', pharmacyId);
 
       if (error) throw error;
 
@@ -1183,6 +1203,65 @@ async function handleValidateCSV() {
     }
   }
 
+// ══════════════════════════════════════════════════════════════
+  //  DELETE SINGLE INVENTORY ITEM
+  // ══════════════════════════════════════════════════════════════
+  let deleteItemTargetId = null;
+
+  window.openDeleteItemModal = function(id, name, batchNo) {
+    deleteItemTargetId = id;
+    $('deleteItemDesc').innerHTML =
+      `This will permanently remove <strong>${esc(name)}</strong> — Batch <strong>${esc(batchNo)}</strong> from your inventory.
+       The product in the master catalogue will not be affected.`;
+    $('deleteItemError').style.display   = 'none';
+    $('btnDeleteItemText').style.display = 'inline-flex';
+    $('btnDeleteItemLoader').style.display = 'none';
+    $('btnConfirmDeleteItem').disabled   = false;
+    openModal('modalDeleteItemBackdrop');
+  };
+
+  function closeDeleteItemModal() {
+    $('modalDeleteItemBackdrop')?.classList.remove('open');
+    deleteItemTargetId = null;
+    $('deleteItemError').style.display = 'none';
+  }
+
+  async function handleDeleteItem() {
+    if (!deleteItemTargetId || !pharmacyId) return;
+
+    const btn     = $('btnConfirmDeleteItem');
+    const btnText = $('btnDeleteItemText');
+    const loader  = $('btnDeleteItemLoader');
+    const errBox  = $('deleteItemError');
+
+    btn.disabled          = true;
+    btnText.style.display = 'none';
+    loader.style.display  = 'inline-flex';
+    errBox.style.display  = 'none';
+
+    try {
+      const { error } = await sb
+        .from('inventory')
+        .delete()
+        .eq('id', deleteItemTargetId)
+        .eq('pharmacy_id', pharmacyId);  // RLS double-check
+
+      if (error) throw error;
+
+      closeDeleteItemModal();
+      showToast('Item deleted successfully.', 'success');
+      await loadStats();
+      await loadInventory();
+    } catch (err) {
+      console.error('Delete item error:', err);
+      errBox.textContent   = err.message || 'Failed to delete item. Please try again.';
+      errBox.style.display = 'block';
+      btn.disabled          = false;
+      btnText.style.display = 'inline-flex';
+      loader.style.display  = 'none';
+    }
+  }
+  
   // ══════════════════════════════════════════════════════════════
   //  DELETE ALL STOCK
   // ══════════════════════════════════════════════════════════════
