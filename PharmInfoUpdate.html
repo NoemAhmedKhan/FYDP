@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
-  <link rel="stylesheet" href="PharmInfoUpdate.css" />
+  <link rel="stylesheet" href="PharmInfoUpdate2.css" />
 </head>
 <body>
 
@@ -54,11 +54,11 @@
 
     <div class="s-user">
       <div class="s-avatar">
-        <img src="Images/PharmAvatar.jpg" alt="Arsalan Ahmed" onerror="this.style.display='none'">
+        <img src="Images/PharmAvatar.jpg" alt="User" id="sidebarAvatar" onerror="this.style.display='none'">
       </div>
       <div class="s-umeta">
-        <span class="s-uname">Arsalan Ahmed</span>
-        <span class="s-urole">Lead Pharmacist</span>
+        <span class="s-uname" id="sidebarName">Loading…</span>
+        <span class="s-urole">Pharmacist</span>
       </div>
     </div>
 
@@ -77,14 +77,23 @@
       <p>Manage your branch details and operational hours.</p>
     </div>
     <div class="topbar-actions">
-      <button class="btn-primary">
+      <button class="btn-primary" id="saveBtn" onclick="saveProfile()">
         <i class="fa-solid fa-floppy-disk"></i> Save Profile Updates
       </button>
     </div>
   </header>
 
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+  <!-- Loading Overlay -->
+  <div id="pageLoader" class="page-loader">
+    <div class="loader-spinner"></div>
+    <p>Loading your profile…</p>
+  </div>
+
   <!-- Info Grid -->
-  <div class="info-grid">
+  <div class="info-grid" id="infoGrid" style="opacity:0; transition: opacity 0.4s;">
 
     <!-- General Information -->
     <section class="card" aria-labelledby="generalHeading">
@@ -94,20 +103,38 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="pharmacyName">Pharmacy Name</label>
-        <input class="form-input" type="text" id="pharmacyName" name="pharmacyName" value="MediFinder Central Branch">
+        <input class="form-input" type="text" id="pharmacyName" name="pharmacyName" placeholder="Enter pharmacy name">
       </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="licenseNum">
             License Number <i class="fa-solid fa-lock label-lock" aria-label="Read-only"></i>
           </label>
-          <input class="form-input" type="text" id="licenseNum" name="licenseNum" value="LIC-99827-C" readonly>
+          <input class="form-input" type="text" id="licenseNum" name="licenseNum" readonly>
         </div>
         <div class="form-group">
           <label class="form-label" for="branchId">
-            Branch ID <i class="fa-solid fa-lock label-lock" aria-label="Read-only"></i>
+            Registration No. <i class="fa-solid fa-lock label-lock" aria-label="Read-only"></i>
           </label>
-          <input class="form-input" type="text" id="branchId" name="branchId" value="KHI-CENTRAL-01" readonly>
+          <input class="form-input" type="text" id="branchId" name="branchId" readonly>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="pharmacyType">
+            Pharmacy Type <i class="fa-solid fa-lock label-lock" aria-label="Read-only"></i>
+          </label>
+          <input class="form-input" type="text" id="pharmacyType" name="pharmacyType" readonly>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="deliveryToggleWrap">Delivery Available</label>
+          <div class="delivery-wrap" id="deliveryToggleWrap">
+            <label class="toggle" aria-label="Delivery available">
+              <input type="checkbox" id="deliveryToggle">
+              <span class="toggle-slider"></span>
+            </label>
+            <span id="deliveryLabel" class="delivery-label">Yes</span>
+          </div>
         </div>
       </div>
     </section>
@@ -121,16 +148,22 @@
       <div class="form-row">
         <div class="form-group">
           <label class="form-label" for="primaryPhone">Primary Phone</label>
-          <input class="form-input" type="tel" id="primaryPhone" name="primaryPhone" value="+92 21 34567890">
+          <input class="form-input" type="tel" id="primaryPhone" name="primaryPhone" placeholder="+92 300 0000000">
         </div>
         <div class="form-group">
           <label class="form-label" for="emergencyPhone">Emergency Contact</label>
-          <input class="form-input" type="tel" id="emergencyPhone" name="emergencyPhone" value="+92 300 1234567">
+          <input class="form-input" type="tel" id="emergencyPhone" name="emergencyPhone" placeholder="+92 300 0000000">
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label" for="officialEmail">Official Email</label>
-        <input class="form-input" type="email" id="officialEmail" name="officialEmail" value="contact@medifinder.pk">
+        <label class="form-label" for="officialEmail">
+          Official Email <i class="fa-solid fa-lock label-lock" aria-label="Read-only"></i>
+        </label>
+        <input class="form-input" type="email" id="officialEmail" name="officialEmail" readonly>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="ownerName">Owner / Manager Name</label>
+        <input class="form-input" type="text" id="ownerName" name="ownerName" placeholder="Full name">
       </div>
     </section>
 
@@ -142,16 +175,26 @@
       </div>
       <div class="form-group">
         <label class="form-label" for="streetAddress">Street Address</label>
-        <textarea class="form-input" id="streetAddress" name="streetAddress" rows="3">Suite 402, Medical Plaza, Block 6, PECHS</textarea>
+        <textarea class="form-input" id="streetAddress" name="streetAddress" rows="3" placeholder="Enter street address"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="city">City</label>
+          <input class="form-input" type="text" id="city" name="city" placeholder="City">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="province">Province</label>
+          <input class="form-input" type="text" id="province" name="province" placeholder="Province">
+        </div>
       </div>
       <div class="form-group">
-        <label class="form-label" for="city">City</label>
-        <input class="form-input" type="text" id="city" name="city" value="Karachi, Sindh">
+        <label class="form-label" for="landmark">Landmark (optional)</label>
+        <input class="form-input" type="text" id="landmark" name="landmark" placeholder="Near main hospital, etc.">
       </div>
       <div class="form-group">
         <label class="form-label" for="gpsCoords">GPS Coordinates / Map Pin</label>
         <div class="input-wrap">
-          <input class="form-input" type="text" id="gpsCoords" name="gpsCoords" value="24.8607° N, 67.0011° E">
+          <input class="form-input" type="text" id="gpsCoords" name="gpsCoords" placeholder="e.g. 24.8607° N, 67.0011° E">
           <i class="fa-solid fa-map input-wrap-icon" aria-hidden="true"></i>
         </div>
       </div>
@@ -169,24 +212,26 @@
   </div>
 
   <!-- Profile Verification Banner -->
-  <aside class="verify-card" aria-label="Profile verification status">
+  <aside class="verify-card" id="verifyCard" aria-label="Profile verification status" style="opacity:0; transition: opacity 0.4s;">
     <div class="verify-icon" aria-hidden="true">
       <i class="fa-solid fa-shield-halved"></i>
     </div>
     <div class="verify-info">
       <p class="verify-title">Profile Verification Status</p>
-      <p class="verify-sub">Your profile is 85% complete. Update your emergency contact and operating hours to reach 100% and maintain your "Verified Pharmacy" badge on the patient portal.</p>
+      <p class="verify-sub" id="verifySubText">Loading profile completion…</p>
       <div class="verify-bar">
-        <div class="progress-bar" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100" aria-label="Profile completion 85%">
-          <div class="progress-fill" style="width:85%"></div>
+        <div class="progress-bar" role="progressbar" id="progressBar" aria-valuemin="0" aria-valuemax="100" aria-label="Profile completion">
+          <div class="progress-fill" id="progressFill" style="width:0%"></div>
         </div>
       </div>
     </div>
-    <p class="verify-pct" aria-hidden="true">85%</p>
+    <p class="verify-pct" id="verifyPct" aria-hidden="true">0%</p>
   </aside>
 
 </main>
 
-<script src="PharmInfoUpdate.js"></script>
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="PharmInfoUpdate2.js"></script>
 </body>
 </html>
