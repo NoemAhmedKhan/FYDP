@@ -478,6 +478,18 @@
             <input type="number" id="edit_discounted_price" min="0" step="0.01" />
             <span class="field-err" id="err_edit_discounted_price"></span>
           </div>
+          <div class="form-group">
+            <label for="edit_expiry_date">Expiry Date <span class="req">*</span></label>
+            <input type="date" id="edit_expiry_date" />
+            <span class="field-err" id="err_edit_expiry_date"></span>
+          </div>
+          <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:4px;">
+            <label style="margin-bottom:10px;">Prescription Required</label>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:13px;cursor:pointer;">
+              <input type="checkbox" id="edit_prescription_required" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;" />
+              Requires prescription (Rx)
+            </label>
+          </div>
         </div>
       </div>
       <div class="form-error-box" id="editFormError" style="display:none"></div>
@@ -546,8 +558,40 @@
     </div>
   </div>
 </div>
+
 <!-- Toast notification -->
 <div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!--  MODAL: DELETE SINGLE ITEM CONFIRMATION                   -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modalDeleteItemBackdrop">
+  <div class="modal modal-danger" id="modalDeleteItem" role="dialog" aria-modal="true" aria-label="Delete Stock Item">
+    <div class="modal-header">
+      <div class="danger-header-icon">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <button class="modal-close" id="modalDeleteItemClose" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div class="modal-body modal-body-danger">
+      <h3 class="danger-title">Delete This Item?</h3>
+      <p class="danger-desc" id="deleteItemDesc">
+        This will permanently remove this batch entry from your inventory.
+        The product in the master catalogue will not be affected.
+      </p>
+      <div class="form-error-box" id="deleteItemError" style="display:none"></div>
+    </div>
+    <div class="modal-footer modal-footer-danger">
+      <button class="btn-secondary" id="modalDeleteItemCancel">Cancel</button>
+      <button class="btn-danger" id="btnConfirmDeleteItem">
+        <span id="btnDeleteItemText"><i class="fa-solid fa-trash-can"></i> Delete Item</span>
+        <span id="btnDeleteItemLoader" style="display:none"><div class="spinner-sm spinner-sm-red"></div> Deleting…</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="PharmStockMang_CSV_Transformer.js"></script>
