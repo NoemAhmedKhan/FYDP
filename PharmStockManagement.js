@@ -697,106 +697,145 @@
   }
 
   // ── Client-side validate ─────────────────────────────────────
-  async function handleValidateCSV() {
-    const btn  = $('btnValidateCSV');
-    const file = btn._file;
-    if (!file) return;
+async function handleValidateCSV() {
+  const btn  = $('btnValidateCSV');
+  const file = btn._file;
+  if (!file) return;
 
-    // Reset
-    $('stepValidate').style.display    = 'block';
-    $('valSummary').style.display      = 'none';
-    $('errorTableWrap').style.display  = 'none';
-    $('previewWrap').style.display     = 'none';
-    $('btnUploadCSV').style.display    = 'none';
-    $('uploadResult').style.display    = 'none';
+  // Reset UI
+  $('stepValidate').style.display   = 'block';
+  $('valSummary').style.display     = 'none';
+  $('errorTableWrap').style.display = 'none';
+  $('previewWrap').style.display    = 'none';
+  $('btnUploadCSV').style.display   = 'none';
+  $('uploadResult').style.display   = 'none';
 
-    const text = await file.text();
-    const parsed = parseCSV(text);
+  const rawText = await file.text();
 
-    if (parsed.error) {
-      $('stepValidate').style.display = 'block';
-      $('errorTableWrap').style.display = 'block';
-      $('errorTableTitle').textContent = 'File error';
-      $('errorTableBody').innerHTML = `
+  // ── Step 1: Run transformer (normalize small messiness) ──────
+  const transformed = CSVStockTransformer.transform(rawText);
+
+  // If transformer itself found unfixable issues, show them and stop
+  if (transformed.unfixable.length) {
+    $('errorTableWrap').style.display = 'block';
+    $('errorTableTitle').textContent  = `${transformed.unfixable.length} unfixable error${transformed.unfixable.length !== 1 ? 's' : ''} — fix these in your file and re-upload`;
+    $('errorTableBody').innerHTML = transformed.unfixable.map(e => `
+      <tr class="err-row">
+        <td class="row-num">Row ${e.row}</td>
+        <td>${esc(e.field)}</td>
+        <td class="err-val" title="${esc(e.value)}">${esc(e.value) || '<em>empty</em>'}</td>
+        <td class="err-msg">${esc(e.reason)}</td>
+      </tr>`).join('');
+    // Also show skipped columns if any
+    if (transformed.skippedColumns.length) {
+      $('errorTableBody').innerHTML += `
         <tr class="err-row">
-          <td class="row-num">—</td>
-          <td>File</td>
-          <td class="err-val">—</td>
-          <td class="err-msg">${esc(parsed.error)}</td>
+          <td class="row-num">Header</td>
+          <td>Unknown columns</td>
+          <td class="err-val">${esc(transformed.skippedColumns.join(', '))}</td>
+          <td class="err-msg">These column names were not recognised and were ignored. Check your file matches the template.</td>
         </tr>`;
-      csvHasErrors = true;
-      return;
     }
-
-    // Validate rows
-    const allErrors = [];
-    const cleanRows = [];
-
-    for (const { raw, lineNum } of parsed.rows) {
-      const { errors, clean } = validateCSVRow(raw, lineNum);
-      if (errors.length) allErrors.push(...errors);
-      else cleanRows.push(clean);
-    }
-
-    // Intra-file duplicate detection
-    const seen = new Set();
-    for (const row of cleanRows) {
-      const key = `${row.generic_name}|${row.strength}|${row.dosage_form}|${row.manufacturer}|${row.batch_no}`;
-      if (seen.has(key)) {
-        allErrors.push({ row: '?', field: 'batch_no', message: 'Duplicate batch_no for same product in this file', value: row.batch_no });
-      }
-      seen.add(key);
-    }
-
-    // Show summary chips
-    $('valSummary').style.display = 'flex';
-    $('valChipValid').textContent = `✓ ${cleanRows.length} valid row${cleanRows.length !== 1 ? 's' : ''}`;
-    $('valChipValid').style.display = 'flex';
-
-    if (allErrors.length) {
-      $('valChipInvalid').textContent = `✕ ${allErrors.length} error${allErrors.length !== 1 ? 's' : ''}`;
-      $('valChipInvalid').style.display = 'flex';
-
-      $('errorTableWrap').style.display = 'block';
-      $('errorTableTitle').textContent  = `${allErrors.length} validation error${allErrors.length !== 1 ? 's' : ''} found`;
-      $('errorTableBody').innerHTML     = allErrors.map(e => `
-        <tr class="err-row">
-          <td class="row-num">Row ${e.row}</td>
-          <td>${esc(e.field)}</td>
-          <td class="err-val" title="${esc(e.value)}">${esc(e.value) || '<em>empty</em>'}</td>
-          <td class="err-msg">${esc(e.message)}</td>
-        </tr>`).join('');
-
-      csvHasErrors  = true;
-      parsedCSVRows = [];
-    } else {
-      // All valid — show preview
-      $('previewWrap').style.display = 'block';
-      $('previewTitle').textContent  = `${cleanRows.length} rows ready to upload`;
-      $('previewTableBody').innerHTML = cleanRows.slice(0, 10).map(r => `
-        <tr>
-          <td>${esc(r.product_name)}</td>
-          <td>${esc(r.generic_name)}</td>
-          <td>${esc(r.strength)}</td>
-          <td>${esc(r.batch_no)}</td>
-          <td>${r.quantity.toLocaleString()}</td>
-          <td>${fmtDate(r.expiry_date)}</td>
-        </tr>`).join('') +
-        (cleanRows.length > 10
-          ? `<tr><td colspan="6" style="text-align:center;color:var(--gray-md);font-style:italic;padding:10px">
-               …and ${cleanRows.length - 10} more rows
-             </td></tr>`
-          : '');
-
-      csvHasErrors  = false;
-      parsedCSVRows = cleanRows;
-
-      // Enable upload button
-      const uploadBtn = $('btnUploadCSV');
-      uploadBtn.style.display = 'inline-flex';
-      uploadBtn.disabled = false;
-    }
+    $('valSummary').style.display   = 'flex';
+    $('valChipInvalid').textContent = `✕ ${transformed.unfixable.length} unfixable error${transformed.unfixable.length !== 1 ? 's' : ''}`;
+    $('valChipInvalid').style.display = 'flex';
+    $('valChipValid').style.display   = 'none';
+    csvHasErrors  = true;
+    parsedCSVRows = [];
+    return;
   }
+
+  // ── Step 2: Pass the normalised CSV through existing row validator ──
+  const parsed = parseCSV(transformed.csv);
+
+  if (parsed.error) {
+    $('errorTableWrap').style.display = 'block';
+    $('errorTableTitle').textContent  = 'File error';
+    $('errorTableBody').innerHTML = `
+      <tr class="err-row">
+        <td class="row-num">—</td>
+        <td>File</td>
+        <td class="err-val">—</td>
+        <td class="err-msg">${esc(parsed.error)}</td>
+      </tr>`;
+    csvHasErrors = true;
+    return;
+  }
+
+  const allErrors = [];
+  const cleanRows = [];
+
+  for (const { raw, lineNum } of parsed.rows) {
+    const { errors, clean } = validateCSVRow(raw, lineNum);
+    if (errors.length) allErrors.push(...errors);
+    else cleanRows.push(clean);
+  }
+
+  // Intra-file duplicate detection
+  const seen = new Set();
+  for (const row of cleanRows) {
+    const key = `${row.generic_name}|${row.strength}|${row.dosage_form}|${row.manufacturer}|${row.batch_no}`;
+    if (seen.has(key)) {
+      allErrors.push({ row: '?', field: 'batch_no', message: 'Duplicate batch_no for same product in this file', value: row.batch_no });
+    }
+    seen.add(key);
+  }
+
+  // ── Step 3: Show summary ─────────────────────────────────────
+  $('valSummary').style.display = 'flex';
+
+  // Show auto-fix note if transformer changed anything (non-intrusive)
+  const autoFixed = transformed.warnings.length;
+  if (autoFixed) {
+    $('valChipValid').textContent  = `✓ ${cleanRows.length} valid row${cleanRows.length !== 1 ? 's' : ''} (${autoFixed} field${autoFixed !== 1 ? 's' : ''} auto-formatted)`;
+  } else {
+    $('valChipValid').textContent  = `✓ ${cleanRows.length} valid row${cleanRows.length !== 1 ? 's' : ''}`;
+  }
+  $('valChipValid').style.display = 'flex';
+
+  if (allErrors.length) {
+    $('valChipInvalid').textContent  = `✕ ${allErrors.length} error${allErrors.length !== 1 ? 's' : ''}`;
+    $('valChipInvalid').style.display = 'flex';
+
+    $('errorTableWrap').style.display = 'block';
+    $('errorTableTitle').textContent  = `${allErrors.length} validation error${allErrors.length !== 1 ? 's' : ''} found — fix these in your file and re-upload`;
+    $('errorTableBody').innerHTML     = allErrors.map(e => `
+      <tr class="err-row">
+        <td class="row-num">Row ${e.row}</td>
+        <td>${esc(e.field)}</td>
+        <td class="err-val" title="${esc(e.value)}">${esc(e.value) || '<em>empty</em>'}</td>
+        <td class="err-msg">${esc(e.message)}</td>
+      </tr>`).join('');
+
+    csvHasErrors  = true;
+    parsedCSVRows = [];
+
+  } else {
+    // All valid — show preview
+    $('previewWrap').style.display  = 'block';
+    $('previewTitle').textContent   = `${cleanRows.length} rows ready to upload`;
+    $('previewTableBody').innerHTML = cleanRows.slice(0, 10).map(r => `
+      <tr>
+        <td>${esc(r.product_name)}</td>
+        <td>${esc(r.generic_name)}</td>
+        <td>${esc(r.strength)}</td>
+        <td>${esc(r.batch_no)}</td>
+        <td>${r.quantity.toLocaleString()}</td>
+        <td>${fmtDate(r.expiry_date)}</td>
+      </tr>`).join('') +
+      (cleanRows.length > 10
+        ? `<tr><td colspan="6" style="text-align:center;color:var(--gray-md);font-style:italic;padding:10px">
+             …and ${cleanRows.length - 10} more rows
+           </td></tr>`
+        : '');
+
+    csvHasErrors  = false;
+    parsedCSVRows = cleanRows;
+
+    $('btnUploadCSV').style.display = 'inline-flex';
+    $('btnUploadCSV').disabled      = false;
+  }
+}
 
   // ── Upload to Edge Function ──────────────────────────────────
   async function handleUploadCSV() {
