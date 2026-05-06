@@ -164,6 +164,23 @@
     });
   }
 
+  // ── Pharmacist Heartbeat ────────────────────────────────
+// Paste this into PharmacistDashboard.js (or equivalent)
+// Keeps this pharmacy visible in user search results.
+async function sendHeartbeat() {
+    const { error } = await supabaseClient.rpc('pharmacy_heartbeat');
+    if (error) console.warn('Heartbeat failed:', error.message);
+}
+
+// Ping immediately on dashboard load, then every 60 seconds
+sendHeartbeat();
+const heartbeatInterval = setInterval(sendHeartbeat, 60_000);
+
+// Stop pinging if pharmacist closes/leaves the tab
+window.addEventListener('beforeunload', () => {
+    clearInterval(heartbeatInterval);
+});
+  
   // ── Boot ───────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', init);
 
