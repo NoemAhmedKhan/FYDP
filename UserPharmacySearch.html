@@ -154,6 +154,21 @@
     -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
+<script>
+    // Define callback before loading Maps script
+    window.__mapsReady = false;
+    window.__mapsReadyCallbacks = [];
+    function onGoogleMapsLoaded() {
+        window.__mapsReady = true;
+        window.__mapsReadyCallbacks.forEach(fn => fn());
+        window.__mapsReadyCallbacks = [];
+    }
+</script>
+<script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCm2iNXn99zOpB5SP7UBLeX16I1M7UrdNc&libraries=geometry&callback=onGoogleMapsLoaded"
+    async defer>
+</script>
+    
     <!-- Main pharmacy search + prescription scanner logic -->
     <script src="UserPharmacySearch.js"></script>
 
