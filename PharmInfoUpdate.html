@@ -54,7 +54,8 @@
 
     <div class="s-user">
       <div class="s-avatar">
-        <img src="Images/PharmAvatar.jpg" alt="User" id="sidebarAvatar" onerror="this.style.display='none'">
+        <img id="sidebarAvatar" src="" alt="User" style="display:none;">
+        <span class="s-avatar-initials" id="sidebarInitials"></span>
       </div>
       <div class="s-umeta">
         <span class="s-uname" id="sidebarName">Loading…</span>
@@ -210,6 +211,48 @@
     </section>
 
   </div>
+
+  <!-- Profile Photo Upload -->
+  <section class="card photo-card" id="photoCard" style="opacity:0; transition: opacity 0.4s;" aria-labelledby="photoHeading">
+    <div class="section-head">
+      <i class="fa-solid fa-camera section-icon--blue" aria-hidden="true"></i>
+      <h2 id="photoHeading">Profile Photo</h2>
+    </div>
+    <div class="photo-body">
+
+      <!-- Preview -->
+      <div class="photo-preview-wrap">
+        <div class="photo-preview" id="photoPreview">
+          <img id="photoPreviewImg" src="" alt="Profile photo" style="display:none;">
+          <div class="photo-placeholder" id="photoPlaceholder">
+            <i class="fa-solid fa-user"></i>
+          </div>
+          <!-- Overlay on hover -->
+          <label class="photo-overlay" for="photoFileInput" aria-label="Change photo">
+            <i class="fa-solid fa-camera"></i>
+            <span>Change</span>
+          </label>
+        </div>
+        <p class="photo-hint">JPG, PNG or WEBP · Max 2 MB</p>
+      </div>
+
+      <!-- Upload controls -->
+      <div class="photo-controls">
+        <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp" class="sr-only">
+        <label for="photoFileInput" class="btn-upload">
+          <i class="fa-solid fa-arrow-up-from-bracket"></i> Choose Photo
+        </label>
+        <button class="btn-primary" id="uploadPhotoBtn" onclick="uploadPhoto()" disabled>
+          <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
+        </button>
+        <button class="btn-remove" id="removePhotoBtn" onclick="removePhoto()" style="display:none;">
+          <i class="fa-solid fa-trash"></i> Remove Photo
+        </button>
+        <p class="photo-selected-name" id="photoSelectedName"></p>
+      </div>
+
+    </div>
+  </section>
 
   <!-- Profile Verification Banner -->
   <aside class="verify-card" id="verifyCard" aria-label="Profile verification status" style="opacity:0; transition: opacity 0.4s;">
