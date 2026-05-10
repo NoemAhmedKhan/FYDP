@@ -123,7 +123,7 @@
         <tr>
           <th>Drug Name</th>
           <th>Batch No</th>
-          <th>Quantity</th>
+          <th>Stock (Boxes / Loose)</th>
           <th>Price (PKR)</th>
           <th>Expiry Date</th>
           <th>Supplier</th>
@@ -185,18 +185,27 @@
             <label for="f_dosage_form">Dosage Form <span class="req">*</span></label>
             <select id="f_dosage_form">
               <option value="">Select form…</option>
-              <option>TABLET</option><option>CAPSULE</option><option>SYRUP</option>
-              <option>INJECTION</option><option>DROPS</option><option>CREAM</option>
-              <option>OINTMENT</option><option>INHALER</option><option>PATCH</option>
-              <option>SUPPOSITORY</option><option>POWDER</option><option>SUSPENSION</option>
+              <option>TABLET</option><option>CAPSULE</option><option>SOFTGEL</option>
+              <option>SYRUP</option><option>SUSPENSION</option><option>SOLUTION</option>
+              <option>DROPS</option><option>INJECTION</option><option>INFUSION</option>
+              <option>CREAM</option><option>OINTMENT</option><option>LOTION</option>
+              <option>GEL</option><option>SPRAY</option><option>INHALER</option>
+              <option>PATCH</option><option>SACHET</option><option>POWDER</option>
+              <option>SUPPOSITORY</option><option>FACE WASH</option><option>SHAMPOO</option>
+              <option>SOAP</option><option>TOOTHPASTE</option><option>OIL</option>
             </select>
             <span class="field-err" id="err_dosage_form"></span>
           </div>
           <div class="form-group">
             <label for="f_release_type">Release Type</label>
             <select id="f_release_type">
-              <option value="">Select…</option>
-              <option>IMMEDIATE</option><option>EXTENDED</option><option>DELAYED</option><option>SUSTAINED</option>
+              <option value="">Select… (optional)</option>
+              <option>IMMEDIATE RELEASE</option>
+              <option>EXTENDED RELEASE</option>
+              <option>SUSTAINED RELEASE</option>
+              <option>MODIFIED RELEASE</option>
+              <option>DELAYED RELEASE</option>
+              <option>CONTROLLED RELEASE</option>
             </select>
           </div>
           <div class="form-group">
@@ -233,14 +242,19 @@
             <input type="number" id="f_pack_size" placeholder="e.g. 10" min="1" />
             <span class="field-err" id="err_pack_size"></span>
           </div>
+         <div class="form-group">
+            <label for="f_box_quantity">Box Quantity <span class="req">*</span></label>
+            <input type="number" id="f_box_quantity" placeholder="e.g. 50" min="0" />
+            <span class="field-err" id="err_box_quantity"></span>
+          </div>
           <div class="form-group">
-            <label for="f_quantity">Quantity (Units) <span class="req">*</span></label>
-            <input type="number" id="f_quantity" placeholder="e.g. 500" min="0" />
-            <span class="field-err" id="err_quantity"></span>
+            <label for="f_loose_units">Loose Units <span class="req">*</span></label>
+            <input type="number" id="f_loose_units" placeholder="e.g. 0" min="0" value="0" />
+            <span class="field-err" id="err_loose_units"></span>
           </div>
           <div class="form-group">
             <label for="f_reorder_level">Reorder Level <span class="req">*</span></label>
-            <input type="number" id="f_reorder_level" placeholder="e.g. 50" min="0" value="10" />
+            <input type="number" id="f_reorder_level" placeholder="e.g. 10" min="1" value="10" />
             <span class="field-err" id="err_reorder_level"></span>
           </div>
           <div class="form-group">
@@ -451,10 +465,16 @@
       <input type="hidden" id="edit_id" />
       <div class="form-section">
         <div class="form-grid-3">
+          <input type="hidden" id="edit_pack_size_ref" value="0" />
           <div class="form-group">
-            <label for="edit_quantity">Quantity (Units) <span class="req">*</span></label>
-            <input type="number" id="edit_quantity" min="0" />
-            <span class="field-err" id="err_edit_quantity"></span>
+            <label for="edit_box_quantity">Box Quantity <span class="req">*</span></label>
+            <input type="number" id="edit_box_quantity" min="0" />
+            <span class="field-err" id="err_edit_box_quantity"></span>
+          </div>
+          <div class="form-group">
+            <label for="edit_loose_units">Loose Units <span class="req">*</span></label>
+            <input type="number" id="edit_loose_units" min="0" value="0" />
+            <span class="field-err" id="err_edit_loose_units"></span>
           </div>
           <div class="form-group">
             <label for="edit_reorder_level">Reorder Level <span class="req">*</span></label>
