@@ -327,20 +327,33 @@ async function loadProfile() {
     /* ── g) Build Operating Hours UI ── */
     buildHoursUI(parsedHours);
 
-    /* ── h) Update sidebar user name ── */
+    /* ── h) Update sidebar user name & avatar ── */
     const sidebarName = document.getElementById('sidebarName');
     if (sidebarName && profileData && profileData.full_name) {
       sidebarName.textContent = profileData.full_name;
     }
+    if (profileData && profileData.profile_img) {
+      setSidebarAvatar(profileData.profile_img, profileData.full_name);
+    } else if (profileData && profileData.full_name) {
+      setSidebarAvatar(null, profileData.full_name);
+    }
 
-    /* ── i) Profile completion ── */
+    /* ── i) Load existing profile photo into upload card ── */
+    if (profileData && profileData.profile_img) {
+      setPhotoPreview(profileData.profile_img);
+      const removeBtn = document.getElementById('removePhotoBtn');
+      if (removeBtn) removeBtn.style.display = 'inline-flex';
+    }
+
+    /* ── j) Profile completion ── */
     const pct = calcCompletion(pharmData, profileData || {});
     updateCompletionUI(pct);
 
-    /* ── j) Reveal content ── */
+    /* ── k) Reveal content ── */
     hideLoader();
     fadeIn('infoGrid');
     fadeIn('verifyCard');
+    fadeIn('photoCard');
 
   } catch (err) {
     console.error('Unexpected error in loadProfile:', err);
@@ -509,3 +522,227 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Expose saveProfile globally for the onclick in HTML
 window.saveProfile = saveProfile;
+
+/* ─────────────────────────────────────────
+   PHOTO UPLOAD SECTION
+   ─────────────────────────────────────────
+   Flow:
+     • User picks a file → preview shown locally
+     • "Upload Photo" button enabled
+     • On click: upload to Supabase Storage bucket "avatars"
+       under path: {userId}/profile.jpg
+     • Public URL saved back to profiles.profile_img
+     • Sidebar avatar updated live
+     • "Remove Photo" deletes from storage + clears DB field
+   ───────────────────────────────────────── */
+
+const AVATAR_BUCKET = 'pharmacy-profile-photos';   // your Supabase Storage bucket name
+
+let _selectedFile = null;          // holds the File object chosen by user
+
+/* ── Wire up file input on DOM ready ── */
+document.addEventListener('DOMContentLoaded', function () {
+  const fileInput = document.getElementById('photoFileInput');
+  if (!fileInput) return;
+
+  fileInput.addEventListener('change', function () {
+    const file = this.files && this.files[0];
+    if (!file) return;
+
+    /* Validate size (2 MB max) */
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('Image must be under 2 MB.', 'error');
+      this.value = '';
+      return;
+    }
+
+    _selectedFile = file;
+
+    /* Show local preview immediately */
+    const reader = new FileReader();
+    reader.onload = function (e) { setPhotoPreview(e.target.result); };
+    reader.readAsDataURL(file);
+
+    /* Show filename, enable upload button */
+    const nameEl = document.getElementById('photoSelectedName');
+    if (nameEl) nameEl.textContent = file.name;
+
+    const uploadBtn = document.getElementById('uploadPhotoBtn');
+    if (uploadBtn) uploadBtn.disabled = false;
+  });
+});
+
+/* ── Set preview image (accepts URL or base64) ── */
+function setPhotoPreview(src) {
+  const img         = document.getElementById('photoPreviewImg');
+  const placeholder = document.getElementById('photoPlaceholder');
+  if (img) {
+    img.src = src;
+    img.style.display = 'block';
+  }
+  if (placeholder) placeholder.style.display = 'none';
+}
+
+/* ── Clear preview back to placeholder ── */
+function clearPhotoPreview() {
+  const img         = document.getElementById('photoPreviewImg');
+  const placeholder = document.getElementById('photoPlaceholder');
+  if (img) { img.src = ''; img.style.display = 'none'; }
+  if (placeholder) placeholder.style.display = 'flex';
+}
+
+/* ── Set sidebar avatar: photo URL or initials fallback ── */
+function setSidebarAvatar(photoUrl, fullName) {
+  const avatarImg      = document.getElementById('sidebarAvatar');
+  const avatarInitials = document.getElementById('sidebarInitials');
+
+  if (photoUrl && avatarImg) {
+    avatarImg.src          = photoUrl;
+    avatarImg.style.display = 'block';
+    if (avatarInitials) avatarInitials.style.display = 'none';
+  } else {
+    // Show initials
+    if (avatarImg) avatarImg.style.display = 'none';
+    if (avatarInitials && fullName) {
+      const parts = fullName.trim().split(' ');
+      const initials = parts.length >= 2
+        ? parts[0][0] + parts[parts.length - 1][0]
+        : parts[0].slice(0, 2);
+      avatarInitials.textContent    = initials.toUpperCase();
+      avatarInitials.style.display  = 'flex';
+    }
+  }
+}
+
+/* ── Upload Photo to Supabase Storage ── */
+async function uploadPhoto() {
+  if (!_selectedFile) {
+    showToast('Please choose a photo first.', 'info');
+    return;
+  }
+
+  const uploadBtn = document.getElementById('uploadPhotoBtn');
+  if (uploadBtn) {
+    uploadBtn.disabled   = true;
+    uploadBtn.innerHTML  = '<span class="loader-spinner" style="width:14px;height:14px;border-width:2px;margin:0 4px;"></span> Uploading…';
+  }
+
+  try {
+    /* Get current user */
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { showToast('Session expired. Please log in again.', 'error'); return; }
+    const userId = session.user.id;
+
+    /* Build storage path: avatars/{userId}/profile.{ext} */
+    const ext      = _selectedFile.name.split('.').pop().toLowerCase();
+    const filePath = userId + '/profile.' + ext;
+
+    /* Upload (upsert replaces existing file) */
+    const { error: uploadErr } = await db.storage
+      .from(AVATAR_BUCKET)
+      .upload(filePath, _selectedFile, { upsert: true, contentType: _selectedFile.type });
+
+    if (uploadErr) throw new Error('Upload failed: ' + uploadErr.message);
+
+    /* Get public URL */
+    const { data: urlData } = db.storage
+      .from(AVATAR_BUCKET)
+      .getPublicUrl(filePath);
+
+    const publicUrl = urlData.publicUrl;
+
+    /* Save URL to profiles.profile_img */
+    const { error: dbErr } = await db
+      .from('profiles')
+      .update({ profile_img: publicUrl })
+      .eq('user_id', userId);
+
+    if (dbErr) throw new Error('Could not save photo URL: ' + dbErr.message);
+
+    /* Update sidebar avatar live */
+    const nameEl = document.getElementById('sidebarName');
+    const fullName = nameEl ? nameEl.textContent : '';
+    setSidebarAvatar(publicUrl, fullName);
+
+    /* Show remove button, clear file selection */
+    const removeBtn = document.getElementById('removePhotoBtn');
+    if (removeBtn) removeBtn.style.display = 'inline-flex';
+
+    const selectedNameEl = document.getElementById('photoSelectedName');
+    if (selectedNameEl) selectedNameEl.textContent = '';
+
+    _selectedFile = null;
+
+    showToast('Profile photo uploaded successfully!', 'success');
+
+  } catch (err) {
+    console.error('Photo upload error:', err);
+    showToast(err.message || 'Photo upload failed.', 'error');
+  } finally {
+    if (uploadBtn) {
+      uploadBtn.disabled  = false;
+      uploadBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo';
+      uploadBtn.disabled  = true; // back to disabled until new file chosen
+    }
+  }
+}
+
+/* ── Remove Photo from Storage + DB ── */
+async function removePhoto() {
+  const removeBtn = document.getElementById('removePhotoBtn');
+  if (removeBtn) {
+    removeBtn.disabled  = true;
+    removeBtn.innerHTML = '<span class="loader-spinner" style="width:14px;height:14px;border-width:2px;border-top-color:var(--clr-red);background:transparent;margin:0 4px;"></span> Removing…';
+  }
+
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) { showToast('Session expired.', 'error'); return; }
+    const userId = session.user.id;
+
+    /* Try removing both jpg and png variants */
+    await db.storage.from(AVATAR_BUCKET).remove([
+      userId + '/profile.jpg',
+      userId + '/profile.png',
+      userId + '/profile.webp',
+    ]);
+
+    /* Clear profile_img in DB */
+    const { error: dbErr } = await db
+      .from('profiles')
+      .update({ profile_img: null })
+      .eq('user_id', userId);
+
+    if (dbErr) throw new Error('Could not clear photo in database: ' + dbErr.message);
+
+    /* Clear UI */
+    clearPhotoPreview();
+    if (removeBtn) removeBtn.style.display = 'none';
+
+    /* Revert sidebar to initials */
+    const nameEl   = document.getElementById('sidebarName');
+    const fullName = nameEl ? nameEl.textContent : '';
+    setSidebarAvatar(null, fullName);
+
+    _selectedFile = null;
+    const fileInput = document.getElementById('photoFileInput');
+    if (fileInput) fileInput.value = '';
+    const nameDisplay = document.getElementById('photoSelectedName');
+    if (nameDisplay) nameDisplay.textContent = '';
+
+    showToast('Profile photo removed.', 'info');
+
+  } catch (err) {
+    console.error('Remove photo error:', err);
+    showToast(err.message || 'Could not remove photo.', 'error');
+  } finally {
+    if (removeBtn) {
+      removeBtn.disabled  = false;
+      removeBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Remove Photo';
+    }
+  }
+}
+
+/* Expose to global scope for onclick attributes */
+window.uploadPhoto = uploadPhoto;
+window.removePhoto = removePhoto;
