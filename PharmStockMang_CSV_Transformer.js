@@ -1,17 +1,17 @@
 /**
  * ============================================================
- *  csvStockTransformer.js — MediFinder Stock CSV Normalizer
- *  Transforms messy/non-standard CSV stock data into the exact
- *  format required by the upload-stock Edge Function.
+ *  PharmStockMang_CSV_Transformer.js — MediFinder Stock CSV Normalizer
+ *  Updated for new schema: box_quantity + loose_units, BAT-XXXX batch,
+ *  full release_type names, expanded dosage_form list, category enum,
+ *  YES/NO prescription_required, separator rules for generic_name.
  *
- *  Usage (browser):
+ *  Usage:
  *    const result = CSVStockTransformer.transform(rawCsvString);
- *    // result.csv        → normalized CSV string ready to upload
- *    // result.warnings   → array of {row, field, original, fixed, note}
- *    // result.unfixable  → array of {row, field, value, reason} — must fix manually
- *    // result.stats      → { total, transformed, clean, unfixable }
- *
- *  Drop this file before PharmStockManagement.js in your HTML.
+ *    result.csv          → normalized CSV ready to pass to validator
+ *    result.warnings     → auto-fixed items (shown as "X fields auto-formatted")
+ *    result.unfixable    → hard errors, shown in error table, upload blocked
+ *    result.skippedColumns → column names that couldn't be mapped
+ *    result.stats        → { total, transformed, clean, unfixable }
  * ============================================================
  */
 
@@ -23,88 +23,149 @@ const CSVStockTransformer = (() => {
     'product_name', 'brand', 'category', 'generic_name', 'strength',
     'dosage_form', 'release_type', 'manufacturer', 'batch_no',
     'supplier_name', 'purchase_price', 'original_price', 'discounted_price',
-    'pack_size', 'quantity', 'prescription_required', 'reorder_level',
-    'manufacture_date', 'expiry_date'
+    'pack_size', 'box_quantity', 'loose_units', 'prescription_required',
+    'reorder_level', 'manufacture_date', 'expiry_date'
   ];
 
   // Required fields (can never be empty after transformation)
   const REQUIRED_FIELDS = [
     'product_name', 'generic_name', 'strength', 'dosage_form',
     'manufacturer', 'batch_no', 'original_price', 'pack_size',
-    'quantity', 'prescription_required', 'reorder_level', 'expiry_date'
+    'box_quantity', 'loose_units', 'prescription_required', 'reorder_level', 'expiry_date'
   ];
 
-  // ── Enum maps ────────────────────────────────────────────────
-  // Dosage form: maps common aliases → canonical value
+  // ── Valid enums ──────────────────────────────────────────────
+
+  const VALID_DOSAGE_FORMS = new Set([
+    'TABLET', 'CAPSULE', 'SYRUP', 'DROPS', 'INJECTION', 'INFUSION',
+    'CREAM', 'OINTMENT', 'LOTION', 'GEL', 'SPRAY', 'SOLUTION',
+    'SUSPENSION', 'SACHET', 'SOFTGEL', 'POWDER', 'PATCH',
+    'SUPPOSITORY', 'INHALER', 'FACE WASH', 'SHAMPOO', 'SOAP',
+    'TOOTHPASTE', 'OIL', 'GUMMIES', 'FOOD', 'SERUM'
+  ]);
+
+  const VALID_RELEASE_TYPES = new Set([
+    'IMMEDIATE RELEASE', 'EXTENDED RELEASE', 'SUSTAINED RELEASE',
+    'MODIFIED RELEASE', 'DELAYED RELEASE', 'CONTROLLED RELEASE', ''
+  ]);
+
+  const VALID_CATEGORIES = new Set([
+    'ANTI-ULCERANT', 'ANTI-DIABETIC', 'ANTI-BACTERIAL', 'ANTI-INFLAMMATORY',
+    'ANTI-HYPERTENSIVE', 'ANTI-LIPIDEMIC', 'ANTI-EPILEPTIC', 'ANTI-ALLERGY', 'ANTI-CONVULSANT',
+    'ANTI-FUNGAL', 'ANTI-SPASMODIC', 'ANTI-COAGULANT', 'ANTI-ANEMIC', 'ANTI-CONVULSANT',
+    'ANTI-DIARRHEAL', 'ANTI-DEPRESSANT', 'ANTI-PSYCHOTIC', 'ANTI-GOUT',
+    'ANTI-VIRAL', 'ANTI-EMETIC', 'ANTI-OBESITY', 'ANTI-VERTIGO',
+    'ASTHMA / COPD', 'COUGH & COLD', 'VITAMINS & SUPPLEMENTS', 'SKIN CARE',
+    'OPHTHALMOLOGY', 'PAIN RELIEF', 'CARDIAC THERAPY', 'DIURETICS',
+    'LAXATIVE', 'UROLOGY', 'MUSCLE RELAXANT', 'CORTICOSTEROID',
+    'CORTICOSTEROID + ANTI-BACTERIAL', 'HORMONAL PRODUCTS', 'IMMUNOMODULATOR',
+    'OSTEOPOROSIS', 'GASTROPROKINETIC', 'NEUROLOGY', 'SCABICIDE', 'HERBAL',
+    "PARKINSON'S DISEASE", "ALZHEIMER'S DISEASE", 'LOCAL ANAESTHETIC', 'ANTI-RHEUMATIC', 'ANTI-AMOEBIC',
+'ANTI-PYRETIC', 'ANTHELMINTIC', 'ORAL HEALTH CARE',
+'EAR PREPARATIONS', 'ONCOLOGY', 'ANTISEPTIC',
+'CORTICOSTEROID + ANTI-BACTERIAL + ANTI-FUNGAL',
+'LIVER & BILE', 'ANTI-HAEMORRHOIDAL', 'HAIR CARE'
+  ]);
+
+  // ── Dosage form alias map → canonical value ──────────────────
   const DOSAGE_FORM_MAP = {
     // TABLET
     'tablet': 'TABLET', 'tab': 'TABLET', 'tabs': 'TABLET', 'tablets': 'TABLET',
     'pill': 'TABLET', 'pills': 'TABLET', 'tbl': 'TABLET', 'oral tablet': 'TABLET',
     // CAPSULE
     'capsule': 'CAPSULE', 'cap': 'CAPSULE', 'caps': 'CAPSULE', 'capsules': 'CAPSULE',
-    'softgel': 'CAPSULE', 'soft gel': 'CAPSULE', 'soft gelatin': 'CAPSULE',
+    'soft gelatin capsule': 'CAPSULE', 'hard gelatin': 'CAPSULE',
+    // SOFTGEL (kept as its own form per spec)
+    'softgel': 'SOFTGEL', 'soft gel': 'SOFTGEL', 'soft gelatin': 'SOFTGEL', 'softgel capsule': 'SOFTGEL','softgel capsules': 'SOFTGEL',
     // SYRUP
-    'syrup': 'SYRUP', 'syr': 'SYRUP', 'syp': 'SYRUP', 'oral liquid': 'SYRUP',
-    'oral solution': 'SYRUP', 'elixir': 'SYRUP',
+    'syrup': 'SYRUP', 'syr': 'SYRUP', 'syp': 'SYRUP', 'oral liquid': 'SYRUP', 'liquid': 'SYRUP','elixir': 'SYRUP',
     // INJECTION
     'injection': 'INJECTION', 'inj': 'INJECTION', 'injectable': 'INJECTION',
-    'im injection': 'INJECTION', 'iv injection': 'INJECTION', 'iv': 'INJECTION',
-    'im': 'INJECTION', 'ampule': 'INJECTION', 'ampoule': 'INJECTION', 'vial': 'INJECTION',
+    'im injection': 'INJECTION', 'iv injection': 'INJECTION',
+    'ampule': 'INJECTION', 'ampoule': 'INJECTION', 'vial': 'INJECTION',
+    // INFUSION
+    'infusion': 'INFUSION', 'iv infusion': 'INFUSION', 'intravenous infusion': 'INFUSION',
     // DROPS
     'drops': 'DROPS', 'drop': 'DROPS', 'eye drops': 'DROPS', 'ear drops': 'DROPS',
     'nasal drops': 'DROPS', 'ophthalmic drops': 'DROPS',
     // CREAM
     'cream': 'CREAM', 'crm': 'CREAM', 'topical cream': 'CREAM',
     // OINTMENT
-    'ointment': 'OINTMENT', 'oint': 'OINTMENT', 'ung': 'OINTMENT', 'unguent': 'OINTMENT',
+    'ointment': 'OINTMENT', 'oint': 'OINTMENT', 'ung': 'OINTMENT',
     'topical ointment': 'OINTMENT',
-    // INHALER
-    'inhaler': 'INHALER', 'mdi': 'INHALER', 'metered dose inhaler': 'INHALER',
-    'dpi': 'INHALER', 'dry powder inhaler': 'INHALER', 'rotacap': 'INHALER',
+    // LOTION
+    'lotion': 'LOTION', 'lot': 'LOTION', 'topical lotion': 'LOTION',
+    // GEL
+    'gel': 'GEL', 'jelly': 'GEL', 'topical gel': 'GEL',
+    // SPRAY
+    'spray': 'SPRAY', 'nasal spray': 'SPRAY', 'oral spray': 'SPRAY',
+    // SOLUTION
+    'solution': 'SOLUTION', 'sol': 'SOLUTION', 'soln': 'SOLUTION',
+    'oral solution': 'SOLUTION',
+    // SUSPENSION
+    'suspension': 'SUSPENSION', 'susp': 'SUSPENSION', 'oral suspension': 'SUSPENSION',
+    // SACHET
+    'sachet': 'SACHET', 'granules': 'SACHET', 'powder sachet': 'SACHET',
+    // POWDER
+    'powder': 'POWDER', 'pwd': 'POWDER',
     // PATCH
     'patch': 'PATCH', 'transdermal patch': 'PATCH', 'td patch': 'PATCH',
     // SUPPOSITORY
-    'suppository': 'SUPPOSITORY', 'supp': 'SUPPOSITORY', 'rectal': 'SUPPOSITORY',
-    // POWDER
-    'powder': 'POWDER', 'pwd': 'POWDER', 'sachet': 'POWDER', 'granules': 'POWDER',
-    // SUSPENSION
-    'suspension': 'SUSPENSION', 'susp': 'SUSPENSION', 'oral suspension': 'SUSPENSION',
-    // GEL
-    'gel': 'GEL', 'jelly': 'GEL', 'topical gel': 'GEL',
-    // LOTION
-    'lotion': 'LOTION', 'lot': 'LOTION',
-    // SOLUTION
-    'solution': 'SOLUTION', 'sol': 'SOLUTION', 'soln': 'SOLUTION',
-    // SPRAY
-    'spray': 'SPRAY', 'nasal spray': 'SPRAY', 'oral spray': 'SPRAY',
-    // ENEMA
-    'enema': 'ENEMA', 'rectal enema': 'ENEMA',
-    // PESSARY
-    'pessary': 'PESSARY', 'vaginal tablet': 'PESSARY', 'vaginal suppository': 'PESSARY',
-    // IMPLANT
-    'implant': 'IMPLANT', 'subcutaneous implant': 'IMPLANT',
+    'suppository': 'SUPPOSITORY', 'supp': 'SUPPOSITORY',
+    // INHALER
+    'inhaler': 'INHALER', 'mdi': 'INHALER', 'metered dose inhaler': 'INHALER',
+    'dpi': 'INHALER', 'dry powder inhaler': 'INHALER', 'rotacap': 'INHALER',
+    // FACE WASH
+    'face wash': 'FACE WASH', 'facewash': 'FACE WASH', 'facial wash': 'FACE WASH',
+    // SHAMPOO
+    'shampoo': 'SHAMPOO',
+    // SOAP
+    'soap': 'SOAP', 'medicated soap': 'SOAP',
+    // TOOTHPASTE
+    'toothpaste': 'TOOTHPASTE', 'tooth paste': 'TOOTHPASTE', 'dental paste': 'TOOTHPASTE',
+    // OIL
+    'oil': 'OIL', 'topical oil': 'OIL', 'hair oil': 'OIL',
   };
 
-  // Release type aliases
+  // ── Release type alias map → full canonical names ────────────
   const RELEASE_TYPE_MAP = {
-    'immediate': 'IMMEDIATE', 'ir': 'IMMEDIATE', 'immediate release': 'IMMEDIATE',
-    'standard': 'IMMEDIATE', 'normal': 'IMMEDIATE', 'regular': 'IMMEDIATE',
-    'extended': 'EXTENDED', 'er': 'EXTENDED', 'extended release': 'EXTENDED',
-    'xr': 'EXTENDED', 'xl': 'EXTENDED', 'la': 'EXTENDED', 'long acting': 'EXTENDED',
-    'delayed': 'DELAYED', 'dr': 'DELAYED', 'delayed release': 'DELAYED',
-    'enteric coated': 'DELAYED', 'ec': 'DELAYED',
-    'sustained': 'SUSTAINED', 'sr': 'SUSTAINED', 'sustained release': 'SUSTAINED',
-    'slow release': 'SUSTAINED',
-    'modified': 'MODIFIED', 'mr': 'MODIFIED', 'modified release': 'MODIFIED',
-    'controlled': 'MODIFIED', 'cr': 'MODIFIED', 'controlled release': 'MODIFIED',
+    // IMMEDIATE RELEASE
+    'immediate': 'IMMEDIATE RELEASE',
+    'immediate release': 'IMMEDIATE RELEASE',
+    'ir': 'IMMEDIATE RELEASE',
+    'standard': 'IMMEDIATE RELEASE',
+    'normal': 'IMMEDIATE RELEASE',
+    'regular': 'IMMEDIATE RELEASE',
+    // EXTENDED RELEASE
+    'extended': 'EXTENDED RELEASE',
+    'extended release': 'EXTENDED RELEASE',
+    'er': 'EXTENDED RELEASE',
+    'xr': 'EXTENDED RELEASE',
+    'xl': 'EXTENDED RELEASE',
+    'la': 'EXTENDED RELEASE',
+    'long acting': 'EXTENDED RELEASE',
+    // SUSTAINED RELEASE
+    'sustained': 'SUSTAINED RELEASE',
+    'sustained release': 'SUSTAINED RELEASE',
+    'sr': 'SUSTAINED RELEASE',
+    'slow release': 'SUSTAINED RELEASE',
+    // MODIFIED RELEASE
+    'modified': 'MODIFIED RELEASE',
+    'modified release': 'MODIFIED RELEASE',
+    'mr': 'MODIFIED RELEASE',
+    // DELAYED RELEASE
+    'delayed': 'DELAYED RELEASE',
+    'delayed release': 'DELAYED RELEASE',
+    'dr': 'DELAYED RELEASE',
+    'enteric coated': 'DELAYED RELEASE',
+    'ec': 'DELAYED RELEASE',
+    // CONTROLLED RELEASE
+    'controlled': 'CONTROLLED RELEASE',
+    'controlled release': 'CONTROLLED RELEASE',
+    'cr': 'CONTROLLED RELEASE',
   };
 
-  // Boolean synonyms
-  const TRUE_VALS  = new Set(['true', '1', 'yes', 'y', 'required', 'rx', 'rx required', 'prescription', 'x']);
-  const FALSE_VALS = new Set(['false', '0', 'no', 'n', 'not required', 'otc', 'over the counter', '']);
-
-  // ── Column name alias map ────────────────────────────────────
-  // Maps every reasonable variant → canonical field name
+  // ── Column name alias map ─────────────────────────────────────
   const COLUMN_ALIAS_MAP = {
     // product_name
     'product_name': 'product_name', 'productname': 'product_name',
@@ -114,18 +175,15 @@ const CSVStockTransformer = (() => {
     'item': 'product_name', 'name': 'product_name',
     'product': 'product_name', 'med name': 'product_name',
     'medication': 'product_name', 'medication name': 'product_name',
-
     // brand
     'brand': 'brand', 'brand name': 'brand', 'brandname': 'brand',
     'trade name': 'brand', 'tradename': 'brand', 'trade': 'brand',
     'company brand': 'brand',
-
     // category
     'category': 'category', 'cat': 'category', 'drug category': 'category',
-    'therapeutic category': 'category', 'type': 'category', 'class': 'category',
+    'therapeutic category': 'category', 'class': 'category',
     'drug class': 'category', 'therapeutic class': 'category',
     'drug type': 'category', 'medicine type': 'category',
-
     // generic_name
     'generic_name': 'generic_name', 'generic name': 'generic_name',
     'genericname': 'generic_name', 'generic': 'generic_name',
@@ -133,41 +191,34 @@ const CSVStockTransformer = (() => {
     'ingredient': 'generic_name', 'composition': 'generic_name',
     'salt': 'generic_name', 'formula': 'generic_name',
     'chemical name': 'generic_name', 'inn': 'generic_name',
-
     // strength
     'strength': 'strength', 'dose': 'strength', 'dosage': 'strength',
     'potency': 'strength', 'concentration': 'strength', 'conc': 'strength',
-    'mg': 'strength', 'dose strength': 'strength', 'drug strength': 'strength',
-
+    'dose strength': 'strength', 'drug strength': 'strength',
     // dosage_form
     'dosage_form': 'dosage_form', 'dosage form': 'dosage_form',
     'dosageform': 'dosage_form', 'form': 'dosage_form',
     'drug form': 'dosage_form', 'formulation': 'dosage_form',
-    'presentation': 'dosage_form', 'route': 'dosage_form',
-
+    'presentation': 'dosage_form',
     // release_type
     'release_type': 'release_type', 'release type': 'release_type',
     'releasetype': 'release_type', 'release': 'release_type',
     'release mechanism': 'release_type', 'drug release': 'release_type',
-
     // manufacturer
     'manufacturer': 'manufacturer', 'mfr': 'manufacturer', 'mfg': 'manufacturer',
     'maker': 'manufacturer', 'made by': 'manufacturer', 'manufactured by': 'manufacturer',
     'company': 'manufacturer', 'pharma company': 'manufacturer',
     'manufacturing company': 'manufacturer', 'producer': 'manufacturer',
     'lab': 'manufacturer', 'laboratory': 'manufacturer',
-
     // batch_no
     'batch_no': 'batch_no', 'batch no': 'batch_no', 'batch number': 'batch_no',
     'batchno': 'batch_no', 'batch': 'batch_no', 'lot no': 'batch_no',
     'lot number': 'batch_no', 'lot': 'batch_no', 'lot_no': 'batch_no',
-
     // supplier_name
     'supplier_name': 'supplier_name', 'supplier name': 'supplier_name',
     'supplier': 'supplier_name', 'vendor': 'supplier_name',
     'vendor name': 'supplier_name', 'distributor': 'supplier_name',
     'distributor name': 'supplier_name', 'wholesaler': 'supplier_name',
-
     // purchase_price
     'purchase_price': 'purchase_price', 'purchase price': 'purchase_price',
     'purchaseprice': 'purchase_price', 'cost': 'purchase_price',
@@ -175,7 +226,6 @@ const CSVStockTransformer = (() => {
     'buy price': 'purchase_price', 'net price': 'purchase_price',
     'net cost': 'purchase_price', 'pp': 'purchase_price',
     'landed cost': 'purchase_price',
-
     // original_price
     'original_price': 'original_price', 'original price': 'original_price',
     'originalprice': 'original_price', 'mrp': 'original_price',
@@ -184,50 +234,50 @@ const CSVStockTransformer = (() => {
     'sale price': 'original_price', 'sp': 'original_price',
     'rsp': 'original_price', 'max retail price': 'original_price',
     'maximum retail price': 'original_price',
-
     // discounted_price
     'discounted_price': 'discounted_price', 'discounted price': 'discounted_price',
     'discountedprice': 'discounted_price', 'discount price': 'discounted_price',
     'offer price': 'discounted_price', 'promo price': 'discounted_price',
     'promotional price': 'discounted_price', 'special price': 'discounted_price',
     'dp': 'discounted_price',
-
     // pack_size
     'pack_size': 'pack_size', 'pack size': 'pack_size', 'packsize': 'pack_size',
     'pack': 'pack_size', 'units per pack': 'pack_size',
-    'tablets per pack': 'pack_size', 'strips': 'pack_size',
-    'pieces': 'pack_size', 'pcs': 'pack_size', 'qty per pack': 'pack_size',
+    'tablets per pack': 'pack_size', 'pieces': 'pack_size',
+    'pcs': 'pack_size', 'qty per pack': 'pack_size',
     'count': 'pack_size', 'tab per pack': 'pack_size',
-
-    // quantity
-    'quantity': 'quantity', 'qty': 'quantity', 'stock': 'quantity',
-    'stock quantity': 'quantity', 'available': 'quantity',
-    'available quantity': 'quantity', 'units': 'quantity',
-    'total quantity': 'quantity', 'no of packs': 'quantity',
-    'packs': 'quantity', 'current stock': 'quantity',
-
+    // box_quantity
+    'box_quantity': 'box_quantity', 'box quantity': 'box_quantity',
+    'boxquantity': 'box_quantity', 'boxes': 'box_quantity',
+    'no of boxes': 'box_quantity', 'number of boxes': 'box_quantity',
+    'stock boxes': 'box_quantity', 'qty boxes': 'box_quantity',
+    'packs': 'box_quantity', 'no of packs': 'box_quantity',
+    // loose_units
+    'loose_units': 'loose_units', 'loose units': 'loose_units',
+    'looseunits': 'loose_units', 'loose': 'loose_units',
+    'open units': 'loose_units', 'extra units': 'loose_units',
+    'partial': 'loose_units', 'individual units': 'loose_units',
+    'spare units': 'loose_units',
     // prescription_required
     'prescription_required': 'prescription_required',
     'prescription required': 'prescription_required',
     'prescriptionrequired': 'prescription_required',
     'rx required': 'prescription_required', 'rx': 'prescription_required',
-    'prescription': 'prescription_required', 'requires prescription': 'prescription_required',
+    'prescription': 'prescription_required',
+    'requires prescription': 'prescription_required',
     'is prescription': 'prescription_required',
-
     // reorder_level
     'reorder_level': 'reorder_level', 'reorder level': 'reorder_level',
     'reorderlevel': 'reorder_level', 'reorder': 'reorder_level',
     'min stock': 'reorder_level', 'minimum stock': 'reorder_level',
     'reorder point': 'reorder_level', 'minimum quantity': 'reorder_level',
     'min qty': 'reorder_level', 'safety stock': 'reorder_level',
-
     // manufacture_date
     'manufacture_date': 'manufacture_date', 'manufacture date': 'manufacture_date',
     'manufacturedate': 'manufacture_date', 'mfg date': 'manufacture_date',
     'manufacturing date': 'manufacture_date', 'mfr date': 'manufacture_date',
     'date of manufacture': 'manufacture_date', 'dom': 'manufacture_date',
     'mfg_date': 'manufacture_date', 'prod date': 'manufacture_date',
-
     // expiry_date
     'expiry_date': 'expiry_date', 'expiry date': 'expiry_date',
     'expirydate': 'expiry_date', 'expiry': 'expiry_date',
@@ -239,7 +289,7 @@ const CSVStockTransformer = (() => {
     'doe': 'expiry_date',
   };
 
-  // ── Month name map for date parsing ─────────────────────────
+  // ── Month name map ────────────────────────────────────────────
   const MONTH_MAP = {
     jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
     jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
@@ -249,25 +299,15 @@ const CSVStockTransformer = (() => {
   };
 
   // ============================================================
-  //  PARSERS
+  //  CSV PARSER
   // ============================================================
-
-  /**
-   * Parse raw CSV string → array of {header: value} objects.
-   * Handles: quoted fields, commas inside quotes, CRLF + LF, BOM.
-   */
   function parseCSV(raw) {
-    // Strip BOM
     const text = raw.replace(/^\uFEFF/, '').trim();
     const lines = [];
-    let line = [];
-    let cell = '';
-    let inQuotes = false;
+    let line = [], cell = '', inQuotes = false;
 
     for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      const next = text[i + 1];
-
+      const ch = text[i], next = text[i + 1];
       if (inQuotes) {
         if (ch === '"' && next === '"') { cell += '"'; i++; }
         else if (ch === '"')            { inQuotes = false; }
@@ -285,56 +325,44 @@ const CSVStockTransformer = (() => {
       }
     }
     if (cell !== '' || line.length) { line.push(cell.trim()); lines.push(line); }
-
-    // Remove fully empty trailing lines
     while (lines.length && lines[lines.length - 1].every(c => c === '')) lines.pop();
-
     if (lines.length < 2) return { headers: [], rows: [] };
 
     const rawHeaders = lines[0];
     const rows = lines.slice(1)
-      .filter(l => l.some(c => c !== '')) // skip blank rows
+      .filter(l => l.some(c => c !== ''))
       .map(l => {
         const obj = {};
         rawHeaders.forEach((h, i) => { obj[h] = l[i] !== undefined ? l[i] : ''; });
         return obj;
       });
-
     return { headers: rawHeaders, rows };
   }
 
-  /**
-   * Map raw CSV headers → canonical field names.
-   * Returns { mapping: {rawHeader: canonicalField}, unmapped: [rawHeader] }
-   */
+  // ============================================================
+  //  HEADER MAPPER
+  // ============================================================
   function mapHeaders(rawHeaders) {
-    const mapping = {};
-    const unmapped = [];
-
+    const mapping = {}, unmapped = [];
     rawHeaders.forEach(raw => {
       const key = raw.trim().toLowerCase().replace(/[_\-\s]+/g, ' ').trim();
-      // Try exact alias map
       if (COLUMN_ALIAS_MAP[key]) {
         mapping[raw] = COLUMN_ALIAS_MAP[key];
       } else if (COLUMN_ALIAS_MAP[key.replace(/ /g, '_')]) {
-        // Try underscore variant
         mapping[raw] = COLUMN_ALIAS_MAP[key.replace(/ /g, '_')];
       } else {
-        // Fuzzy match: find the alias whose canonical name or key is most similar
         let best = null, bestScore = 0;
         for (const [alias, canonical] of Object.entries(COLUMN_ALIAS_MAP)) {
           const score = stringSimilarity(key, alias);
           if (score > bestScore && score > 0.75) { bestScore = score; best = canonical; }
         }
-        if (best) { mapping[raw] = best; }
-        else      { unmapped.push(raw); }
+        if (best) mapping[raw] = best;
+        else      unmapped.push(raw);
       }
     });
-
     return { mapping, unmapped };
   }
 
-  /** Simple Dice coefficient similarity (0–1) */
   function stringSimilarity(a, b) {
     if (a === b) return 1;
     if (a.length < 2 || b.length < 2) return 0;
@@ -355,41 +383,22 @@ const CSVStockTransformer = (() => {
   }
 
   // ============================================================
-  //  DATE TRANSFORMER
+  //  DATE NORMALIZER — any format → YYYY-MM-DD
   // ============================================================
-
-  /**
-   * Try to parse any date string → YYYY-MM-DD.
-   * Returns null if unparseable.
-   * Handles:
-   *   DD/MM/YYYY, MM/DD/YYYY, YYYY/MM/DD
-   *   DD-MM-YYYY, MM-DD-YYYY, YYYY-MM-DD
-   *   DD.MM.YYYY, YYYY.MM.DD
-   *   Jan 15 2026, 15 Jan 2026, January 15, 2026
-   *   MM/YYYY (assumes day=01)
-   *   MMYYYY or MMYY (assumes day=01)
-   */
   function normalizeDate(raw) {
     if (!raw) return null;
     const s = raw.trim();
     if (!s) return null;
-
-    // Already correct
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
       const d = new Date(s);
       return isNaN(d) ? null : s;
     }
-
     let day = null, month = null, year = null;
-
-    // ── Try: "Jan 2026" or "Jan-2026" (no day — use 01)
     const monYear = s.match(/^([a-z]+)[\s\-](\d{4})$/i);
     if (monYear) {
       const m = MONTH_MAP[monYear[1].toLowerCase()];
       if (m) { day = '01'; month = m; year = monYear[2]; }
     }
-
-    // ── Try: "Jan 15 2026" or "15 Jan 2026" or "January 15, 2026"
     if (!day) {
       const named1 = s.match(/^([a-z]+)\s+(\d{1,2})[,\s]+(\d{4})$/i);
       const named2 = s.match(/^(\d{1,2})\s+([a-z]+)[,\s]+(\d{4})$/i);
@@ -401,65 +410,43 @@ const CSVStockTransformer = (() => {
         if (m) { day = named2[1].padStart(2,'0'); month = m; year = named2[3]; }
       }
     }
-
-    // ── Try: numeric formats with separators (/ - .)
     if (!day) {
       const sep = s.match(/^(\d{1,4})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
       if (sep) {
         let [, p1, p2, p3] = sep;
-        // Normalize 2-digit year
         if (p3.length === 2) p3 = (parseInt(p3) >= 50 ? '19' : '20') + p3;
         if (p1.length === 4) {
-          // YYYY/MM/DD
           year = p1; month = p2.padStart(2,'0'); day = p3.padStart(2,'0');
         } else if (parseInt(p1) > 12) {
-          // DD/MM/YYYY — day cannot be > 12 if it's a month
           day = p1.padStart(2,'0'); month = p2.padStart(2,'0'); year = p3;
         } else if (parseInt(p2) > 12) {
-          // MM/DD/YYYY — but we prefer DD/MM for pharma (Pakistani context)
-          // If p2 > 12 it must be a day
           day = p2.padStart(2,'0'); month = p1.padStart(2,'0'); year = p3;
         } else {
-          // Ambiguous — assume DD/MM/YYYY (Pakistan convention)
+          // Ambiguous → DD/MM/YYYY (Pakistan convention)
           day = p1.padStart(2,'0'); month = p2.padStart(2,'0'); year = p3;
         }
       }
     }
-
-    // ── Try: MM/YYYY (no day)
     if (!day) {
       const monYearNum = s.match(/^(\d{1,2})[\/\-](\d{4})$/);
-      if (monYearNum) {
-        day = '01'; month = monYearNum[1].padStart(2,'0'); year = monYearNum[2];
-      }
+      if (monYearNum) { day = '01'; month = monYearNum[1].padStart(2,'0'); year = monYearNum[2]; }
     }
-
     if (day && month && year && year.length === 4) {
       const iso = `${year}-${month}-${day}`;
       const d = new Date(iso);
       if (!isNaN(d) && d.getFullYear() === parseInt(year)) return iso;
     }
-
-    return null; // unparseable
+    return null;
   }
 
   // ============================================================
-  //  NUMERIC TRANSFORMER
+  //  NUMERIC NORMALIZER — strip RS., PKR, commas
   // ============================================================
-
-  /**
-   * Strip currency symbols, commas, spaces → clean numeric string.
-   * Returns '' if empty or truly unparseable.
-   */
   function normalizeNumeric(raw) {
     if (!raw) return '';
     let s = raw.toString().trim();
-    // Strip currency prefixes: Rs., PKR, $, £, €, ₨, etc.
     s = s.replace(/^(Rs\.?|PKR\.?|USD|INR|usd|rs\.?|\$|£|€|₨|₹)\s*/i, '');
-    // Remove thousand separators (commas), allow decimal dot
-    s = s.replace(/,/g, '');
-    // Remove trailing/leading spaces
-    s = s.trim();
+    s = s.replace(/,/g, '').trim();
     if (s === '' || isNaN(Number(s))) return '';
     return s;
   }
@@ -467,63 +454,105 @@ const CSVStockTransformer = (() => {
   // ============================================================
   //  STRENGTH NORMALIZER
   // ============================================================
-
-  /**
-   * Try to ensure strength has a unit.
-   * "500" → we CANNOT assume unit, just uppercase and warn.
-   * "500mg" → "500MG"
-   * "500 mg" → "500MG"
-   * "250ml" → "250ML"
-   * "5%" → "5%"
-   */
   function normalizeStrength(raw) {
     if (!raw) return { value: '', fixed: false };
-    let s = raw.toString().trim();
-    // Uppercase and remove spaces between number and unit
-    s = s.toUpperCase().replace(/(\d)\s+(MG|ML|MCG|IU|MEQ|MMOL|G|KG|%|MG\/ML|MCG\/ML|MG\/5ML|MG\/ML)$/, '$1$2');
-    // Already has a unit?
-    const hasUnit = /\d\s*(MG|ML|MCG|IU|MEQ|MMOL|G|KG|%|MG\/ML|MCG\/ML|MG\/5ML|MG\/ML|UNITS?)$/i.test(s);
+    // Uppercase, remove spaces between number and unit, remove spaces around /
+    let s = raw.toString().trim().toUpperCase();
+    // Remove spaces around / (N8)
+    s = s.replace(/\s*\/\s*/g, '/');
+    // Remove spaces between digit and unit suffix e.g. "500 MG" → "500MG"
+    s = s.replace(/(\d)\s+(MG|MCG|G|ML|L|IU|MEQ|%|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML)(\b|\/)/g, '$1$2$3');
+    const hasUnit = /\d(MG|MCG|G|ML|L|IU|MEQ|%|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML|N\/A)/i.test(s);
     return { value: s, fixed: hasUnit };
   }
 
   // ============================================================
-  //  BATCH NO NORMALIZER
+  //  BATCH NO NORMALIZER — attempt to format as BAT-XXXX
   // ============================================================
-
-  /** Replace spaces with dashes, uppercase */
   function normalizeBatchNo(raw) {
     if (!raw) return '';
-    return raw.toString().trim().toUpperCase().replace(/\s+/g, '-');
+    let s = raw.toString().trim().toUpperCase();
+    // Already correct
+    if (/^BAT-\d{4}$/.test(s)) return s;
+    // Replace spaces with dashes
+    s = s.replace(/\s+/g, '-');
+    // If it's purely digits with length 4, prepend BAT-
+    if (/^\d{4}$/.test(s)) return `BAT-${s}`;
+    // If it starts with BATCH or LOT, try to extract 4 digits
+    const match = s.match(/(?:BATCH|BAT|LOT)[^0-9]*(\d{4})/);
+    if (match) return `BAT-${match[1]}`;
+    return s; // return as-is; validator will catch if still wrong
   }
 
   // ============================================================
-  //  BOOLEAN NORMALIZER
+  //  TRAILING DOT REMOVER — N2 rule for brand / manufacturer
   // ============================================================
+  function removeTrailingDot(s) {
+    if (!s) return s;
+    return s.replace(/\s*\.\s*$/, '');
+  }
 
-  function normalizeBoolean(raw) {
+  // ============================================================
+  //  PRODUCT NAME CLEANER — N6, N7 rules
+  // ============================================================
+  function cleanProductName(raw, dosageFormCanonical) {
+    if (!raw) return raw;
+    let s = raw.toString().trim().toUpperCase();
+    // N6: Remove trailing /, +, digits+slash, trailing comma
+    s = s.replace(/[\s,\/\+]+$/, '').trim();
+    s = s.replace(/\s+\d+\/\s*$/, '').trim();
+    // N7: Remove duplicate dosage form word at end if present
+    if (dosageFormCanonical) {
+      const dfWords = dosageFormCanonical.split(' ');
+      const lastWord = dfWords[dfWords.length - 1];
+      // Check if product_name ends with the dosage form word repeated
+      const dupPattern = new RegExp(`(\\b${lastWord}\\b)\\s+\\1\\s*$`, 'i');
+      s = s.replace(dupPattern, lastWord);
+    }
+    return s;
+  }
+
+  // ============================================================
+  //  GENERIC NAME NORMALIZER — N4, N5 rules
+  // ============================================================
+  function normalizeGenericName(raw) {
+    if (!raw) return '';
+    let s = raw.toString().trim().toUpperCase();
+    // N5: Normalize comma spacing → ", " (no space before, one space after)
+    s = s.replace(/\s*,\s*/g, ', ');
+    // N4: Normalize + spacing → " + " (space before AND after)
+    s = s.replace(/\s*\+\s*/g, ' + ');
+    // Remove trailing / or truncated artifact
+    s = s.replace(/[\s\/]+$/, '').trim();
+    return s;
+  }
+
+  // ============================================================
+  //  PRESCRIPTION REQUIRED NORMALIZER → YES or NO (spec)
+  // ============================================================
+  function normalizePrescription(raw) {
     if (raw === null || raw === undefined) return null;
     const s = raw.toString().trim().toLowerCase();
-    if (TRUE_VALS.has(s)) return 'true';
-    if (FALSE_VALS.has(s)) return 'false';
-    return null; // unfixable
+    const YES_VALS = new Set(['yes', 'true', '1', 'y', 'required', 'rx', 'rx required', 'prescription', 'x']);
+    const NO_VALS  = new Set(['no', 'false', '0', 'n', 'not required', 'otc', 'over the counter', '']);
+    if (YES_VALS.has(s)) return 'YES';
+    if (NO_VALS.has(s))  return 'NO';
+    return null;
   }
 
   // ============================================================
   //  ROW TRANSFORMER
   // ============================================================
-
   function transformRow(rawObj, canonicalMap, rowIndex) {
-    const warnings = [];
+    const warnings  = [];
     const unfixable = [];
-
     const warn  = (field, original, fixed, note) => warnings.push({ row: rowIndex, field, original, fixed: String(fixed), note });
     const unfix = (field, value, reason)          => unfixable.push({ row: rowIndex, field, value: String(value), reason });
 
-    // ── 1. Remap columns using canonicalMap
+    // 1. Remap columns
     const row = {};
     for (const [rawHeader, canonical] of Object.entries(canonicalMap)) {
       if (rawObj[rawHeader] !== undefined) {
-        // If two raw headers map to the same canonical field, prefer the non-empty one
         const existing = row[canonical];
         const incoming = rawObj[rawHeader];
         if (existing === undefined || (existing === '' && incoming !== '')) {
@@ -531,31 +560,21 @@ const CSVStockTransformer = (() => {
         }
       }
     }
-
-    // ── 2. Ensure all output columns exist (fill missing with '')
     OUTPUT_HEADERS.forEach(h => { if (row[h] === undefined) row[h] = ''; });
 
     const out = {};
 
-    // ── 3. Text fields — trim
-    const textFields = ['product_name','brand','category','manufacturer','supplier_name'];
-    textFields.forEach(f => { out[f] = (row[f] || '').toString().trim(); });
-
-    // ── 4. Upper-text fields
-    ['generic_name'].forEach(f => {
-      out[f] = (row[f] || '').toString().trim().toUpperCase();
-    });
-
-    // ── 5. dosage_form
+    // 2. dosage_form first — needed for product_name cleaning
     const rawDF = (row['dosage_form'] || '').toString().trim();
     const dfKey = rawDF.toLowerCase().replace(/\s+/g, ' ');
+    let dosageFormCanonical = '';
     if (DOSAGE_FORM_MAP[dfKey]) {
-      const fixed = DOSAGE_FORM_MAP[dfKey];
-      if (fixed !== rawDF.toUpperCase()) warn('dosage_form', rawDF, fixed, 'Normalized to standard enum value');
-      out['dosage_form'] = fixed;
-    } else if (rawDF.toUpperCase() === rawDF && rawDF !== '') {
-      // Already uppercase — keep it, edge function will validate
-      out['dosage_form'] = rawDF;
+      dosageFormCanonical = DOSAGE_FORM_MAP[dfKey];
+      if (dosageFormCanonical !== rawDF.toUpperCase()) warn('dosage_form', rawDF, dosageFormCanonical, 'Normalized to standard value');
+      out['dosage_form'] = dosageFormCanonical;
+    } else if (VALID_DOSAGE_FORMS.has(rawDF.toUpperCase())) {
+      dosageFormCanonical = rawDF.toUpperCase();
+      out['dosage_form'] = dosageFormCanonical;
     } else if (rawDF !== '') {
       out['dosage_form'] = rawDF.toUpperCase();
       warn('dosage_form', rawDF, out['dosage_form'], 'Uppercased — verify this is a valid dosage form');
@@ -563,100 +582,183 @@ const CSVStockTransformer = (() => {
       out['dosage_form'] = '';
     }
 
-    // ── 6. release_type
+    // 3. product_name — N6, N7, N10
+    const rawPN = (row['product_name'] || '').toString().trim();
+    const cleanedPN = cleanProductName(rawPN, dosageFormCanonical);
+    const upperPN = cleanedPN.toUpperCase();
+    out['product_name'] = upperPN;
+    if (upperPN !== rawPN.toUpperCase()) warn('product_name', rawPN, upperPN, 'Cleaned trailing artifacts / duplicate dosage word');
+    else if (upperPN !== rawPN) warn('product_name', rawPN, upperPN, 'Converted to uppercase');
+
+    // 4. brand — N2 (trailing dot), N10 (uppercase)
+    const rawBrand = (row['brand'] || '').toString().trim();
+    const cleanBrand = removeTrailingDot(rawBrand).toUpperCase();
+    out['brand'] = cleanBrand;
+    if (cleanBrand !== rawBrand.toUpperCase()) warn('brand', rawBrand, cleanBrand, 'Removed trailing dot / uppercased');
+
+    // 5. category — N10 (uppercase), check against known list
+    const rawCat = (row['category'] || '').toString().trim().toUpperCase();
+    out['category'] = rawCat;
+    // Category validation is left to validateCSVRow (E06)
+
+    // 6. generic_name — N4, N5, N10
+    const rawGN = (row['generic_name'] || '').toString().trim();
+    const normGN = normalizeGenericName(rawGN);
+    out['generic_name'] = normGN;
+    if (normGN !== rawGN.toUpperCase().trim()) warn('generic_name', rawGN, normGN, 'Normalized separator spacing (N4/N5)');
+
+    // 7. strength — N8 (spaces around /), N10
+    const { value: strengthVal, fixed: hasUnit } = normalizeStrength(row['strength']);
+    out['strength'] = strengthVal;
+    if (strengthVal && !hasUnit) {
+      warn('strength', row['strength'], strengthVal, 'No valid unit detected — add MG, ML, % etc.');
+    } else if (strengthVal && strengthVal !== (row['strength'] || '').toString().trim().toUpperCase()) {
+      warn('strength', row['strength'], strengthVal, 'Normalized spacing/casing');
+    }
+
+    // 8. release_type — map to full name
     const rawRT = (row['release_type'] || '').toString().trim();
     const rtKey = rawRT.toLowerCase().replace(/\s+/g, ' ');
     if (!rawRT) {
       out['release_type'] = '';
     } else if (RELEASE_TYPE_MAP[rtKey]) {
       const fixed = RELEASE_TYPE_MAP[rtKey];
-      if (fixed !== rawRT.toUpperCase()) warn('release_type', rawRT, fixed, 'Normalized to standard enum value');
+      if (fixed !== rawRT.toUpperCase()) warn('release_type', rawRT, fixed, 'Normalized to full release type name');
       out['release_type'] = fixed;
+    } else if (VALID_RELEASE_TYPES.has(rawRT.toUpperCase())) {
+      out['release_type'] = rawRT.toUpperCase();
     } else {
       out['release_type'] = rawRT.toUpperCase();
-      warn('release_type', rawRT, out['release_type'], 'Uppercased — verify this is a valid release type');
+      warn('release_type', rawRT, out['release_type'], 'Uppercased — verify this matches an allowed release type');
     }
 
-    // ── 7. strength
-    const { value: strengthVal, fixed: hasUnit } = normalizeStrength(row['strength']);
-    out['strength'] = strengthVal;
-    if (strengthVal && !hasUnit) {
-      warn('strength', row['strength'], strengthVal, 'No unit detected — add MG, ML, etc. (e.g. 500MG)');
-    } else if (strengthVal !== row['strength']) {
-      warn('strength', row['strength'], strengthVal, 'Normalized casing/spacing');
-    }
+    // 9. manufacturer — N2 (trailing dot), N10
+    const rawMfr = (row['manufacturer'] || '').toString().trim();
+    const cleanMfr = removeTrailingDot(rawMfr).toUpperCase();
+    out['manufacturer'] = cleanMfr;
+    if (cleanMfr !== rawMfr.toUpperCase()) warn('manufacturer', rawMfr, cleanMfr, 'Removed trailing dot / uppercased');
 
-    // ── 8. batch_no
+    // 10. supplier_name — N10
+    out['supplier_name'] = (row['supplier_name'] || '').toString().trim().toUpperCase();
+
+    // 11. batch_no — normalize toward BAT-XXXX
     const rawBatch = (row['batch_no'] || '').toString().trim();
     const normBatch = normalizeBatchNo(rawBatch);
     out['batch_no'] = normBatch;
-    if (normBatch && normBatch !== rawBatch) warn('batch_no', rawBatch, normBatch, 'Spaces replaced with dashes, uppercased');
+    if (normBatch && normBatch !== rawBatch) warn('batch_no', rawBatch, normBatch, 'Normalized toward BAT-XXXX format');
 
-    // ── 9. Numeric fields
+    // 12. Numeric price fields — N3 (strip RS., commas)
     const numFields = [
       { field: 'purchase_price',   required: false },
       { field: 'original_price',   required: true  },
       { field: 'discounted_price', required: false },
     ];
     numFields.forEach(({ field, required }) => {
-      const raw = (row[field] || '').toString();
-      if (!raw.trim()) { out[field] = ''; return; }
-      const norm = normalizeNumeric(raw);
-      if (norm === '') {
-        if (required) unfix(field, raw, 'Cannot parse as a number — must be a valid positive number');
+      const rawVal = (row[field] || '').toString();
+      if (!rawVal.trim()) { out[field] = ''; return; }
+      const normed = normalizeNumeric(rawVal);
+      if (normed === '') {
+        if (required) unfix(field, rawVal, 'Cannot parse as a number — must be a valid positive number (e.g. 65.00)');
         else out[field] = '';
         return;
       }
-      if (norm !== raw.trim()) warn(field, raw, norm, 'Removed currency symbol/formatting');
-      out[field] = norm;
+      if (normed !== rawVal.trim()) warn(field, rawVal, normed, 'Removed currency symbol/comma formatting (N3)');
+      out[field] = normed;
     });
 
-    // ── 10. Integer fields
-    const intFields = [
-      { field: 'pack_size',    required: true  },
-      { field: 'quantity',     required: true  },
-      { field: 'reorder_level',required: true  },
-    ];
-    intFields.forEach(({ field, required }) => {
-      const raw = (row[field] || '').toString();
-      if (!raw.trim()) { out[field] = ''; return; }
-      const norm = normalizeNumeric(raw);
-      const asNum = Number(norm);
-      if (norm === '' || isNaN(asNum)) {
-        if (required) unfix(field, raw, `Cannot parse as a whole number`);
-        else out[field] = '';
-        return;
+    // 13. pack_size — positive integer
+    const rawPS = (row['pack_size'] || '').toString();
+    if (!rawPS.trim()) {
+      out['pack_size'] = '';
+    } else {
+      const normedPS = normalizeNumeric(rawPS);
+      const asNum = Number(normedPS);
+      if (normedPS === '' || isNaN(asNum) || asNum < 1) {
+        unfix('pack_size', rawPS, 'Must be a positive integer (e.g. 10)');
+        out['pack_size'] = '';
+      } else {
+        const intVal = Math.round(asNum).toString();
+        if (intVal !== rawPS.trim()) warn('pack_size', rawPS, intVal, 'Rounded to whole number');
+        out['pack_size'] = intVal;
       }
-      // Round to integer if float was given
-      const intVal = Math.round(asNum).toString();
-      if (intVal !== raw.trim()) warn(field, raw, intVal, 'Rounded to whole number');
-      out[field] = intVal;
-    });
+    }
 
-    // ── 11. prescription_required
+    // 14. box_quantity — non-negative integer
+    const rawBQ = (row['box_quantity'] || '').toString();
+    if (!rawBQ.trim()) {
+      out['box_quantity'] = '';
+    } else {
+      const normedBQ = normalizeNumeric(rawBQ);
+      const asNum = Number(normedBQ);
+      if (normedBQ === '' || isNaN(asNum) || asNum < 0) {
+        unfix('box_quantity', rawBQ, 'Must be a non-negative integer (e.g. 50)');
+        out['box_quantity'] = '';
+      } else {
+        const intVal = Math.round(asNum).toString();
+        if (intVal !== rawBQ.trim()) warn('box_quantity', rawBQ, intVal, 'Rounded to whole number');
+        out['box_quantity'] = intVal;
+      }
+    }
+
+    // 15. loose_units — non-negative integer (cross-check vs pack_size done in validator)
+    const rawLU = (row['loose_units'] || '').toString();
+    if (!rawLU.trim()) {
+      out['loose_units'] = '0'; // default to 0 if omitted
+      if (rawLU.trim() === '') warn('loose_units', rawLU, '0', 'Empty value defaulted to 0');
+    } else {
+      const normedLU = normalizeNumeric(rawLU);
+      const asNum = Number(normedLU);
+      if (normedLU === '' || isNaN(asNum) || asNum < 0) {
+        unfix('loose_units', rawLU, 'Must be a non-negative integer (e.g. 0 or 5)');
+        out['loose_units'] = '';
+      } else {
+        const intVal = Math.round(asNum).toString();
+        if (intVal !== rawLU.trim()) warn('loose_units', rawLU, intVal, 'Rounded to whole number');
+        out['loose_units'] = intVal;
+      }
+    }
+
+    // 16. prescription_required → YES or NO
     const rawRx = (row['prescription_required'] || '').toString();
-    const normRx = normalizeBoolean(rawRx);
+    const normRx = normalizePrescription(rawRx);
     if (normRx === null && rawRx.trim() !== '') {
-      unfix('prescription_required', rawRx, 'Cannot determine true/false — use: true, false, yes, no, 1, 0');
+      unfix('prescription_required', rawRx, 'Cannot determine YES/NO — use: YES, NO, true, false, 1, 0');
       out['prescription_required'] = rawRx;
     } else if (normRx === null) {
-      out['prescription_required'] = 'false'; // sensible default for empty
-      warn('prescription_required', rawRx, 'false', 'Empty value defaulted to false (OTC)');
+      out['prescription_required'] = 'NO';
+      warn('prescription_required', rawRx, 'NO', 'Empty value defaulted to NO (OTC)');
     } else {
-      if (normRx !== rawRx.toLowerCase().trim()) warn('prescription_required', rawRx, normRx, 'Normalized to true/false');
+      if (normRx !== rawRx.trim().toUpperCase()) warn('prescription_required', rawRx, normRx, 'Normalized to YES/NO');
       out['prescription_required'] = normRx;
     }
 
-    // ── 12. Date fields
-    ['manufacture_date', 'expiry_date'].forEach(field => {
-      const raw = (row[field] || '').toString().trim();
-      if (!raw) { out[field] = ''; return; }
-      const normed = normalizeDate(raw);
-      if (!normed) {
-        if (field === 'expiry_date') unfix(field, raw, 'Cannot parse date — use YYYY-MM-DD (e.g. 2026-06-30)');
-        else { out[field] = ''; warn(field, raw, '', 'Cannot parse date — cleared. Fix manually if needed.'); }
+    // 17. reorder_level — positive integer (≥1)
+    const rawRL = (row['reorder_level'] || '').toString();
+    if (!rawRL.trim()) {
+      out['reorder_level'] = '';
+    } else {
+      const normedRL = normalizeNumeric(rawRL);
+      const asNum = Number(normedRL);
+      if (normedRL === '' || isNaN(asNum)) {
+        unfix('reorder_level', rawRL, 'Must be a positive integer ≥ 1');
+        out['reorder_level'] = '';
       } else {
-        if (normed !== raw) warn(field, raw, normed, 'Date format converted to YYYY-MM-DD');
+        const intVal = Math.round(asNum).toString();
+        if (intVal !== rawRL.trim()) warn('reorder_level', rawRL, intVal, 'Rounded to whole number');
+        out['reorder_level'] = intVal;
+      }
+    }
+
+    // 18. Dates — N9
+    ['manufacture_date', 'expiry_date'].forEach(field => {
+      const rawD = (row[field] || '').toString().trim();
+      if (!rawD) { out[field] = ''; return; }
+      const normed = normalizeDate(rawD);
+      if (!normed) {
+        if (field === 'expiry_date') unfix(field, rawD, 'Cannot parse date — use YYYY-MM-DD (e.g. 2027-06-30)');
+        else { out[field] = ''; warn(field, rawD, '', 'Cannot parse date — cleared. Fix manually if needed.'); }
+      } else {
+        if (normed !== rawD) warn(field, rawD, normed, 'Date format converted to YYYY-MM-DD (N9)');
         out[field] = normed;
       }
     });
@@ -667,7 +769,6 @@ const CSVStockTransformer = (() => {
   // ============================================================
   //  CSV SERIALIZER
   // ============================================================
-
   function escapeCSVCell(val) {
     const s = val === null || val === undefined ? '' : String(val);
     if (s.includes(',') || s.includes('"') || s.includes('\n')) {
@@ -685,19 +786,8 @@ const CSVStockTransformer = (() => {
   }
 
   // ============================================================
-  //  MAIN TRANSFORM FUNCTION
+  //  MAIN PUBLIC API
   // ============================================================
-
-  /**
-   * @param {string} rawCsvString — The raw CSV file contents
-   * @returns {{
-   *   csv: string,             — Normalized CSV ready to download/upload
-   *   warnings: Array,         — Fixable issues that were auto-corrected
-   *   unfixable: Array,        — Issues that need manual correction
-   *   skippedColumns: Array,   — Raw column names that couldn't be mapped
-   *   stats: Object
-   * }}
-   */
   function transform(rawCsvString) {
     const { headers, rows } = parseCSV(rawCsvString);
 
@@ -712,14 +802,11 @@ const CSVStockTransformer = (() => {
     }
 
     const { mapping, unmapped } = mapHeaders(headers);
-
-    const allWarnings  = [];
-    const allUnfixable = [];
-    const outputRows   = [];
+    const allWarnings = [], allUnfixable = [], outputRows = [];
     let cleanCount = 0;
 
     rows.forEach((rawRow, i) => {
-      const rowNum = i + 2; // 1-indexed + header row
+      const rowNum = i + 2;
       const { row, warnings, unfixable } = transformRow(rawRow, mapping, rowNum);
       outputRows.push(row);
       allWarnings.push(...warnings);
@@ -727,52 +814,20 @@ const CSVStockTransformer = (() => {
       if (warnings.length === 0 && unfixable.length === 0) cleanCount++;
     });
 
-    const rowsWithUnfixable = new Set(allUnfixable.map(u => u.row)).size;
-
     return {
       csv:            serializeCSV(outputRows),
       warnings:       allWarnings,
       unfixable:      allUnfixable,
       skippedColumns: unmapped,
       stats: {
-        total:      rows.length,
+        total:       rows.length,
         transformed: allWarnings.length > 0 ? new Set(allWarnings.map(w => w.row)).size : 0,
-        clean:      cleanCount,
-        unfixable:  rowsWithUnfixable,
+        clean:       cleanCount,
+        unfixable:   new Set(allUnfixable.map(u => u.row)).size,
       }
     };
   }
 
-  // ── Public API ───────────────────────────────────────────────
   return { transform };
 
 })();
-
-
-// ============================================================
-//  INTEGRATION HELPER — drop this into PharmStockManagement.js
-//  where you currently call parseAndValidateCSV()
-// ============================================================
-
-/**
- * Call this before your existing client-side validation.
- *
- *   const file = event.target.files[0];
- *   const raw  = await file.text();
- *   const result = CSVStockTransformer.transform(raw);
- *
- *   if (result.unfixable.length > 0) {
- *     // Show unfixable errors to user — they MUST fix these before upload
- *     showTransformErrors(result.unfixable);
- *     return;
- *   }
- *
- *   if (result.warnings.length > 0) {
- *     // Optionally show what was auto-fixed (nice UX)
- *     showTransformWarnings(result.warnings);
- *   }
- *
- *   // Pass result.csv to your existing CSV parser as if it was the original file
- *   const cleanFile = new File([result.csv], file.name, { type: 'text/csv' });
- *   handleCSVFile(cleanFile); // your existing function
- */
