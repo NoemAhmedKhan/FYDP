@@ -24,14 +24,14 @@
     'product_name','brand','category','generic_name','strength',
     'dosage_form','release_type','manufacturer','batch_no',
     'supplier_name','purchase_price','original_price','discounted_price',
-    'pack_size','quantity','prescription_required','reorder_level',
-    'manufacture_date','expiry_date'
+    'pack_size','box_quantity','loose_units','prescription_required',
+    'reorder_level','manufacture_date','expiry_date'
   ];
 
   const CSV_REQUIRED_FIELDS = [
     'product_name','generic_name','strength','dosage_form',
     'manufacturer','batch_no','original_price','pack_size',
-    'quantity','prescription_required','reorder_level','expiry_date'
+    'box_quantity','loose_units','prescription_required','reorder_level','expiry_date'
   ];
 
   // ── State ───────────────────────────────────────────────────
@@ -218,8 +218,8 @@
       let rows = data || [];
 
       // Client-side status filter
-      if (filterStatus === 'oos')      rows = rows.filter(r => r.quantity === 0);
-      if (filterStatus === 'low')      rows = rows.filter(r => r.quantity > 0 && r.quantity <= r.reorder_level);
+      if (filterStatus === 'oos')      rows = rows.filter(r => r.box_quantity === 0 && (r.loose_units ?? 0) === 0);
+      if (filterStatus === 'low')      rows = rows.filter(r => r.box_quantity > 0 && r.box_quantity <= r.reorder_level);
       if (filterStatus === 'expiring') rows = rows.filter(r => isExpiringSoon(r.expiry_date));
 
       renderRows(rows);
@@ -239,9 +239,12 @@
     tbody.innerHTML = rows.map(m => {
       const initial = (m.product_name || '?')[0].toUpperCase();
       const color   = avatarColor(m.product_name || '');
-      const qty     = m.quantity ?? 0;
-      const isLow   = qty > 0 && qty <= (m.reorder_level ?? 10);
-      const isOOS   = qty === 0;
+      const boxQty  = m.box_quantity ?? 0;
+      const loose   = m.loose_units  ?? 0;
+      const packSz  = m.pack_size    ?? 1;
+      const totalUnits = (boxQty * packSz) + loose;
+      const isLow   = boxQty > 0 && boxQty <= (m.reorder_level ?? 10);
+      const isOOS   = boxQty === 0 && loose === 0;
       const expWarn = isPast(m.expiry_date) || isExpiringSoon(m.expiry_date);
 
       const discRow = m.discounted_price
@@ -268,8 +271,9 @@
           <td>${esc(m.batch_no || '—')}</td>
           <td>
             <div class="qty-cell">
-              <span class="qty-num ${isOOS ? 'red' : ''}">${qty.toLocaleString()}</span>
-              <span class="qty-unit">UNITS</span>
+              <span class="qty-num ${isOOS ? 'red' : ''}">${boxQty}</span>
+              <span class="qty-unit">BOXES</span>
+              ${loose > 0 ? `<span class="qty-loose">+${loose} loose</span>` : ''}
               ${isLow && !isOOS ? '<span class="badge-low">Low</span>' : ''}
               ${isOOS ? '<span class="badge-low" style="color:var(--red);background:#fef2f2;border-color:#fecaca">OOS</span>' : ''}
               ${rxBadge}
@@ -286,9 +290,9 @@
           <td>
             <div class="action-cell">
               <button class="act-btn" title="Edit item"
-                onclick="openEditModal('${m.id}','${esc(m.product_name)}',${m.quantity},${m.reorder_level},
+                onclick="openEditModal('${m.id}','${esc(m.product_name)}',${boxQty},${loose},${m.reorder_level},
                   '${esc(m.supplier_name||'')}',${m.purchase_price||'null'},${m.original_price},${m.discounted_price||'null'},
-                  '${m.expiry_date||''}',${m.prescription_required ? 'true' : 'false'})">
+                  '${m.expiry_date||''}',${m.prescription_required ? 'true' : 'false'},${packSz})">
                 <i class="fa-solid fa-pen"></i>
               </button>
               <button class="act-btn act-btn-danger" title="Delete this item"
@@ -411,91 +415,240 @@
   function isPosNum(s) { const n = Number(s); return !isNaN(n) && n > 0; }
   function isNonNegNum(s) { const n = Number(s); return !isNaN(n) && n >= 0; }
 
+  // ── Valid enum sets for CSV validation ──────────────────────
+  const VALID_DOSAGE_FORMS_SET = new Set([
+    'TABLET','CAPSULE','SYRUP','DROPS','INJECTION','INFUSION',
+    'CREAM','OINTMENT','LOTION','GEL','SPRAY','SOLUTION',
+    'SUSPENSION','SACHET','SOFTGEL','POWDER','PATCH',
+    'SUPPOSITORY','INHALER','FACE WASH','SHAMPOO','SOAP',
+    'TOOTHPASTE','OIL', 'GUMMIES', 'FOOD', 'SERUM'
+  ]);
+
+  const VALID_RELEASE_TYPES_SET = new Set([
+    'IMMEDIATE RELEASE','EXTENDED RELEASE','SUSTAINED RELEASE',
+    'MODIFIED RELEASE','DELAYED RELEASE','CONTROLLED RELEASE',''
+  ]);
+
+  const VALID_CATEGORIES_SET = new Set([
+    'ANTI-ULCERANT','ANTI-DIABETIC','ANTI-BACTERIAL','ANTI-INFLAMMATORY',
+    'ANTI-HYPERTENSIVE','ANTI-LIPIDEMIC','ANTI-EPILEPTIC','ANTI-ALLERGY',
+    'ANTI-FUNGAL','ANTI-SPASMODIC','ANTI-COAGULANT','ANTI-ANEMIC', 'ANTI-CONVULSANT',
+    'ANTI-DIARRHEAL','ANTI-DEPRESSANT','ANTI-PSYCHOTIC','ANTI-GOUT',
+    'ANTI-VIRAL','ANTI-EMETIC','ANTI-OBESITY','ANTI-VERTIGO',
+    'ASTHMA / COPD','COUGH & COLD','VITAMINS & SUPPLEMENTS','SKIN CARE',
+    'OPHTHALMOLOGY','PAIN RELIEF','CARDIAC THERAPY','DIURETICS',
+    'LAXATIVE','UROLOGY','MUSCLE RELAXANT','CORTICOSTEROID',
+    'CORTICOSTEROID + ANTI-BACTERIAL','HORMONAL PRODUCTS','IMMUNOMODULATOR',
+    'OSTEOPOROSIS','GASTROPROKINETIC', 'NEUROLOGY', 'SCABICIDE','HERBAL',
+    "PARKINSON'S DISEASE","ALZHEIMER'S DISEASE", 'LOCAL ANAESTHETIC', 'ANTI-RHEUMATIC', 'ANTI-AMOEBIC',
+'ANTI-PYRETIC', 'ANTHELMINTIC', 'ORAL HEALTH CARE',
+'EAR PREPARATIONS', 'ONCOLOGY', 'ANTISEPTIC',
+'CORTICOSTEROID + ANTI-BACTERIAL + ANTI-FUNGAL',
+'LIVER & BILE', 'ANTI-HAEMORRHOIDAL', 'HAIR CARE'
+  ]);
+
+  // Count generic_name components using + and , separators
+  function countGenericComponents(genericName) {
+    if (!genericName) return 0;
+    const plusParts = genericName.split(' + ');
+    let count = 0;
+    plusParts.forEach(part => {
+      count += part.split(', ').length;
+    });
+    return count;
+  }
+
+  // Count strength components using / separator
+  function countStrengthComponents(strength) {
+    if (!strength || strength === 'N/A') return 1;
+    return strength.split('/').length;
+  }
+
   function validateCSVRow(raw, rowIndex) {
     const errors = [];
-    const addErr = (field, message, value = '') =>
-      errors.push({ row: rowIndex, field, message, value: String(value) });
+    const addErr = (field, code, message, value = '') =>
+      errors.push({ row: rowIndex, field, code, message, value: String(value) });
 
-    // Required fields
+    // ── Required fields ─────────────────────────────────────
     for (const f of CSV_REQUIRED_FIELDS) {
-      if (!norm(raw[f])) addErr(f, 'Required field is empty');
+      if (!norm(raw[f])) addErr(f, 'E-REQ', 'Required field is empty');
     }
     if (errors.length) return { errors, clean: null };
 
-    // Type checks
+    // ── E03/E05/E07/E10/E18/E21 — uppercase check ───────────
+    const upperFields = [
+      'product_name','brand','category','generic_name',
+      'strength','dosage_form','manufacturer','supplier_name'
+    ];
+    upperFields.forEach(f => {
+      if (norm(raw[f]) && norm(raw[f]) !== norm(raw[f]).toUpperCase())
+        addErr(f, 'E-CASE', 'Value must be uppercase', raw[f]);
+    });
+
+    // ── E17/E18 — dosage_form enum ───────────────────────────
+    const dfVal = normUp(raw.dosage_form);
+    if (!VALID_DOSAGE_FORMS_SET.has(dfVal))
+      addErr('dosage_form', 'E17',
+        `Invalid dosage form. Allowed: ${[...VALID_DOSAGE_FORMS_SET].join(', ')}`, raw.dosage_form);
+
+    // ── E19 — release_type enum ──────────────────────────────
+    const rtVal = normUp(raw.release_type);
+    if (norm(raw.release_type) && !VALID_RELEASE_TYPES_SET.has(rtVal))
+      addErr('release_type', 'E19',
+        `Invalid release type. Allowed: ${[...VALID_RELEASE_TYPES_SET].filter(Boolean).join(' | ')}`,
+        raw.release_type);
+
+    // ── E06 — category enum ──────────────────────────────────
+    const catVal = normUp(raw.category);
+    if (norm(raw.category) && !VALID_CATEGORIES_SET.has(catVal))
+      addErr('category', 'E06',
+        `Unrecognised category. Check the template for the full allowed list.`, raw.category);
+
+    // ── E22 — batch_no pattern BAT-XXXX ─────────────────────
+    if (!/^BAT-\d{4}$/.test(norm(raw.batch_no)))
+      addErr('batch_no', 'E22',
+        'Batch No must match format BAT-XXXX (e.g. BAT-7224)', raw.batch_no);
+
+    // ── E24/E25 — supplier_name non-empty ───────────────────
+    if (!norm(raw.supplier_name))
+      addErr('supplier_name', 'E24', 'Supplier name is required', '');
+
+    // ── E08/E09/E11 — generic_name separator spacing ─────────
+    const gnVal = norm(raw.generic_name);
+    if (/\+(?!\s)|\s\+(?!\s)/.test(gnVal) || /(?<!\s)\+\s/.test(gnVal))
+      addErr('generic_name', 'E08',
+        '+ separator must have a space on both sides (e.g. DRUG A + DRUG B)', gnVal);
+    if (/,(?!\s)/.test(gnVal))
+      addErr('generic_name', 'E09',
+        ', separator must have no space before and one space after (e.g. DRUG A, DRUG B)', gnVal);
+    if (/[\/]/.test(gnVal))
+      addErr('generic_name', 'E11',
+        'generic_name must not contain / — use + for FDC or , for co-formulated generics', gnVal);
+
+    // ── E12/E13 — strength format ────────────────────────────
+    const stVal = normUp(raw.strength);
+    if (stVal !== 'N/A' && /\d\s+[A-Z]/.test(stVal))
+      addErr('strength', 'E12', 'Strength must not contain spaces (e.g. 500MG not 500 MG)', stVal);
+    if (stVal !== 'N/A' && !/\d(MG|MCG|G|ML|L|IU|MEQ|%|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML)/i.test(stVal))
+      addErr('strength', 'E13',
+        'Strength must include a valid unit (MG, MCG, G, ML, %, MG/ML, etc.) or N/A', stVal);
+
+    // ── E14 — strength component count vs generic_name ───────
+    const gnComponents = countGenericComponents(norm(raw.generic_name));
+    const stComponents = countStrengthComponents(stVal);
+    const singleVolumeForms = new Set(['SYRUP','SOLUTION','SUSPENSION','INFUSION','LOTION','CREAM','OINTMENT','GEL','DROPS','SPRAY','OIL']);
+    if (
+      gnComponents > 1 &&
+      stVal !== 'N/A' &&
+      stComponents !== gnComponents &&
+      !singleVolumeForms.has(dfVal)
+    ) {
+      addErr('strength', 'E14',
+        `Component count mismatch: generic_name has ${gnComponents} drug(s) but strength has ${stComponents} value(s). Use / to separate each dose (e.g. 15MG/500MG)`,
+        stVal);
+    }
+
+    // ── E16 — strength must not use , or + as separator ──────
+    if (/[,\+]/.test(stVal))
+      addErr('strength', 'E16',
+        'Strength must only use / as separator between dose values', stVal);
+
+    // ── Numeric type checks ───────────────────────────────────
     if (!isPosNum(raw.original_price))
-      addErr('original_price', 'Must be a positive number', raw.original_price);
+      addErr('original_price', 'E30', 'Must be a positive number (e.g. 65.00)', raw.original_price);
 
     if (norm(raw.purchase_price) && !isNonNegNum(raw.purchase_price))
-      addErr('purchase_price', 'Must be a non-negative number', raw.purchase_price);
+      addErr('purchase_price', 'E27', 'Must be a non-negative number (e.g. 45.00)', raw.purchase_price);
 
     if (norm(raw.discounted_price) && !isNonNegNum(raw.discounted_price))
-      addErr('discounted_price', 'Must be a non-negative number', raw.discounted_price);
+      addErr('discounted_price', 'E32', 'Must be a non-negative number', raw.discounted_price);
 
     if (!isPosNum(raw.pack_size) || !Number.isInteger(Number(raw.pack_size)))
-      addErr('pack_size', 'Must be a positive integer', raw.pack_size);
+      addErr('pack_size', 'E35', 'Must be a positive whole number (e.g. 10)', raw.pack_size);
 
-    if (!isNonNegNum(raw.quantity) || !Number.isInteger(Number(raw.quantity)))
-      addErr('quantity', 'Must be a non-negative integer', raw.quantity);
+    if (!isNonNegNum(raw.box_quantity) || !Number.isInteger(Number(raw.box_quantity)))
+      addErr('box_quantity', 'E38', 'Must be a non-negative whole number (e.g. 50)', raw.box_quantity);
 
-    if (!isNonNegNum(raw.reorder_level) || !Number.isInteger(Number(raw.reorder_level)))
-      addErr('reorder_level', 'Must be a non-negative integer', raw.reorder_level);
+    if (!isNonNegNum(raw.loose_units) || !Number.isInteger(Number(raw.loose_units)))
+      addErr('loose_units', 'E39', 'Must be a non-negative whole number (e.g. 0)', raw.loose_units);
 
-    const prVal = norm(raw.prescription_required).toLowerCase();
-    if (!['true','false','1','0','yes','no'].includes(prVal))
-      addErr('prescription_required', 'Must be true/false/yes/no', raw.prescription_required);
+    // ── E41 — prescription_required must be YES or NO ────────
+    const prVal = normUp(raw.prescription_required);
+    if (!['YES','NO'].includes(prVal))
+      addErr('prescription_required', 'E41',
+        'Must be exactly YES or NO (uppercase)', raw.prescription_required);
 
-    if (!isValidDate(raw.expiry_date))
-      addErr('expiry_date', 'Invalid date — use YYYY-MM-DD', raw.expiry_date);
+    // ── E42/E43 — reorder_level ≥ 1 ─────────────────────────
+    const rlNum = Number(raw.reorder_level);
+    if (!Number.isInteger(rlNum) || rlNum < 1)
+      addErr('reorder_level', 'E42',
+        'Must be a positive integer ≥ 1', raw.reorder_level);
 
-    if (norm(raw.manufacture_date) && !isValidDate(raw.manufacture_date))
-      addErr('manufacture_date', 'Invalid date — use YYYY-MM-DD', raw.manufacture_date);
+    // ── Date format checks ────────────────────────────────────
+    if (!isValidDate(norm(raw.expiry_date)))
+      addErr('expiry_date', 'E47', 'Invalid date — use YYYY-MM-DD format (e.g. 2027-06-30)', raw.expiry_date);
+
+    if (norm(raw.manufacture_date) && !isValidDate(norm(raw.manufacture_date)))
+      addErr('manufacture_date', 'E44', 'Invalid date — use YYYY-MM-DD format (e.g. 2024-01-15)', raw.manufacture_date);
 
     if (errors.length) return { errors, clean: null };
 
-    // Business rules
-    const origPrice  = Number(raw.original_price);
-    const discPrice  = norm(raw.discounted_price) ? Number(raw.discounted_price) : null;
-    const purchPrice = norm(raw.purchase_price)   ? Number(raw.purchase_price)   : null;
-    const expiry     = new Date(raw.expiry_date);
-    const mfgDate    = norm(raw.manufacture_date) ? new Date(raw.manufacture_date) : null;
+    // ── Business rules ────────────────────────────────────────
+    const origPrice  = Number(norm(raw.original_price));
+    const discPrice  = norm(raw.discounted_price)  ? Number(norm(raw.discounted_price))  : null;
+    const purchPrice = norm(raw.purchase_price)    ? Number(norm(raw.purchase_price))    : null;
+    const expiry     = new Date(norm(raw.expiry_date));
+    const mfgDate    = norm(raw.manufacture_date)  ? new Date(norm(raw.manufacture_date)) : null;
+    const today      = new Date(); today.setHours(0,0,0,0);
+    const boxQty     = Number(norm(raw.box_quantity));
+    const looseUnits = Number(norm(raw.loose_units));
+    const packSize   = Number(norm(raw.pack_size));
 
     if (discPrice !== null && discPrice > origPrice)
-      addErr('discounted_price', 'Cannot exceed original_price', raw.discounted_price);
+      addErr('discounted_price', 'E33',
+        `Discounted price (${discPrice}) cannot exceed original price (${origPrice})`, raw.discounted_price);
 
     if (purchPrice !== null && purchPrice > origPrice)
-      addErr('purchase_price', 'Purchase price should not exceed original price', raw.purchase_price);
-
-    if (expiry <= new Date())
-      addErr('expiry_date', 'Expiry date must be in the future', raw.expiry_date);
+      addErr('purchase_price', 'E28',
+        `Purchase price (${purchPrice}) should not exceed original price (${origPrice})`, raw.purchase_price);
 
     if (mfgDate && mfgDate >= expiry)
-      addErr('manufacture_date', 'Must be before expiry date', raw.manufacture_date);
+      addErr('manufacture_date', 'E46', 'Manufacture date must be before expiry date', raw.manufacture_date);
+
+    if (mfgDate && mfgDate >= today)
+      addErr('manufacture_date', 'E45', 'Manufacture date must be in the past', raw.manufacture_date);
+
+    // E40 — loose_units must be < pack_size
+    if (!isNaN(looseUnits) && !isNaN(packSize) && packSize > 0 && looseUnits >= packSize)
+      addErr('loose_units', 'E40',
+        `Loose units (${looseUnits}) must be less than pack size (${packSize}). Consolidate into boxes.`,
+        raw.loose_units);
 
     if (errors.length) return { errors, clean: null };
 
     return {
       errors: [],
       clean: {
-        product_name:          norm(raw.product_name),
-        brand:                 norm(raw.brand),
+        product_name:          normUp(raw.product_name),
+        brand:                 normUp(raw.brand),
         category:              normUp(raw.category),
         generic_name:          normUp(raw.generic_name),
         strength:              normUp(raw.strength),
         dosage_form:           normUp(raw.dosage_form),
         release_type:          normUp(raw.release_type),
         manufacturer:          normUp(raw.manufacturer),
-        batch_no:              norm(raw.batch_no).toUpperCase(),
-        supplier_name:         norm(raw.supplier_name),
+        batch_no:              normUp(raw.batch_no),
+        supplier_name:         normUp(raw.supplier_name),
         purchase_price:        purchPrice,
         original_price:        origPrice,
         discounted_price:      discPrice,
-        pack_size:             Number(raw.pack_size),
-        quantity:              Number(raw.quantity),
-        prescription_required: ['true','1','yes'].includes(prVal),
-        reorder_level:         Number(raw.reorder_level),
+        pack_size:             packSize,
+        box_quantity:          boxQty,
+        loose_units:           looseUnits,
+        prescription_required: prVal === 'YES',
+        reorder_level:         rlNum,
         manufacture_date:      norm(raw.manufacture_date) || null,
-        expiry_date:           raw.expiry_date,
+        expiry_date:           norm(raw.expiry_date),
       }
     };
   }
@@ -692,7 +845,7 @@
       } else {
         // Fallback: generate template locally
         const content = CSV_REQUIRED_HEADERS.join(',') + '\n' +
-          'Panadol 500mg Tablet,Panadol,Analgesic,Paracetamol,500MG,TABLET,IMMEDIATE,GSK,BATCH-001,MedSuppliers,45.00,65.00,60.00,10,500,false,50,2024-01-15,2026-01-15\n';
+          'PANADOL 500MG TABLET,GLAXOSMITHKLINE PAKISTAN,PAIN RELIEF,PARACETAMOL,500MG,TABLET,IMMEDIATE RELEASE,GLAXOSMITHKLINE PAKISTAN,BAT-7224,MEDSUPPLIERS PVT LTD,45.00,65.00,60.00,10,50,5,YES,10,2024-01-15,2027-01-15\n';
         const blob = new Blob([content], { type: 'text/csv' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
@@ -787,7 +940,7 @@ async function handleValidateCSV() {
   for (const row of cleanRows) {
     const key = `${row.generic_name}|${row.strength}|${row.dosage_form}|${row.manufacturer}|${row.batch_no}`;
     if (seen.has(key)) {
-      allErrors.push({ row: '?', field: 'batch_no', message: 'Duplicate batch_no for same product in this file', value: row.batch_no });
+      allErrors.push({ row: '?', field: 'batch_no', code: 'E23', message: 'Duplicate batch_no for same product in this file', value: row.batch_no });
     }
     seen.add(key);
   }
@@ -813,7 +966,7 @@ async function handleValidateCSV() {
     $('errorTableBody').innerHTML     = allErrors.map(e => `
       <tr class="err-row">
         <td class="row-num">Row ${e.row}</td>
-        <td>${esc(e.field)}</td>
+        <td>${esc(e.field)}${e.code ? ` <span class="err-code">${esc(e.code)}</span>` : ''}</td>
         <td class="err-val" title="${esc(e.value)}">${esc(e.value) || '<em>empty</em>'}</td>
         <td class="err-msg">${esc(e.message)}</td>
       </tr>`).join('');
@@ -831,7 +984,7 @@ async function handleValidateCSV() {
         <td>${esc(r.generic_name)}</td>
         <td>${esc(r.strength)}</td>
         <td>${esc(r.batch_no)}</td>
-        <td>${r.quantity.toLocaleString()}</td>
+        <td>${r.box_quantity} boxes / ${r.loose_units} loose</td>
         <td>${fmtDate(r.expiry_date)}</td>
       </tr>`).join('') +
       (cleanRows.length > 10
@@ -964,19 +1117,19 @@ async function handleValidateCSV() {
     const fields = [
       'product_name','generic_name','strength','dosage_form','release_type',
       'manufacturer','brand','category','batch_no','supplier_name',
-      'pack_size','quantity','reorder_level','purchase_price',
+      'pack_size','box_quantity','loose_units','reorder_level','purchase_price',
       'original_price','discounted_price','manufacture_date','expiry_date'
     ];
     fields.forEach(f => {
       const el = $('f_' + f);
-      if (el) el.value = (f === 'reorder_level' ? '10' : '');
+      if (el) el.value = (f === 'reorder_level' ? '1' : f === 'loose_units' ? '0' : '');
     });
     const pr = $('f_prescription_required');
     if (pr) pr.checked = false;
     $('addFormError').style.display = 'none';
     clearFieldErrors(['product_name','generic_name','strength','dosage_form',
-      'manufacturer','batch_no','pack_size','quantity','reorder_level',
-      'original_price','discounted_price','expiry_date']);
+      'manufacturer','batch_no','pack_size','box_quantity','loose_units',
+      'reorder_level','original_price','discounted_price','expiry_date']);
   }
 
   function clearFieldErrors(fields) {
@@ -997,23 +1150,24 @@ async function handleValidateCSV() {
 
   function getAddFormData() {
     return {
-      product_name:          norm($('f_product_name')?.value),
-      brand:                 norm($('f_brand')?.value),
+      product_name:          normUp($('f_product_name')?.value),
+      brand:                 normUp($('f_brand')?.value),
       category:              normUp($('f_category')?.value),
       generic_name:          normUp($('f_generic_name')?.value),
       strength:              normUp($('f_strength')?.value),
       dosage_form:           normUp($('f_dosage_form')?.value),
       release_type:          normUp($('f_release_type')?.value),
       manufacturer:          normUp($('f_manufacturer')?.value),
-      batch_no:              norm($('f_batch_no')?.value).toUpperCase(),
-      supplier_name:         norm($('f_supplier_name')?.value),
-      purchase_price:        $('f_purchase_price')?.value  ? Number($('f_purchase_price').value)  : null,
-      original_price:        $('f_original_price')?.value  ? Number($('f_original_price').value)  : null,
-      discounted_price:      $('f_discounted_price')?.value ? Number($('f_discounted_price').value) : null,
-      pack_size:             $('f_pack_size')?.value ? Number($('f_pack_size').value) : null,
-      quantity:              $('f_quantity')?.value  ? Number($('f_quantity').value)  : null,
-      prescription_required: $('f_prescription_required')?.checked ?? false,
-      reorder_level:         $('f_reorder_level')?.value ? Number($('f_reorder_level').value) : 10,
+      batch_no:              normUp($('f_batch_no')?.value),
+      supplier_name:         normUp($('f_supplier_name')?.value),
+      purchase_price:        $('f_purchase_price')?.value   ? Number($('f_purchase_price').value)   : null,
+      original_price:        $('f_original_price')?.value   ? Number($('f_original_price').value)   : null,
+      discounted_price:      $('f_discounted_price')?.value ? Number($('f_discounted_price').value)  : null,
+      pack_size:             $('f_pack_size')?.value        ? Number($('f_pack_size').value)         : null,
+      box_quantity:          $('f_box_quantity')?.value !== '' ? Number($('f_box_quantity').value)   : null,
+      loose_units:           $('f_loose_units')?.value  !== '' ? Number($('f_loose_units').value)   : 0,
+      prescription_required: $('f_prescription_required')?.checked ? 'YES' : 'NO',
+      reorder_level:         $('f_reorder_level')?.value    ? Number($('f_reorder_level').value)     : 1,
       manufacture_date:      norm($('f_manufacture_date')?.value) || null,
       expiry_date:           norm($('f_expiry_date')?.value),
     };
@@ -1027,13 +1181,16 @@ async function handleValidateCSV() {
     if (!d.dosage_form)   errors.dosage_form   = 'Required';
     if (!d.manufacturer)  errors.manufacturer  = 'Required';
     if (!d.batch_no)      errors.batch_no      = 'Required';
-    if (!d.pack_size || d.pack_size <= 0)          errors.pack_size      = 'Must be a positive integer';
-    if (d.quantity === null || d.quantity < 0)     errors.quantity       = 'Must be ≥ 0';
+    if (!/^BAT-\d{4}$/.test(d.batch_no)) errors.batch_no = 'Must match format BAT-XXXX (e.g. BAT-7224)';
+    if (!d.pack_size || d.pack_size <= 0)            errors.pack_size      = 'Must be a positive integer';
+    if (d.box_quantity === null || d.box_quantity < 0) errors.box_quantity = 'Must be ≥ 0';
+    if (d.loose_units < 0)                           errors.loose_units    = 'Must be ≥ 0';
+    if (d.pack_size && d.loose_units >= d.pack_size) errors.loose_units    = `Must be less than pack size (${d.pack_size})`;
     if (!d.original_price || d.original_price <= 0) errors.original_price = 'Must be a positive number';
-    if (!d.expiry_date)                            errors.expiry_date    = 'Required';
-    if (d.expiry_date && new Date(d.expiry_date) <= new Date()) errors.expiry_date = 'Must be in the future';
+    if (!d.expiry_date)                              errors.expiry_date    = 'Required';
     if (d.discounted_price !== null && d.discounted_price > d.original_price)
       errors.discounted_price = 'Cannot exceed original price';
+    if (d.reorder_level < 1)                         errors.reorder_level  = 'Must be ≥ 1';
     return errors;
   }
 
@@ -1045,8 +1202,8 @@ async function handleValidateCSV() {
 
     const d = getAddFormData();
     clearFieldErrors(['product_name','generic_name','strength','dosage_form',
-      'manufacturer','batch_no','pack_size','quantity','reorder_level',
-      'original_price','discounted_price','expiry_date']);
+      'manufacturer','batch_no','pack_size','box_quantity','loose_units',
+      'reorder_level','original_price','discounted_price','expiry_date']);
     errBox.style.display = 'none';
 
     const errors = validateAddForm(d);
@@ -1103,10 +1260,11 @@ async function handleValidateCSV() {
   // ══════════════════════════════════════════════════════════════
   //  EDIT INVENTORY ITEM
   // ══════════════════════════════════════════════════════════════
-  window.openEditModal = function(id, name, qty, reorderLvl, supplier, purchPrice, origPrice, discPrice, expiryDate, prescriptionRequired) {
+  window.openEditModal = function(id, name, boxQty, looseUnits, reorderLvl, supplier, purchPrice, origPrice, discPrice, expiryDate, prescriptionRequired, packSize) {
     $('edit_id').value               = id;
     $('editModalSubtitle').textContent = `Editing: ${name}`;
-    $('edit_quantity').value         = qty;
+    $('edit_box_quantity').value     = boxQty;
+    $('edit_loose_units').value      = looseUnits;
     $('edit_reorder_level').value    = reorderLvl;
     $('edit_supplier_name').value    = supplier;
     $('edit_purchase_price').value   = purchPrice === 'null' ? '' : purchPrice;
@@ -1114,8 +1272,12 @@ async function handleValidateCSV() {
     $('edit_discounted_price').value = discPrice === 'null' ? '' : discPrice;
     $('edit_expiry_date').value      = expiryDate || '';
     $('edit_prescription_required').checked = prescriptionRequired === 'true' || prescriptionRequired === true;
+    // Store pack_size reference for loose_units validation
+    const psRef = $('edit_pack_size_ref');
+    if (psRef) psRef.value = packSize || 0;
     $('editFormError').style.display = 'none';
-    $('err_edit_quantity').textContent        = '';
+    $('err_edit_box_quantity').textContent    = '';
+    $('err_edit_loose_units').textContent     = '';
     $('err_edit_original_price').textContent  = '';
     $('err_edit_discounted_price').textContent = '';
     $('err_edit_expiry_date').textContent      = '';
@@ -1129,9 +1291,10 @@ async function handleValidateCSV() {
     const errBox  = $('editFormError');
 
     const id           = $('edit_id').value;
-    const qty          = Number($('edit_quantity').value);
+    const boxQty       = Number($('edit_box_quantity').value);
+    const looseUnits   = Number($('edit_loose_units').value);
     const reorderLvl   = Number($('edit_reorder_level').value);
-    const supplier     = norm($('edit_supplier_name').value);
+    const supplier     = normUp($('edit_supplier_name').value);
     const purchPrice   = $('edit_purchase_price').value ? Number($('edit_purchase_price').value) : null;
     const origPrice    = Number($('edit_original_price').value);
     const discPrice    = $('edit_discounted_price').value ? Number($('edit_discounted_price').value) : null;
@@ -1139,7 +1302,8 @@ async function handleValidateCSV() {
     const prescReq     = $('edit_prescription_required').checked;
 
     // Reset errors
-    $('err_edit_quantity').textContent         = '';
+    $('err_edit_box_quantity').textContent     = '';
+    $('err_edit_loose_units').textContent      = '';
     $('err_edit_original_price').textContent   = '';
     $('err_edit_discounted_price').textContent = '';
     $('err_edit_expiry_date').textContent       = '';
@@ -1147,8 +1311,17 @@ async function handleValidateCSV() {
 
     // Validate
     let hasError = false;
-    if (isNaN(qty) || qty < 0) {
-      $('err_edit_quantity').textContent = 'Must be ≥ 0';
+    if (isNaN(boxQty) || boxQty < 0) {
+      $('err_edit_box_quantity').textContent = 'Must be ≥ 0';
+      hasError = true;
+    }
+    if (isNaN(looseUnits) || looseUnits < 0) {
+      $('err_edit_loose_units').textContent = 'Must be ≥ 0';
+      hasError = true;
+    }
+    const packSizeForEdit = Number($('edit_pack_size_ref')?.value || 0);
+    if (packSizeForEdit > 0 && looseUnits >= packSizeForEdit) {
+      $('err_edit_loose_units').textContent = `Must be less than pack size (${packSizeForEdit})`;
       hasError = true;
     }
     if (!origPrice || origPrice <= 0) {
@@ -1162,10 +1335,8 @@ async function handleValidateCSV() {
     if (!expiryDate) {
       $('err_edit_expiry_date').textContent = 'Required';
       hasError = true;
-    } else if (new Date(expiryDate) <= new Date()) {
-      $('err_edit_expiry_date').textContent = 'Must be in the future';
-      hasError = true;
-    }
+    } 
+    
     if (hasError) {
       errBox.textContent   = 'Please fix the errors above.';
       errBox.style.display = 'block';
@@ -1180,7 +1351,8 @@ async function handleValidateCSV() {
       const { error } = await sb
         .from('inventory')
         .update({
-          quantity:              qty,
+          box_quantity:          boxQty,
+          loose_units:           looseUnits,
           reorder_level:         reorderLvl,
           supplier_name:         supplier     || null,
           purchase_price:        purchPrice,
