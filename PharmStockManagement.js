@@ -547,7 +547,7 @@ const CSV_REQUIRED_FIELDS = [
     const stVal = normUp(raw.strength);
     if (stVal !== 'N/A' && /\d\s+[A-Z]/.test(stVal))
       addErr('strength', 'E12', 'Strength must not contain spaces (e.g. 500MG not 500 MG)', stVal);
-    const STRENGTH_UNIT_RE = s = s.replace(/(\d)\s+(BILLION\s?CFU|MCG\/ACTUATION|G\/100ML|MG\/5ML|CCID50|TCID50|MG\/M²|MG\/M2|MG\/KG|KG\/NG|MG\/ML|KG\/L|MG\/G|MCG|MIU|MEQ|CFU|IU|ML|LF|NG|KG|MG|G|U|L|%)(\b|\/)/g, '$1$2$3');
+    const STRENGTH_UNIT_RE = /\d(BILLION\s?CFU|MCG\/ACTUATION|G\/100ML|MG\/5ML|CCID50|TCID50|MG\/M²|MG\/M2|MG\/KG|KG\/NG|MG\/ML|KG\/L|MG\/G|MCG|MIU|MEQ|CFU|IU|ML|LF|NG|KG|MG|G|U|L|%)/i;
       addErr('strength', 'E13',
         'Strength must include a valid unit (MG, MCG, G, ML, IU, MIU, CFU, BILLION CFU, CCID50, TCID50, LF, MG/KG, MG/M², KG/NG, KG/L, MEQ, KG, NG, U, %) or N/A',
         stVal);
