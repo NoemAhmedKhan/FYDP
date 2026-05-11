@@ -186,7 +186,7 @@ function calcCompletion(pharmacy, profile) {
     pharmacy.city,
     pharmacy.province,
     pharmacy.coordinates,
-    pharmacy.operating_hours,
+    (pharmacy.is_24_7 || pharmacy.hours_json || pharmacy.opening_time),
     profile.full_name,
     profile.phone_no,
   ];
@@ -294,26 +294,25 @@ async function loadProfile() {
        we use a JSON trick in operating_hours extras.
        Since there's no dedicated column, we store it gracefully
        in a parsed section of operating_hours JSON under "_meta". */
-    let parsedHours = null;
-    let emergencyPhone = '';
+    let parsedHours    = null;
+let emergencyPhone = '';
 
-    if (pharmData.operating_hours) {
-      try {
-        const parsed = JSON.parse(pharmData.operating_hours);
-        // Check if it has the _meta section we write on save
+const hoursSource = pharmData.hours_json || pharmData.operating_hours || null;
+if (hoursSource) {
+    try {
+        const parsed = JSON.parse(hoursSource);
         if (parsed._meta) {
-          emergencyPhone = parsed._meta.emergency_phone || '';
-          // Remaining keys are the actual hours
-          const { _meta, ...hoursOnly } = parsed;
-          parsedHours = hoursOnly;
+            emergencyPhone = parsed._meta.emergency_phone || '';
+            const { _meta, ...hoursOnly } = parsed;
+            parsedHours = hoursOnly;
         } else {
-          parsedHours = parsed;
+            parsedHours = parsed;
         }
-      } catch (e) {
-        // operating_hours may be a plain string from old data
-        console.warn('operating_hours is not JSON:', pharmData.operating_hours);
-      }
+    } catch (e) {
+        console.warn('hours source is not JSON:', hoursSource);
+        // Graceful degradation: show default hours UI if data is old-format text
     }
+}
 
     setValue('emergencyPhone', emergencyPhone);
 
@@ -428,18 +427,47 @@ async function saveProfile() {
     }
 
     /* ── Update pharmacies table ── */
-    const pharmacyPayload = {
-      pharmacy_name:   pharmacyName,
-      address:         streetAddr,
-      city:            city,
-      province:        getValue('province'),
-      landmark:        getValue('landmark') || null,
-      coordinates:     getValue('gpsCoords'),
-      delivery:        document.getElementById('deliveryToggle')
-                         ? document.getElementById('deliveryToggle').checked
-                         : true,
-      operating_hours: hoursJSON,
-    };
+    // Derive summary columns from the per-day hours object
+const hoursObj = collectHoursFromUI();
+hoursObj._meta = { emergency_phone: getValue('emergencyPhone') };
+const hoursJSON = JSON.stringify(hoursObj);
+
+// Detect if all days are open with same time (simple "any open" check)
+// is_24_7 is false here because PharmInfoUpdate handles custom per-day hours
+// opening_time / closing_time set to first open day's times as a representative summary
+const openDays  = Object.entries(hoursObj).filter(([k, v]) => k !== '_meta' && v.open);
+const firstOpen = openDays[0]?.[1] || {};
+
+// Convert "09:00 AM" style → "09:00" for TIME column
+function toTime24(str) {
+    if (!str) return null;
+    // If already HH:MM format
+    if (/^\d{2}:\d{2}$/.test(str)) return str;
+    // Parse "09:00 AM" / "10:00 PM"
+    const m = str.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!m) return null;
+    let h = parseInt(m[1], 10);
+    const min = m[2];
+    const ampm = m[3].toUpperCase();
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return `${String(h).padStart(2, '0')}:${min}`;
+}
+
+const pharmacyPayload = {
+    pharmacy_name:   pharmacyName,
+    address:         streetAddr,
+    city:            city,
+    province:        getValue('province'),
+    landmark:        getValue('landmark') || null,
+    coordinates:     getValue('gpsCoords'),
+    delivery:        document.getElementById('deliveryToggle')?.checked ?? true,
+    hours_json:      hoursJSON,           // ← new dedicated column (full per-day data)
+    operating_hours: hoursJSON,           // ← keep for backward compat during transition
+    is_24_7:         false,               // PharmInfoUpdate always uses custom per-day hours
+    opening_time:    toTime24(firstOpen.from) || null,
+    closing_time:    toTime24(firstOpen.to)   || null,
+};
 
     const { error: pharmUpdateErr } = await db
       .from('pharmacies')
