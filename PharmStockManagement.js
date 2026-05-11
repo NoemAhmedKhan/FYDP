@@ -486,25 +486,33 @@ const CSV_REQUIRED_FIELDS = [
         addErr(f, 'E-CASE', 'Value must be uppercase', raw[f]);
     });
 
-    // ── E17/E18 — dosage_form enum ───────────────────────────
+    // ── E17/E18 — dosage_form enum (N/A allowed with disclaimer) ──
     const dfVal = normUp(raw.dosage_form);
-    if (!VALID_DOSAGE_FORMS_SET.has(dfVal))
+    if (dfVal !== 'N/A' && !VALID_DOSAGE_FORMS_SET.has(dfVal))
       addErr('dosage_form', 'E17',
-        `Invalid dosage form. Allowed: ${[...VALID_DOSAGE_FORMS_SET].join(', ')}`, raw.dosage_form);
+        `Invalid dosage form. Allowed: ${[...VALID_DOSAGE_FORMS_SET].join(', ')} or N/A`, raw.dosage_form);
 
-    // ── E19 — release_type enum ──────────────────────────────
-// ── E19 — release_type enum (now required, no blank) ─────
+    // ── E19 — release_type required (N/A allowed with disclaimer) ──
     const rtVal = normUp(raw.release_type);
-    if (!VALID_RELEASE_TYPES_SET.has(rtVal) || rtVal === '')
-       addErr('release_type', 'E19',
-         `Required. Allowed: ${[...VALID_RELEASE_TYPES_SET].filter(Boolean).join(' | ')}`,
-          raw.release_type);
+    if (rtVal !== 'N/A' && (!VALID_RELEASE_TYPES_SET.has(rtVal) || rtVal === ''))
+      addErr('release_type', 'E19',
+        `Required. Allowed: ${[...VALID_RELEASE_TYPES_SET].filter(Boolean).join(' | ')} or N/A`,
+        raw.release_type);
 
-    // ── E06 — category enum ──────────────────────────────────
-    const catVal = normUp(raw.category);
-    if (norm(raw.category) && !VALID_CATEGORIES_SET.has(catVal))
-      addErr('category', 'E06',
-        `Unrecognised category. Check the template for the full allowed list.`, raw.category);
+   // ── E06 — category: required, normalize & and 'and', enum check ──
+    // & is PART OF category names (COUGH & COLD, VITAMINS & SUPPLEMENTS)
+    // Only normalize 'AND' → '&' and spacing around &
+    // + as separator → ' & '
+    let catVal = normUp(raw.category);
+    catVal = catVal.replace(/\bAND\b/g, '&');
+    catVal = catVal.replace(/\s*\+\s*/g, ' & ');
+    catVal = catVal.replace(/\s*&\s*/g, ' & ');
+    catVal = catVal.trim();
+    if (!catVal)
+       addErr('category', 'E06-REQ', 'Required field is empty', '');
+    else if (catVal !== 'N/A' && !VALID_CATEGORIES_SET.has(catVal))
+       addErr('category', 'E06',
+         `Unrecognised category. Check the template for the full allowed list.`, catVal);
 
     // ── E22 — batch_no pattern BAT-XXXX ─────────────────────
     if (!/^BAT-\d{4}$/.test(norm(raw.batch_no)))
@@ -516,24 +524,34 @@ const CSV_REQUIRED_FIELDS = [
       addErr('supplier_name', 'E24', 'Supplier name is required', '');
 
     // ── E08/E09/E11 — generic_name separator spacing ─────────
-    const gnVal = norm(raw.generic_name);
-    if (/\+(?!\s)|\s\+(?!\s)/.test(gnVal) || /(?<!\s)\+\s/.test(gnVal))
-      addErr('generic_name', 'E08',
-        '+ separator must have a space on both sides (e.g. DRUG A + DRUG B)', gnVal);
-    if (/,(?!\s)/.test(gnVal))
-      addErr('generic_name', 'E09',
-        ', separator must have no space before and one space after (e.g. DRUG A, DRUG B)', gnVal);
-    if (/[\/]/.test(gnVal))
-      addErr('generic_name', 'E11',
-        'generic_name must not contain / — use + for FDC or , for co-formulated generics', gnVal);
+    // ── generic_name: auto-fix separators, then check for invalid chars ──
+    let gnVal = norm(raw.generic_name);
+    // Auto-fix: ' & ' and ' AND ' between words → ' + '
+    gnVal = gnVal.replace(/\s+&\s+/g, ' + ').replace(/\bAND\b/gi, '+');
+    // Auto-fix: '/' → ' + '
+    gnVal = gnVal.replace(/\s*\/\s*/g, ' + ');
+    // Normalize + spacing → ' + '
+    gnVal = gnVal.replace(/\s*\+\s*/g, ' + ');
+    // Normalize , spacing → ', '
+    gnVal = gnVal.replace(/\s*,\s*/g, ', ');
+    // Trim trailing separators
+    gnVal = gnVal.replace(/[\s,+]+$/, '').trim();
+    // Check for invalid chars remaining (only A-Z 0-9 space + , . - ( ) are allowed)
+    const gnInvalidChars = gnVal.replace(/[A-Z0-9\s\+,.\-\(\)]/g, '');
+    if (gnInvalidChars.length > 0)
+      addErr('generic_name', 'E11-CHAR',
+        `generic_name contains invalid characters after auto-fix: "${gnInvalidChars}". Only letters, numbers, +, and , are allowed.`,
+        gnVal);
 
     // ── E12/E13 — strength format ────────────────────────────
     const stVal = normUp(raw.strength);
     if (stVal !== 'N/A' && /\d\s+[A-Z]/.test(stVal))
       addErr('strength', 'E12', 'Strength must not contain spaces (e.g. 500MG not 500 MG)', stVal);
-    if (stVal !== 'N/A' && !/\d(MG|MCG|G|ML|L|IU|MEQ|%|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML)/i.test(stVal))
+    const STRENGTH_UNIT_RE = /\d(BILLION CFU|CCID50|TCID50|MG\/KG|MG\/M2|MG\/M²|KG\/NG|KG\/L|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML|MG|MCG|MIU|MEQ|CFU|IU|ML|KG|NG|LF|G|U|%)/i;
+    if (stVal !== 'N/A' && !STRENGTH_UNIT_RE.test(stVal))
       addErr('strength', 'E13',
-        'Strength must include a valid unit (MG, MCG, G, ML, %, MG/ML, etc.) or N/A', stVal);
+        'Strength must include a valid unit (MG, MCG, G, ML, IU, MIU, CFU, BILLION CFU, CCID50, TCID50, LF, MG/KG, MG/M², KG/NG, KG/L, MEQ, KG, NG, U, %) or N/A',
+        stVal);
 
     // ── E14 — strength component count vs generic_name ───────
     const gnComponents = countGenericComponents(norm(raw.generic_name));
