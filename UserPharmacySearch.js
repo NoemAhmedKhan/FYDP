@@ -56,7 +56,7 @@
         discounted_price: 'discounted_price',
         original_price:   'original_price',
         pack_size:        'pack_size',
-        quantity:         'quantity',
+        box_quantity:         'box_quantity',
         prescription:     'prescription_required',
         /* pharmacy */
         pharmacy_id:      'pharmacy_id',
@@ -518,12 +518,12 @@
                     'product_id', 'product_name', 'brand', 'category',
                     'generic_name', 'strength', 'dosage_form', 'release_type',
                     'discounted_price', 'original_price', 'pack_size',
-                    'quantity', 'prescription_required',
+                    'box_quantity', 'prescription_required',
                     'pharmacy_id', 'pharmacy_name', 'phone_no',
                     'profile_img', 'coordinates',
                 ].join(', '))
                 .eq('product_id', productId)
-                .gt('quantity', 0)
+                .gt('box_quantity', 0)
                 .limit(20);
 
             if (error) throw error;
@@ -638,12 +638,12 @@
                 .select([
                     'product_id', 'product_name', 'brand', 'category',
                     'generic_name', 'strength', 'dosage_form',
-                    'discounted_price', 'original_price', 'quantity',
+                    'discounted_price', 'original_price', 'box_quantity',
                     'prescription_required',
                 ].join(', '))
                 .eq('pharmacy_id', pharmacyId)
                 .eq('dosage_form',  df)
-                .gt('quantity', 0)
+                .gt('box_quantity', 0)
                 .neq('product_id', sourceRow[COL.product_id])
                 .limit(5);
 
