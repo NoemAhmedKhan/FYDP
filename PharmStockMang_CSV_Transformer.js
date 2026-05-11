@@ -460,8 +460,8 @@ function normalizeStrength(raw) {
     // Remove spaces around /
     s = s.replace(/\s*\/\s*/g, '/');
     // Remove spaces between digit and known unit
-    s = s.replace(/(\d)\s+(BILLION CFU|CCID50|TCID50|MG\/KG|MG\/M2|KG\/NG|KG\/L|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML|MG|MCG|MIU|MEQ|CFU|IU|ML|KG|NG|LF|G|U|%)(\b|\/)/g, '$1$2$3');
-    const UNIT_PATTERN = /\d(BILLION CFU|CCID50|TCID50|MG\/KG|MG\/M2|MG\/M²|KG\/NG|KG\/L|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML|MG|MCG|MIU|MEQ|CFU|IU|ML|KG|NG|LF|G|U|%)/i;
+    s = s.replace(/(\d)\s+(BILLION\s?CFU|MCG\/ACTUATION|G\/100ML|MG\/5ML|CCID50|TCID50|MG\/M²|MG\/M2|MG\/KG|KG\/NG|MG\/ML|KG\/L|MG\/G|MCG|MIU|MEQ|CFU|IU|ML|LF|NG|KG|MG|G|U|L|%)(\b|\/)/g, '$1$2$3');
+    const UNIT_PATTERN = /\d(BILLION\s?CFU|MCG\/ACTUATION|G\/100ML|MG\/5ML|CCID50|TCID50|MG\/M²|MG\/M2|MG\/KG|KG\/NG|MG\/ML|KG\/L|MG\/G|MCG|MIU|MEQ|CFU|IU|ML|LF|NG|KG|MG|G|U|L|%)/i;
     const hasUnit = UNIT_PATTERN.test(s) || s === 'N/A';
     return { value: s, fixed: hasUnit };
   }
