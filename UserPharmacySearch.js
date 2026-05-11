@@ -62,7 +62,6 @@
         pharmacy_id:      'pharmacy_id',
         pharmacy_name:    'pharmacy_name',
         phone:            'phone_no',
-        profile_img:      'profile_img',
         coordinates:      'coordinates',
     };
 
@@ -520,7 +519,7 @@
                     'discounted_price', 'original_price', 'pack_size',
                     'box_quantity', 'prescription_required',
                     'pharmacy_id', 'pharmacy_name', 'phone_no',
-                    'profile_img', 'coordinates',
+                    'coordinates',
                 ].join(', '))
                 .eq('product_id', productId)
                 .gt('box_quantity', 0)
@@ -550,7 +549,6 @@
                         id:          pid,
                         name:        row[COL.pharmacy_name]  || 'Pharmacy',
                         phone:       row[COL.phone]          || '',
-                        profile_img: row[COL.profile_img]    || null,
                         coord,
                         // Distance fields — filled by enrichWithRoadDistances()
                         distanceM:    coord && userLat !== null
@@ -709,14 +707,9 @@
                 </div>`;
         }
 
-        /* ── Profile image ── */
+        /* ── Profile image — initials only (no profile_img in view) ── */
         const initials       = (pharmacy.name || '?').split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
-        const profileImgHTML = pharmacy.profile_img
-            ? `<img src="${escapeHtml(pharmacy.profile_img)}" alt="${escapeHtml(pharmacy.name)}"
-                    class="card-image__photo"
-                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-               <div class="card-image__initials" style="display:none">${escapeHtml(initials)}</div>`
-            : `<div class="card-image__initials">${escapeHtml(initials)}</div>`;
+        const profileImgHTML = `<div class="card-image__initials">${escapeHtml(initials)}</div>`;
 
         /* ── View Route button (opens Google Maps in new tab, no API call) ── */
         let routeBtnHTML = '';
