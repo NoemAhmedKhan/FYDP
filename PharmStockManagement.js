@@ -543,14 +543,21 @@ const CSV_REQUIRED_FIELDS = [
         `generic_name contains invalid characters after auto-fix: "${gnInvalidChars}". Only letters, numbers, +, and , are allowed.`,
         gnVal);
 
-    // ── E12/E13 — strength format ────────────────────────────
+   // ── E12/E13 — strength format ────────────────────────────
     const stVal = normUp(raw.strength);
     if (stVal !== 'N/A' && /\d\s+[A-Z]/.test(stVal))
       addErr('strength', 'E12', 'Strength must not contain spaces (e.g. 500MG not 500 MG)', stVal);
+
     const STRENGTH_UNIT_RE = /\d(BILLION\s?CFU|MCG\/ACTUATION|G\/100ML|MG\/5ML|CCID50|TCID50|MG\/M²|MG\/M2|MG\/KG|KG\/NG|MG\/ML|KG\/L|MG\/G|MCG|MIU|MEQ|CFU|IU|ML|LF|NG|KG|MG|G|U|L|%)/i;
+    if (stVal !== 'N/A' && !STRENGTH_UNIT_RE.test(stVal))
       addErr('strength', 'E13',
-        'Strength must include a valid unit (MG, MCG, G, ML, IU, MIU, CFU, BILLION CFU, CCID50, TCID50, LF, MG/KG, MG/M², KG/NG, KG/L, MEQ, KG, NG, U, %) or N/A',
+        'Strength must include a valid unit (MG, MCG, G, ML, IU, MIU, CFU, BILLION CFU, CCID50, TCID50, LF, MG/KG, MG/M², KG/NG, KG/L, MEQ, KG, NG, U, L, %) or N/A',
         stVal);
+
+    // ── E16 — strength must not use , or + as separator ──────
+    if (/[,\+]/.test(stVal))
+      addErr('strength', 'E16',
+        'Strength must only use / as separator between dose values', stVal);
 
     // ── E14 — strength component count vs generic_name ───────
     const gnComponents = countGenericComponents(norm(raw.generic_name));
@@ -566,11 +573,6 @@ const CSV_REQUIRED_FIELDS = [
         `Component count mismatch: generic_name has ${gnComponents} drug(s) but strength has ${stComponents} value(s). Use / to separate each dose (e.g. 15MG/500MG)`,
         stVal);
     }
-
-    // ── E16 — strength must not use , or + as separator ──────
-    if (/[,\+]/.test(stVal))
-      addErr('strength', 'E16',
-        'Strength must only use / as separator between dose values', stVal);
 
     // ── Numeric type checks ───────────────────────────────────
     if (!isPosNum(raw.original_price))
