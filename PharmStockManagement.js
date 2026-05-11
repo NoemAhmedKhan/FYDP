@@ -28,8 +28,8 @@
     'reorder_level','manufacture_date','expiry_date'
   ];
 
-  const CSV_REQUIRED_FIELDS = [
-    'product_name','generic_name','strength','dosage_form',
+const CSV_REQUIRED_FIELDS = [
+    'product_name','generic_name','strength','dosage_form','release_type','category',
     'manufacturer','batch_no','original_price','pack_size',
     'box_quantity','loose_units','prescription_required','reorder_level','expiry_date'
   ];
@@ -44,6 +44,7 @@
   let sessionToken   = null;
   let parsedCSVRows  = [];   // client-validated clean rows for preview
   let csvHasErrors   = false;
+  let csvHasNARows   = false; // rows with N/A in strict optional fields
 
   // ── Avatar palette ──────────────────────────────────────────
   const COLORS = [
@@ -492,11 +493,12 @@
         `Invalid dosage form. Allowed: ${[...VALID_DOSAGE_FORMS_SET].join(', ')}`, raw.dosage_form);
 
     // ── E19 — release_type enum ──────────────────────────────
+// ── E19 — release_type enum (now required, no blank) ─────
     const rtVal = normUp(raw.release_type);
-    if (norm(raw.release_type) && !VALID_RELEASE_TYPES_SET.has(rtVal))
-      addErr('release_type', 'E19',
-        `Invalid release type. Allowed: ${[...VALID_RELEASE_TYPES_SET].filter(Boolean).join(' | ')}`,
-        raw.release_type);
+    if (!VALID_RELEASE_TYPES_SET.has(rtVal) || rtVal === '')
+       addErr('release_type', 'E19',
+         `Required. Allowed: ${[...VALID_RELEASE_TYPES_SET].filter(Boolean).join(' | ')}`,
+          raw.release_type);
 
     // ── E06 — category enum ──────────────────────────────────
     const catVal = normUp(raw.category);
@@ -974,8 +976,14 @@ async function handleValidateCSV() {
     csvHasErrors  = true;
     parsedCSVRows = [];
 
-  } else {
-    // All valid — show preview
+} else {
+    // All valid — check for N/A in strict optional fields
+    const NA_STRICT_FIELDS = ['dosage_form','release_type','category','generic_name'];
+    const naRows = cleanRows.filter(r =>
+      NA_STRICT_FIELDS.some(f => normUp(String(r[f] ?? '')) === 'N/A')
+    );
+    csvHasNARows = naRows.length > 0;
+
     $('previewWrap').style.display  = 'block';
     $('previewTitle').textContent   = `${cleanRows.length} rows ready to upload`;
     $('previewTableBody').innerHTML = cleanRows.slice(0, 10).map(r => `
@@ -996,8 +1004,22 @@ async function handleValidateCSV() {
     csvHasErrors  = false;
     parsedCSVRows = cleanRows;
 
-    $('btnUploadCSV').style.display = 'inline-flex';
-    $('btnUploadCSV').disabled      = false;
+    // Show N/A disclaimer if any rows have N/A in strict fields
+    const naDisclaimerEl = $('naDisclaimer');
+    const naCheckEl      = $('naDisclaimerCheck');
+    if (csvHasNARows && naDisclaimerEl) {
+      naDisclaimerEl.style.display = 'block';
+      if (naCheckEl) naCheckEl.checked = false;
+      $('btnUploadCSV').style.display = 'inline-flex';
+      $('btnUploadCSV').disabled      = true; // disabled until checkbox ticked
+      naCheckEl?.addEventListener('change', () => {
+        $('btnUploadCSV').disabled = !naCheckEl.checked;
+      }, { once: true });
+    } else {
+      if (naDisclaimerEl) naDisclaimerEl.style.display = 'none';
+      $('btnUploadCSV').style.display = 'inline-flex';
+      $('btnUploadCSV').disabled      = false;
+    }
   }
 }
 
@@ -1108,6 +1130,9 @@ async function handleValidateCSV() {
     $('progressBarFill').style.width   = '0%';
     parsedCSVRows = [];
     csvHasErrors  = false;
+    csvHasNARows  = false;
+    const naDisclaimerEl = $('naDisclaimer');
+    if (naDisclaimerEl) naDisclaimerEl.style.display = 'none';
   }
 
   // ══════════════════════════════════════════════════════════════
