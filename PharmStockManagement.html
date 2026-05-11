@@ -433,6 +433,23 @@
       </div>
 
       <!-- Upload result -->
+      <!-- N/A Disclaimer — shown only when rows contain N/A in strict fields -->
+        <div id="naDisclaimer" class="na-disclaimer" style="display:none">
+          <div class="na-disclaimer-icon">⚠️</div>
+          <div class="na-disclaimer-body">
+            <strong>Some rows have N/A in required fields</strong>
+            <p>One or more rows contain <code>N/A</code> in fields like
+               <em>dosage form</em>, <em>release type</em>, <em>category</em>, or
+               <em>generic name</em>. These products may <strong>not appear in
+               patient medicine searches</strong> because search relies on these fields
+               to match queries. You should update them as soon as accurate information
+               is available.</p>
+            <label class="na-disclaimer-check">
+              <input type="checkbox" id="naDisclaimerCheck" />
+              I understand and want to proceed with uploading these rows as-is
+            </label>
+          </div>
+        </div>
       <div class="upload-result" id="uploadResult" style="display:none"></div>
 
     </div>
