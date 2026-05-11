@@ -454,15 +454,15 @@ const CSVStockTransformer = (() => {
   // ============================================================
   //  STRENGTH NORMALIZER
   // ============================================================
-  function normalizeStrength(raw) {
+function normalizeStrength(raw) {
     if (!raw) return { value: '', fixed: false };
-    // Uppercase, remove spaces between number and unit, remove spaces around /
     let s = raw.toString().trim().toUpperCase();
-    // Remove spaces around / (N8)
+    // Remove spaces around /
     s = s.replace(/\s*\/\s*/g, '/');
-    // Remove spaces between digit and unit suffix e.g. "500 MG" → "500MG"
-    s = s.replace(/(\d)\s+(MG|MCG|G|ML|L|IU|MEQ|%|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML)(\b|\/)/g, '$1$2$3');
-    const hasUnit = /\d(MG|MCG|G|ML|L|IU|MEQ|%|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML|N\/A)/i.test(s);
+    // Remove spaces between digit and known unit
+    s = s.replace(/(\d)\s+(BILLION CFU|CCID50|TCID50|MG\/KG|MG\/M2|KG\/NG|KG\/L|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML|MG|MCG|MIU|MEQ|CFU|IU|ML|KG|NG|LF|G|U|%)(\b|\/)/g, '$1$2$3');
+    const UNIT_PATTERN = /\d(BILLION CFU|CCID50|TCID50|MG\/KG|MG\/M2|MG\/M²|KG\/NG|KG\/L|MG\/ML|MG\/G|MG\/5ML|MCG\/ACTUATION|G\/100ML|MG|MCG|MIU|MEQ|CFU|IU|ML|KG|NG|LF|G|U|%)/i;
+    const hasUnit = UNIT_PATTERN.test(s) || s === 'N/A';
     return { value: s, fixed: hasUnit };
   }
 
@@ -515,15 +515,20 @@ const CSVStockTransformer = (() => {
   // ============================================================
   //  GENERIC NAME NORMALIZER — N4, N5 rules
   // ============================================================
-  function normalizeGenericName(raw) {
+function normalizeGenericName(raw) {
     if (!raw) return '';
     let s = raw.toString().trim().toUpperCase();
-    // N5: Normalize comma spacing → ", " (no space before, one space after)
-    s = s.replace(/\s*,\s*/g, ', ');
-    // N4: Normalize + spacing → " + " (space before AND after)
+    // Auto-fix: ' & ' and ' AND ' between words → ' + '
+    s = s.replace(/\s+&\s+/g, ' + ');
+    s = s.replace(/\b AND \b/g, ' + ');
+    // Auto-fix: '/' → ' + ' (FDC separator mistake)
+    s = s.replace(/\s*\/\s*/g, ' + ');
+    // N4: Normalize + spacing → " + "
     s = s.replace(/\s*\+\s*/g, ' + ');
-    // Remove trailing / or truncated artifact
-    s = s.replace(/[\s\/]+$/, '').trim();
+    // N5: Normalize comma spacing → ", "
+    s = s.replace(/\s*,\s*/g, ', ');
+    // Remove trailing separators
+    s = s.replace(/[\s,+]+$/, '').trim();
     return s;
   }
 
@@ -596,10 +601,20 @@ const CSVStockTransformer = (() => {
     out['brand'] = cleanBrand;
     if (cleanBrand !== rawBrand.toUpperCase()) warn('brand', rawBrand, cleanBrand, 'Removed trailing dot / uppercased');
 
-    // 5. category — N10 (uppercase), check against known list
-    const rawCat = (row['category'] || '').toString().trim().toUpperCase();
-    out['category'] = rawCat;
-    // Category validation is left to validateCSVRow (E06)
+// 5. category — uppercase + normalize separators
+    // & is valid INSIDE category names (e.g. COUGH & COLD)
+    // + as separator between two category words → replace with ' & ' only if it
+    // matches a known pattern; otherwise leave for validator to catch
+    let rawCat = (row['category'] || '').toString().trim().toUpperCase();
+    // Auto-fix: ' AND ' between words → ' & ' (common in category names)
+    rawCat = rawCat.replace(/\bAND\b/g, '&');
+    // Auto-fix: normalize & spacing → ' & '
+    rawCat = rawCat.replace(/\s*&\s*/g, ' & ');
+    // Auto-fix: '+' used as separator → ' & '
+    rawCat = rawCat.replace(/\s*\+\s*/g, ' & ');
+    out['category'] = rawCat.trim();
+    if (rawCat.trim() !== (row['category'] || '').toString().trim().toUpperCase())
+      warn('category', row['category'], rawCat.trim(), 'Normalized separator to & format');
 
     // 6. generic_name — N4, N5, N10
     const rawGN = (row['generic_name'] || '').toString().trim();
