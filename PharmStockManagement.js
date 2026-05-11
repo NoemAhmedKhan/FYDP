@@ -647,7 +647,7 @@ const CSV_REQUIRED_FIELDS = [
         pack_size:             packSize,
         box_quantity:          boxQty,
         loose_units:           looseUnits,
-        prescription_required: prVal === 'YES',
+        prescription_required: prVal,             // keep as 'YES' or 'NO' string for Edge Function
         reorder_level:         rlNum,
         manufacture_date:      norm(raw.manufacture_date) || null,
         expiry_date:           norm(raw.expiry_date),
