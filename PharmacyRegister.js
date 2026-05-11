@@ -479,12 +479,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const email         = document.getElementById('email').value.trim();
         const password      = document.getElementById('password')?.value || '';
 
-        let operatingHours = opHoursVal;
-        if (opHoursVal === 'custom') {
-            const open  = document.getElementById('custom-open').value;
-            const close = document.getElementById('custom-close').value;
-            operatingHours = `Custom: ${open} – ${close}`;
-        }
+        const is247      = (opHoursVal === '24_7');
+const customOpen  = is247 ? null : (document.getElementById('custom-open').value  || null);
+const customClose = is247 ? null : (document.getElementById('custom-close').value || null);
+// Keep a human-readable label for display fallback (used in admin card rendering)
+const operatingHoursLabel = is247
+    ? '24/7'
+    : (customOpen && customClose ? `Custom: ${customOpen} – ${customClose}` : '');
 
         const submitBtn = document.getElementById('btn-submit');
         submitBtn.disabled = true;
@@ -531,7 +532,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 reg_no:          regNo,
                 cnic,
                 pharmacy_type:   pharmacyType,
-                operating_hours: operatingHours,
+                operating_hours: operatingHoursLabel,  // kept for display in admin card
+    is_24_7:         is247,
+    opening_time:    customOpen   || null,
+    closing_time:    customClose  || null,
                 delivery,
                 province,
                 city,
