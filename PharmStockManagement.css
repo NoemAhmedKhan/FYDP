@@ -1075,3 +1075,32 @@ input, select, textarea { font-family: inherit; }
   .topbar-title h1 { font-size: 20px; }
   .toast { left: 16px; right: 16px; bottom: 16px; }
 }
+
+/* ── N/A Disclaimer ─────────────────────────────────────────── */
+.na-disclaimer {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #fffbeb;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+.na-disclaimer-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.na-disclaimer-body { flex: 1; }
+.na-disclaimer-body strong { display: block; color: #92400e; font-size: 13.5px; margin-bottom: 6px; }
+.na-disclaimer-body p { margin: 0 0 10px; font-size: 13px; color: #78350f; line-height: 1.5; }
+.na-disclaimer-body code {
+  background: #fef3c7; padding: 1px 5px; border-radius: 3px;
+  font-size: 12px; color: #92400e;
+}
+.na-disclaimer-check {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 13px; color: #78350f; cursor: pointer; font-weight: 500;
+}
+.na-disclaimer-check input[type="checkbox"] {
+  margin-top: 2px; flex-shrink: 0;
+  width: 15px; height: 15px; cursor: pointer;
+  accent-color: #f59e0b;
+}
