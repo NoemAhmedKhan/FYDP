@@ -28,11 +28,7 @@
     'reorder_level','manufacture_date','expiry_date'
   ];
 
-const CSV_REQUIRED_FIELDS = [
-    'product_name','generic_name','strength','dosage_form','release_type','category',
-    'manufacturer','batch_no','original_price','pack_size',
-    'box_quantity','loose_units','prescription_required','reorder_level','expiry_date'
-  ];
+  const CSV_REQUIRED_FIELDS = ['product_name'];
 
   // ── State ───────────────────────────────────────────────────
   let currentPage    = 1;
@@ -409,6 +405,7 @@ const CSV_REQUIRED_FIELDS = [
   // ══════════════════════════════════════════════════════════════
   function isValidDate(s) {
     if (!s) return false;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
     const d = new Date(s);
     return !isNaN(d.getTime());
   }
@@ -430,41 +427,6 @@ const CSV_REQUIRED_FIELDS = [
     'MODIFIED RELEASE','DELAYED RELEASE','CONTROLLED RELEASE',''
   ]);
 
-  const VALID_CATEGORIES_SET = new Set([
-    'ANTI-ULCERANT','ANTI-DIABETIC','ANTI-BACTERIAL','ANTI-INFLAMMATORY',
-    'ANTI-HYPERTENSIVE','ANTI-LIPIDEMIC','ANTI-EPILEPTIC','ANTI-ALLERGY',
-    'ANTI-FUNGAL','ANTI-SPASMODIC','ANTI-COAGULANT','ANTI-ANEMIC', 'ANTI-CONVULSANT',
-    'ANTI-DIARRHEAL','ANTI-DEPRESSANT','ANTI-PSYCHOTIC','ANTI-GOUT',
-    'ANTI-VIRAL','ANTI-EMETIC','ANTI-OBESITY','ANTI-VERTIGO',
-    'ASTHMA / COPD','COUGH & COLD','VITAMINS & SUPPLEMENTS','SKIN CARE',
-    'OPHTHALMOLOGY','PAIN RELIEF','CARDIAC THERAPY','DIURETICS',
-    'LAXATIVE','UROLOGY','MUSCLE RELAXANT','CORTICOSTEROID',
-    'CORTICOSTEROID + ANTI-BACTERIAL','HORMONAL PRODUCTS','IMMUNOMODULATOR',
-    'OSTEOPOROSIS','GASTROPROKINETIC', 'NEUROLOGY', 'SCABICIDE','HERBAL',
-    "PARKINSON'S DISEASE","ALZHEIMER'S DISEASE", 'LOCAL ANAESTHETIC', 'ANTI-RHEUMATIC', 'ANTI-AMOEBIC',
-'ANTI-PYRETIC', 'ANTHELMINTIC', 'ORAL HEALTH CARE',
-'EAR PREPARATIONS', 'ONCOLOGY', 'ANTISEPTIC',
-'CORTICOSTEROID + ANTI-BACTERIAL + ANTI-FUNGAL',
-'LIVER & BILE', 'ANTI-HAEMORRHOIDAL', 'HAIR CARE'
-  ]);
-
-  // Count generic_name components using + and , separators
-  function countGenericComponents(genericName) {
-    if (!genericName) return 0;
-    const plusParts = genericName.split(' + ');
-    let count = 0;
-    plusParts.forEach(part => {
-      count += part.split(', ').length;
-    });
-    return count;
-  }
-
-  // Count strength components using / separator
-  function countStrengthComponents(strength) {
-    if (!strength || strength === 'N/A') return 1;
-    return strength.split('/').length;
-  }
-
   function validateCSVRow(raw, rowIndex) {
     const errors = [];
     const addErr = (field, code, message, value = '') =>
@@ -475,16 +437,6 @@ const CSV_REQUIRED_FIELDS = [
       if (!norm(raw[f])) addErr(f, 'E-REQ', 'Required field is empty');
     }
     if (errors.length) return { errors, clean: null };
-
-    // ── E03/E05/E07/E10/E18/E21 — uppercase check ───────────
-    const upperFields = [
-      'product_name','brand','category','generic_name',
-      'strength','dosage_form','manufacturer','supplier_name'
-    ];
-    upperFields.forEach(f => {
-      if (norm(raw[f]) && norm(raw[f]) !== norm(raw[f]).toUpperCase())
-        addErr(f, 'E-CASE', 'Value must be uppercase', raw[f]);
-    });
 
     // ── E17/E18 — dosage_form enum (N/A allowed with disclaimer) ──
     const dfVal = normUp(raw.dosage_form);
@@ -499,81 +451,36 @@ const CSV_REQUIRED_FIELDS = [
         `Required. Allowed: ${[...VALID_RELEASE_TYPES_SET].filter(Boolean).join(' | ')} or N/A`,
         raw.release_type);
 
-   // ── E06 — category: required, normalize & and 'and', enum check ──
-    // & is PART OF category names (COUGH & COLD, VITAMINS & SUPPLEMENTS)
-    // Only normalize 'AND' → '&' and spacing around &
-    // + as separator → ' & '
+   // ── category: normalize separators and special chars ─────
+    // Allowed: letters, numbers, spaces, + and ,
+    // & → +  |  AND/and → +  |  hyphen → space  |  other specials removed
     let catVal = normUp(raw.category);
-    catVal = catVal.replace(/\bAND\b/g, '&');
-    catVal = catVal.replace(/\s*\+\s*/g, ' & ');
-    catVal = catVal.replace(/\s*&\s*/g, ' & ');
-    catVal = catVal.trim();
-    if (!catVal)
-       addErr('category', 'E06-REQ', 'Required field is empty', '');
-    else if (catVal !== 'N/A' && !VALID_CATEGORIES_SET.has(catVal))
-       addErr('category', 'E06',
-         `Unrecognised category. Check the template for the full allowed list.`, catVal);
-
-    // ── E22 — batch_no pattern BAT-XXXX ─────────────────────
-    if (!/^BAT-\d{4}$/.test(norm(raw.batch_no)))
-      addErr('batch_no', 'E22',
-        'Batch No must match format BAT-XXXX (e.g. BAT-7224)', raw.batch_no);
-
-    // ── E24/E25 — supplier_name non-empty ───────────────────
-    if (!norm(raw.supplier_name))
-      addErr('supplier_name', 'E24', 'Supplier name is required', '');
+    catVal = catVal.replace(/\s*&\s*/g, ' + ');
+    catVal = catVal.replace(/\bAND\b/g, '+');
+    catVal = catVal.replace(/-/g, ' ');
+    catVal = catVal.replace(/[^A-Z0-9\s\+,\.]/g, '');
+    catVal = catVal.replace(/\s+/g, ' ').trim();
 
     // ── E08/E09/E11 — generic_name separator spacing ─────────
-    // ── generic_name: auto-fix separators, then check for invalid chars ──
-    let gnVal = norm(raw.generic_name);
-    // Auto-fix: ' & ' and ' AND ' between words → ' + '
-    gnVal = gnVal.replace(/\s+&\s+/g, ' + ').replace(/\bAND\b/gi, '+');
-    // Auto-fix: '/' → ' + '
+    // ── generic_name: normalize separators and special chars ─
+    // Allowed: letters, numbers, spaces, + and ,
+    // & → +  |  AND/and → +  |  hyphen → space  |  other specials removed
+    let gnVal = normUp(raw.generic_name);
+    gnVal = gnVal.replace(/\s*&\s*/g, ' + ');
+    gnVal = gnVal.replace(/\bAND\b/g, '+');
+    gnVal = gnVal.replace(/-/g, ' ');
     gnVal = gnVal.replace(/\s*\/\s*/g, ' + ');
-    // Normalize + spacing → ' + '
     gnVal = gnVal.replace(/\s*\+\s*/g, ' + ');
-    // Normalize , spacing → ', '
     gnVal = gnVal.replace(/\s*,\s*/g, ', ');
-    // Trim trailing separators
-    gnVal = gnVal.replace(/[\s,+]+$/, '').trim();
-    // Check for invalid chars remaining (only A-Z 0-9 space + , . - ( ) are allowed)
-    const gnInvalidChars = gnVal.replace(/[A-Z0-9\s\+,.\-\(\)]/g, '');
-    if (gnInvalidChars.length > 0)
-      addErr('generic_name', 'E11-CHAR',
-        `generic_name contains invalid characters after auto-fix: "${gnInvalidChars}". Only letters, numbers, +, and , are allowed.`,
-        gnVal);
-
-   // ── E12/E13 — strength format ────────────────────────────
-    const stVal = normUp(raw.strength);
-    if (stVal !== 'N/A' && /\d\s+[A-Z]/.test(stVal))
-      addErr('strength', 'E12', 'Strength must not contain spaces (e.g. 500MG not 500 MG)', stVal);
-
+    gnVal = gnVal.replace(/[^A-Z0-9\s\+,\.]/g, '');
+    gnVal = gnVal.replace(/\s+/g, ' ').replace(/[\s,+]+$/, '').trim();
+    
     const STRENGTH_UNIT_RE = /\d(BILLION\s?CFU|MCG\/ACTUATION|G\/100ML|MG\/5ML|CCID50|TCID50|MG\/M²|MG\/M2|MG\/KG|KG\/NG|MG\/ML|KG\/L|MG\/G|MCG|MIU|MEQ|CFU|IU|ML|LF|NG|KG|MG|G|U|L|%)/i;
     if (stVal !== 'N/A' && !STRENGTH_UNIT_RE.test(stVal))
       addErr('strength', 'E13',
         'Strength must include a valid unit (MG, MCG, G, ML, IU, MIU, CFU, BILLION CFU, CCID50, TCID50, LF, MG/KG, MG/M², KG/NG, KG/L, MEQ, KG, NG, U, L, %) or N/A',
         stVal);
-
-    // ── E16 — strength must not use , or + as separator ──────
-    if (/[,\+]/.test(stVal))
-      addErr('strength', 'E16',
-        'Strength must only use / as separator between dose values', stVal);
-
-    // ── E14 — strength component count vs generic_name ───────
-    const gnComponents = countGenericComponents(norm(raw.generic_name));
-    const stComponents = countStrengthComponents(stVal);
-    const singleVolumeForms = new Set(['SYRUP','SOLUTION','SUSPENSION','INFUSION','LOTION','CREAM','OINTMENT','GEL','DROPS','SPRAY','OIL']);
-    if (
-      gnComponents > 1 &&
-      stVal !== 'N/A' &&
-      stComponents !== gnComponents &&
-      !singleVolumeForms.has(dfVal)
-    ) {
-      addErr('strength', 'E14',
-        `Component count mismatch: generic_name has ${gnComponents} drug(s) but strength has ${stComponents} value(s). Use / to separate each dose (e.g. 15MG/500MG)`,
-        stVal);
-    }
-
+    
     // ── Numeric type checks ───────────────────────────────────
     if (!isPosNum(raw.original_price))
       addErr('original_price', 'E30', 'Must be a positive number (e.g. 65.00)', raw.original_price);
@@ -650,10 +557,10 @@ const CSV_REQUIRED_FIELDS = [
     return {
       errors: [],
       clean: {
-        product_name:          normUp(raw.product_name),
+        product_name:          normUp(raw.product_name).replace(/[^A-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(),
         brand:                 normUp(raw.brand),
-        category:              normUp(raw.category),
-        generic_name:          normUp(raw.generic_name),
+        category:              catVal,
+        generic_name:          gnVal,
         strength:              normUp(raw.strength),
         dosage_form:           normUp(raw.dosage_form),
         release_type:          normUp(raw.release_type),
@@ -996,10 +903,16 @@ async function handleValidateCSV() {
     parsedCSVRows = [];
 
 } else {
-    // All valid — check for N/A in strict optional fields
-    const NA_STRICT_FIELDS = ['dosage_form','release_type','category','generic_name'];
+    // Any non-product_name field that is empty or N/A triggers the disclaimer
+    const OPTIONAL_FIELDS = [
+      'generic_name','strength','dosage_form','release_type','category',
+      'manufacturer','batch_no','original_price','expiry_date'
+    ];
     const naRows = cleanRows.filter(r =>
-      NA_STRICT_FIELDS.some(f => normUp(String(r[f] ?? '')) === 'N/A')
+      OPTIONAL_FIELDS.some(f => {
+        const v = normUp(String(r[f] ?? ''));
+        return v === 'N/A' || v === '';
+      })
     );
     csvHasNARows = naRows.length > 0;
 
