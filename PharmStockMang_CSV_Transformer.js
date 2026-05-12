@@ -498,14 +498,19 @@ function normalizeStrength(raw) {
   function cleanProductName(raw, dosageFormCanonical) {
     if (!raw) return raw;
     let s = raw.toString().trim().toUpperCase();
-    // N6: Remove trailing /, +, digits+slash, trailing comma
+    // Hyphen → single space
+    s = s.replace(/-+/g, ' ');
+    // Strip all remaining special characters (keep A-Z, 0-9, space only)
+    s = s.replace(/[^A-Z0-9\s]/g, ' ');
+    // Collapse multiple spaces
+    s = s.replace(/\s+/g, ' ').trim();
+    // N6: Remove trailing /, +, digits+slash, trailing comma (safety pass)
     s = s.replace(/[\s,\/\+]+$/, '').trim();
     s = s.replace(/\s+\d+\/\s*$/, '').trim();
     // N7: Remove duplicate dosage form word at end if present
     if (dosageFormCanonical) {
       const dfWords = dosageFormCanonical.split(' ');
       const lastWord = dfWords[dfWords.length - 1];
-      // Check if product_name ends with the dosage form word repeated
       const dupPattern = new RegExp(`(\\b${lastWord}\\b)\\s+\\1\\s*$`, 'i');
       s = s.replace(dupPattern, lastWord);
     }
@@ -633,7 +638,8 @@ function normalizeGenericName(raw) {
 
     // 8. release_type — map to full name
     const rawRT = (row['release_type'] || '').toString().trim();
-    const rtKey = rawRT.toLowerCase().replace(/\s+/g, ' ');
+    // Normalize key: hyphen → space, strip non-alpha/space chars, collapse spaces
+    const rtKey = rawRT.toLowerCase().replace(/-+/g, ' ').replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
     if (!rawRT) {
       out['release_type'] = '';
     } else if (RELEASE_TYPE_MAP[rtKey]) {
