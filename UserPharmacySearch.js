@@ -226,67 +226,161 @@
     }
 
     /* ==========================================================================
-       SECTION 10 — DISTANCE MATRIX API
+       SECTION 10 — DISTANCE MATRIX API  (with Routes API fallback)
        ─────────────────────────────────────────────────────────────────────────
-       ONE batch call for all pharmacies. Never called during typing.
-       Called once per search, after pharmacies are fetched from Supabase.
+       THREE-TIER STRATEGY per search:
+         Tier 1 — google.maps.DistanceMatrixService  (legacy, still works)
+         Tier 2 — Routes API  computeRouteMatrix     (if Tier 1 denied/fails)
+         Tier 3 — Haversine straight-line             (if both APIs fail)
 
-       Cost: 1 element = 1 (origin × destination) pair.
-       20 pharmacies = 20 elements = $0.0001 at current pricing.
+       Routes API uses the same Maps JS key (billing + Routes API must be
+       enabled in Google Cloud Console).
 
        Returns: Array of { distanceM, distanceText, durationText, isApprox }
        in the same order as the `destinations` array passed in.
        ========================================================================== */
+
+    // ── Tier 2: Routes API computeRouteMatrix (REST) ──────────────────────────────────────
+    // Called only when DistanceMatrixService is denied or unavailable.
+    // Uses the same Maps API key already on the page.
+    async function getRouteMatrix(destinations) {
+        const MAPS_KEY = 'AIzaSyCm2iNXn99zOpB5SP7UBLeX16I1M7UrdNc';
+
+        const body = {
+            origins: [{
+                waypoint: { location: { latLng: { latitude: userLat, longitude: userLng } } },
+                routeModifiers: {}
+            }],
+            destinations: destinations.map(d => ({
+                waypoint: { location: { latLng: { latitude: d.lat, longitude: d.lng } } }
+            })),
+            travelMode:        'DRIVE',
+            routingPreference: 'TRAFFIC_UNAWARE',
+        };
+
+        const resp = await fetch(
+            'https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix',
+            {
+                method:  'POST',
+                headers: {
+                    'Content-Type':     'application/json',
+                    'X-Goog-Api-Key':   MAPS_KEY,
+                    'X-Goog-FieldMask': 'originIndex,destinationIndex,distanceMeters,duration,status',
+                },
+                body: JSON.stringify(body),
+            }
+        );
+
+        if (!resp.ok) {
+            const errText = await resp.text().catch(() => String(resp.status));
+            throw new Error('Routes API HTTP ' + resp.status + ': ' + errText);
+        }
+
+        const rows = await resp.json();
+
+        // Build result array indexed by destinationIndex
+        const results = destinations.map(() => null);
+
+        (Array.isArray(rows) ? rows : []).forEach(row => {
+            const i = row.destinationIndex ?? 0;
+            if (row.status && row.status !== 'OK') {
+                results[i] = buildHaversineFallback(destinations[i]);
+                return;
+            }
+            const distM  = row.distanceMeters ?? 0;
+            const distKm = (distM / 1000).toFixed(1);
+            // duration arrives as e.g. "720s"
+            const durSec  = row.duration ? parseInt(String(row.duration).replace('s', ''), 10) : null;
+            const durText = durSec !== null
+                ? (durSec >= 3600
+                    ? Math.round(durSec / 3600) + ' hr ' + Math.round((durSec % 3600) / 60) + ' min'
+                    : Math.round(durSec / 60) + ' min')
+                : null;
+
+            results[i] = {
+                distanceM:    distM,
+                distanceText: distKm + ' km',
+                durationText: durText,
+                isApprox:     false,
+            };
+        });
+
+        // Any slots still null (missing from response) fall back to Haversine
+        return results.map((r, i) => r ?? buildHaversineFallback(destinations[i]));
+    }
+
+    // ── Tier 1 + orchestration ────────────────────────────────────────────────────────────────────────────
     async function getDistanceMatrix(destinations) {
         // destinations: Array of { lat, lng } objects
 
+        if (userLat === null || userLng === null) {
+            console.warn('Distance: No user location, using Haversine fallback');
+            return destinations.map(dest => buildHaversineFallback(dest));
+        }
+
         const mapsLoaded = await waitForMaps();
 
-        if (!mapsLoaded || !window.google?.maps?.DistanceMatrixService) {
-            console.warn('Distance Matrix: Maps API not loaded, using Haversine fallback');
-            return destinations.map(dest => buildHaversineFallback(dest));
-        }
-
-        if (userLat === null || userLng === null) {
-            console.warn('Distance Matrix: No user location, using Haversine fallback');
-            return destinations.map(dest => buildHaversineFallback(dest));
-        }
-
-        return new Promise(resolve => {
-            const service = new google.maps.DistanceMatrixService();
-
-            service.getDistanceMatrix(
-                {
-                    origins:      [{ lat: userLat, lng: userLng }],
-                    destinations: destinations.map(d => ({ lat: d.lat, lng: d.lng })),
-                    travelMode:   google.maps.TravelMode.DRIVING,
-                    unitSystem:   google.maps.UnitSystem.METRIC,
-                },
-                (response, status) => {
-                    if (status !== 'OK' || !response?.rows?.[0]?.elements) {
-                        console.warn('Distance Matrix API error:', status, '— using Haversine fallback');
-                        resolve(destinations.map(dest => buildHaversineFallback(dest)));
-                        return;
-                    }
-
-                    const elements = response.rows[0].elements;
-                    const results  = elements.map((el, i) => {
-                        if (el.status !== 'OK') {
-                            // Single destination failed — fallback just for this one
-                            return buildHaversineFallback(destinations[i]);
+        // ── Tier 1: DistanceMatrixService ───────────────────────────────────────────────────────────────────────
+        if (mapsLoaded && window.google?.maps?.DistanceMatrixService) {
+            try {
+                const dmResults = await new Promise((resolve, reject) => {
+                    const service = new google.maps.DistanceMatrixService();
+                    service.getDistanceMatrix(
+                        {
+                            origins:      [{ lat: userLat, lng: userLng }],
+                            destinations: destinations.map(d => ({ lat: d.lat, lng: d.lng })),
+                            travelMode:   google.maps.TravelMode.DRIVING,
+                            unitSystem:   google.maps.UnitSystem.METRIC,
+                        },
+                        (response, status) => {
+                            if (status === 'OK' && response?.rows?.[0]?.elements) {
+                                resolve(response.rows[0].elements.map((el, i) => {
+                                    if (el.status !== 'OK') return null;
+                                    return {
+                                        distanceM:    el.distance.value,
+                                        distanceText: el.distance.text,
+                                        durationText: el.duration.text,
+                                        isApprox:     false,
+                                    };
+                                }));
+                            } else {
+                                reject(new Error('DistanceMatrix status: ' + status));
+                            }
                         }
-                        return {
-                            distanceM:    el.distance.value,           // metres, for sorting
-                            distanceText: el.distance.text,            // "3.2 km"
-                            durationText: el.duration.text,            // "8 mins"
-                            isApprox:     false,
-                        };
-                    });
+                    );
+                });
 
-                    resolve(results);
-                }
-            );
-        });
+                // All elements OK — return immediately
+                if (dmResults.every(r => r !== null)) return dmResults;
+
+                // Some individual elements failed — patch those via Routes API
+                console.warn('DistanceMatrix: some elements failed, patching via Routes API');
+                const failedIdxs  = dmResults.map((r, i) => r === null ? i : -1).filter(i => i >= 0);
+                const patchDests  = failedIdxs.map(i => destinations[i]);
+                const patches     = await getRouteMatrix(patchDests).catch(() =>
+                    patchDests.map(d => buildHaversineFallback(d))
+                );
+                failedIdxs.forEach((origIdx, pi) => { dmResults[origIdx] = patches[pi]; });
+                return dmResults;
+
+            } catch (err) {
+                console.warn('DistanceMatrix failed (' + err.message + '), trying Routes API...');
+            }
+        } else {
+            console.warn('Distance Matrix: Maps API not loaded, trying Routes API...');
+        }
+
+        // ── Tier 2: Routes API computeRouteMatrix ───────────────────────────────────────────────────────
+        try {
+            const routeResults = await getRouteMatrix(destinations);
+            console.info('Routes API succeeded.');
+            return routeResults;
+        } catch (err) {
+            console.warn('Routes API also failed (' + err.message + '), using Haversine fallback');
+        }
+
+        // ── Tier 3: Haversine straight-line ──────────────────────────────────────────────────────────────────
+        return destinations.map(dest => buildHaversineFallback(dest));
     }
 
     function buildHaversineFallback(dest) {
