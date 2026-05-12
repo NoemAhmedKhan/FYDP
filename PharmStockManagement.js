@@ -475,6 +475,12 @@
     gnVal = gnVal.replace(/[^A-Z0-9\s\+,\.]/g, '');
     gnVal = gnVal.replace(/\s+/g, ' ').replace(/[\s,+]+$/, '').trim();
     
+    // ── strength: normalize then validate unit ────────────────
+    let stVal = normUp(raw.strength);
+    stVal = stVal.replace(/\s*\/\s*/g, '/');  // remove spaces around /
+    stVal = stVal.replace(/(\d)\s+(BILLION\s?CFU|MCG\/ACTUATION|G\/100ML|MG\/5ML|CCID50|TCID50|MG\/M²|MG\/M2|MG\/KG|KG\/NG|MG\/ML|KG\/L|MG\/G|MCG|MIU|MEQ|CFU|IU|ML|LF|NG|KG|MG|G|U|L|%)(\b|\/)/gi, '$1$2$3'); // remove spaces between digit and unit
+    stVal = stVal.trim();
+
     const STRENGTH_UNIT_RE = /\d(BILLION\s?CFU|MCG\/ACTUATION|G\/100ML|MG\/5ML|CCID50|TCID50|MG\/M²|MG\/M2|MG\/KG|KG\/NG|MG\/ML|KG\/L|MG\/G|MCG|MIU|MEQ|CFU|IU|ML|LF|NG|KG|MG|G|U|L|%)/i;
     if (stVal !== 'N/A' && !STRENGTH_UNIT_RE.test(stVal))
       addErr('strength', 'E13',
@@ -567,7 +573,7 @@
         brand:                 normUp(raw.brand),
         category:              catVal,
         generic_name:          gnVal,
-        strength:              normUp(raw.strength),
+        strength:              stVal,
         dosage_form:           normUp(raw.dosage_form),
         release_type:          normUp(raw.release_type),
         manufacturer:          normUp(raw.manufacturer),
