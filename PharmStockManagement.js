@@ -821,7 +821,35 @@ async function handleValidateCSV() {
   $('uploadResult').style.display   = 'none';
 
   const rawText = await file.text();
+  const firstLine = rawText.replace(/^\uFEFF/, '').split(/\r?\n/)[0];
+  const rawHeaders = firstLine.split(',').map(h => h.replace(/\s+/g, '').toLowerCase());
+  const missing = CSV_REQUIRED_HEADERS.filter(h => !rawHeaders.includes(h));
+  const extra   = rawHeaders.filter(h => h && !CSV_REQUIRED_HEADERS.includes(h));
 
+if (missing.length || extra.length) {
+  const parts = [];
+  if (missing.length) parts.push(`Missing: ${missing.join(', ')}`);
+  if (extra.length)   parts.push(`Unrecognised: ${extra.join(', ')}`);
+
+  $('errorTableWrap').style.display = 'block';
+  $('errorTableTitle').textContent  = 'Header mismatch — fix your column names and re-upload';
+  $('errorTableBody').innerHTML = `
+    <tr class="err-row">
+      <td class="row-num">Header</td>
+      <td>Column names</td>
+      <td class="err-val">—</td>
+      <td class="err-msg">${esc(parts.join('. '))}. Column names must exactly match the template.</td>
+    </tr>`;
+  $('valSummary').style.display     = 'flex';
+  $('valChipInvalid').textContent   = '✕ Header mismatch';
+  $('valChipInvalid').style.display = 'flex';
+  $('valChipValid').style.display   = 'none';
+  csvHasErrors  = true;
+  parsedCSVRows = [];
+  return;   // ← stop here, never reach the transformer
+}
+
+  
   // ── Step 1: Run transformer (normalize small messiness) ──────
   const transformed = CSVStockTransformer.transform(rawText);
 
