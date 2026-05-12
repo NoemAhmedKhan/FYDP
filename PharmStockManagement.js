@@ -557,7 +557,13 @@
     return {
       errors: [],
       clean: {
-        product_name:          normUp(raw.product_name).replace(/[^A-Z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim(),
+        product_name:          (() => {
+            let p = normUp(raw.product_name);
+            p = p.replace(/-+/g, ' ');           // hyphen → space
+            p = p.replace(/[^A-Z0-9\s]/g, ' ');  // strip remaining specials
+            p = p.replace(/\s+/g, ' ').trim();   // collapse spaces
+            return p;
+          })(),
         brand:                 normUp(raw.brand),
         category:              catVal,
         generic_name:          gnVal,
