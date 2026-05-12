@@ -597,12 +597,18 @@
     const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim());
     if (lines.length < 2) return { error: 'CSV must have at least one data row.' };
 
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'_'));
+    // FIXED — replace ALL whitespace (including \t) before normalizing
+    const headers = lines[0].split(',').map(h => h.replace(/\s+/g, '').toLowerCase());
 
     // Header check
     const missing = CSV_REQUIRED_HEADERS.filter(h => !headers.includes(h));
     if (missing.length) {
       return { error: `Missing required columns: ${missing.join(', ')}` };
+    }
+
+    const extra = headers.filter(h => h && !CSV_REQUIRED_HEADERS.includes(h));
+    if (extra.length) {
+       return { error: `Unexpected columns: ${extra.join(', ')}. Headers must exactly match the template.` };
     }
 
     if (lines.length - 1 > 500) {
