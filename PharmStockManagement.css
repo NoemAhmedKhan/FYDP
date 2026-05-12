@@ -1095,6 +1095,21 @@ input, select, textarea { font-family: inherit; }
   background: #fef3c7; padding: 1px 5px; border-radius: 3px;
   font-size: 12px; color: #92400e;
 }
+.na-field-tag {
+  display: inline-block;
+  background: #fff3cd;
+  border: 1px solid #f0ad4e;
+  color: #7a4f00;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 0.8rem;
+  font-family: monospace;
+  margin: 2px 3px;
+}
+.na-fields-list {
+  margin: 6px 0 10px;
+  line-height: 2;
+}
 .na-disclaimer-check {
   display: flex; align-items: flex-start; gap: 8px;
   font-size: 13px; color: #78350f; cursor: pointer; font-weight: 500;
