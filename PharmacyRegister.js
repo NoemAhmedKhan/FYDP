@@ -5,6 +5,11 @@
    ▸ Uploads docs to  : Storage bucket "pharmacy-docs"
    ▸ NO auth.signUp() at this stage — account is created
      by the admin Edge Function on approval.
+
+   FIX APPLIED:
+     Removed `operating_hours` field from the DB insert.
+     The pharmacy_requests table has no operating_hours column.
+     Hours are stored in: is_24_7 (boolean), opening_time, closing_time.
    ══════════════════════════════════════════════════════ */
 
 const SUPABASE_URL      = 'https://ktzsshlllyjuzphprzso.supabase.co';
@@ -402,7 +407,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (valid.length > 0) {
             allDocsNames.innerHTML = valid.map(f => `<span class="file-tag">✓ ${f.name}</span>`).join('');
             allDocsArea.classList.add('has-file');
-            // rebuild file list without oversized files
             if (over.length > 0) {
                 const dt = new DataTransfer();
                 valid.forEach(f => dt.items.add(f));
@@ -479,13 +483,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const email         = document.getElementById('email').value.trim();
         const password      = document.getElementById('password')?.value || '';
 
-        const is247      = (opHoursVal === '24_7');
-const customOpen  = is247 ? null : (document.getElementById('custom-open').value  || null);
-const customClose = is247 ? null : (document.getElementById('custom-close').value || null);
-// Keep a human-readable label for display fallback (used in admin card rendering)
-const operatingHoursLabel = is247
-    ? '24/7'
-    : (customOpen && customClose ? `Custom: ${customOpen} – ${customClose}` : '');
+        // ── Derive normalized hour fields ──────────────────────────────
+        // pharmacy_requests stores: is_24_7 (bool), opening_time, closing_time
+        // There is NO operating_hours column — the label is display-only.
+        const is247       = (opHoursVal === '24_7');
+        const customOpen  = is247 ? null : (document.getElementById('custom-open').value  || null);
+        const customClose = is247 ? null : (document.getElementById('custom-close').value || null);
 
         const submitBtn = document.getElementById('btn-submit');
         submitBtn.disabled = true;
@@ -495,8 +498,6 @@ const operatingHoursLabel = is247
             /* ── STEP 1: Upload documents to Storage ── */
             const allFiles = Array.from(document.getElementById('all-docs').files);
 
-            // One stable folder per submission — used as the single reference saved in DB
-            // Layout: pharmacy-docs bucket → docs/{folderUUID}/doc_0_filename.ext
             const folderUUID    = crypto.randomUUID();
             const docFolderPath = `docs/${folderUUID}`;
 
@@ -504,8 +505,6 @@ const operatingHoursLabel = is247
 
             for (let i = 0; i < allFiles.length; i++) {
                 const f        = allFiles[i];
-                const ext      = f.name.split('.').pop().toLowerCase();
-                // Keep original filename prefix so admin can identify doc type at a glance
                 const safeName = f.name.replace(/[^a-zA-Z0-9._-]/g, '_');
                 const fp       = `${docFolderPath}/doc_${i}_${safeName}`;
 
@@ -515,7 +514,6 @@ const operatingHoursLabel = is247
 
                 if (uploadErr) {
                     console.warn(`Upload failed for ${f.name}:`, uploadErr.message);
-                    // Don't block submission for one failed file, but warn user
                 }
 
                 const pct = Math.round(((i + 1) / allFiles.length) * 80);
@@ -525,17 +523,18 @@ const operatingHoursLabel = is247
             showProgressBar(true, 90, 'Saving registration…');
 
             /* ── STEP 2: Insert into pharmacy_requests ── */
-            // Column names match the new normalized schema exactly
+            // NOTE: operating_hours column does NOT exist in pharmacy_requests.
+            //       Hours are stored via: is_24_7, opening_time, closing_time.
             const { error: insertErr } = await supabaseClient.from('pharmacy_requests').insert([{
                 pharmacy_name:   pharmacyName,
-                drug_license_no: licenseNo,       // renamed from license_no
+                drug_license_no: licenseNo,
                 reg_no:          regNo,
                 cnic,
                 pharmacy_type:   pharmacyType,
-                operating_hours: operatingHoursLabel,  // kept for display in admin card
-    is_24_7:         is247,
-    opening_time:    customOpen   || null,
-    closing_time:    customClose  || null,
+                // ↓ NO operating_hours field — column doesn't exist ↓
+                is_24_7:         is247,
+                opening_time:    customOpen   || null,
+                closing_time:    customClose  || null,
                 delivery,
                 province,
                 city,
@@ -543,11 +542,10 @@ const operatingHoursLabel = is247
                 landmark:        landmark || null,
                 coordinates,
                 doc_folder_path: docFolderPath,
-                // Owner / profile fields (stored here for admin review)
                 full_name:       ownerName,
                 phone_no:        phone,
                 email,
-                password,                          // stored for use on approval
+                password,
                 status:          'pending'
             }]);
 
@@ -592,7 +590,6 @@ const operatingHoursLabel = is247
                     strengthEl.className = 'pw-strength-msg pw-strength--strong';
                 }
             }
-            // Also re-validate confirm field live
             if (cpwInput && cpwInput.value) {
                 if (cpwInput.value !== this.value) {
                     showError('confirm-password', 'Passwords do not match.');
