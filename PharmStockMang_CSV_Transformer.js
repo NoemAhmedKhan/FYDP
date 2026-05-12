@@ -518,17 +518,20 @@ function normalizeStrength(raw) {
 function normalizeGenericName(raw) {
     if (!raw) return '';
     let s = raw.toString().trim().toUpperCase();
-    // Auto-fix: ' & ' and ' AND ' between words → ' + '
-    s = s.replace(/\s+&\s+/g, ' + ');
-    s = s.replace(/\b AND \b/g, ' + ');
-    // Auto-fix: '/' → ' + ' (FDC separator mistake)
+    // & → +  |  AND → +  |  hyphen → space
+    s = s.replace(/\s*&\s*/g, ' + ');
+    s = s.replace(/\bAND\b/g, '+');
+    s = s.replace(/-/g, ' ');
+    // / → +
     s = s.replace(/\s*\/\s*/g, ' + ');
-    // N4: Normalize + spacing → " + "
+    // Normalize + spacing → " + "
     s = s.replace(/\s*\+\s*/g, ' + ');
-    // N5: Normalize comma spacing → ", "
+    // Normalize , spacing → ", "
     s = s.replace(/\s*,\s*/g, ', ');
-    // Remove trailing separators
-    s = s.replace(/[\s,+]+$/, '').trim();
+    // Remove any other special characters (keep A-Z 0-9 space + , .)
+    s = s.replace(/[^A-Z0-9\s\+,\.]/g, '');
+    // Collapse multiple spaces, trim trailing separators
+    s = s.replace(/\s+/g, ' ').replace(/[\s,+]+$/, '').trim();
     return s;
   }
 
@@ -601,20 +604,17 @@ function normalizeGenericName(raw) {
     out['brand'] = cleanBrand;
     if (cleanBrand !== rawBrand.toUpperCase()) warn('brand', rawBrand, cleanBrand, 'Removed trailing dot / uppercased');
 
-// 5. category — uppercase + normalize separators
-    // & is valid INSIDE category names (e.g. COUGH & COLD)
-    // + as separator between two category words → replace with ' & ' only if it
-    // matches a known pattern; otherwise leave for validator to catch
+    // 5. category — normalize: & → +, AND → +, hyphen → space, remove other specials
     let rawCat = (row['category'] || '').toString().trim().toUpperCase();
-    // Auto-fix: ' AND ' between words → ' & ' (common in category names)
-    rawCat = rawCat.replace(/\bAND\b/g, '&');
-    // Auto-fix: normalize & spacing → ' & '
-    rawCat = rawCat.replace(/\s*&\s*/g, ' & ');
-    // Auto-fix: '+' used as separator → ' & '
-    rawCat = rawCat.replace(/\s*\+\s*/g, ' & ');
-    out['category'] = rawCat.trim();
-    if (rawCat.trim() !== (row['category'] || '').toString().trim().toUpperCase())
-      warn('category', row['category'], rawCat.trim(), 'Normalized separator to & format');
+    const rawCatOrig = rawCat;
+    rawCat = rawCat.replace(/\s*&\s*/g, ' + ');
+    rawCat = rawCat.replace(/\bAND\b/g, '+');
+    rawCat = rawCat.replace(/-/g, ' ');
+    rawCat = rawCat.replace(/[^A-Z0-9\s\+,\.]/g, '');
+    rawCat = rawCat.replace(/\s+/g, ' ').trim();
+    out['category'] = rawCat;
+    if (rawCat !== rawCatOrig)
+      warn('category', row['category'], rawCat, 'Normalized separators and special characters');
 
     // 6. generic_name — N4, N5, N10
     const rawGN = (row['generic_name'] || '').toString().trim();
