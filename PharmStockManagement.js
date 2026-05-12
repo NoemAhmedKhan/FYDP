@@ -949,18 +949,20 @@ if (missing.length || extra.length) {
     parsedCSVRows = [];
 
 } else {
-    // Any non-product_name field that is empty or N/A triggers the disclaimer
-    const OPTIONAL_FIELDS = [
-      'generic_name','strength','dosage_form','release_type','category',
-      'manufacturer','batch_no','original_price','expiry_date'
-    ];
-    const naRows = cleanRows.filter(r =>
-      OPTIONAL_FIELDS.some(f => {
-        const v = normUp(String(r[f] ?? ''));
-        return v === 'N/A' || v === '';
-      })
-    );
-    csvHasNARows = naRows.length > 0;
+    // Collect which fields are empty or N/A across all clean rows
+const NA_WATCHED_FIELDS = [
+  'generic_name', 'strength', 'dosage_form', 'release_type', 'category',
+  'manufacturer', 'batch_no', 'original_price', 'expiry_date'
+];
+
+const naFieldsFound = new Set();
+cleanRows.forEach(r => {
+  NA_WATCHED_FIELDS.forEach(f => {
+    const v = normUp(String(r[f] ?? ''));
+    if (v === 'N/A' || v === '') naFieldsFound.add(f);
+  });
+});
+csvHasNARows = naFieldsFound.size > 0;
 
     $('previewWrap').style.display  = 'block';
     $('previewTitle').textContent   = `${cleanRows.length} rows ready to upload`;
@@ -982,23 +984,29 @@ if (missing.length || extra.length) {
     csvHasErrors  = false;
     parsedCSVRows = cleanRows;
 
-    // Show N/A disclaimer if any rows have N/A in strict fields
+    // Show N/A disclaimer if any rows have N/A
     const naDisclaimerEl = $('naDisclaimer');
-    const naCheckEl      = $('naDisclaimerCheck');
-    if (csvHasNARows && naDisclaimerEl) {
-      naDisclaimerEl.style.display = 'block';
-      if (naCheckEl) naCheckEl.checked = false;
-      $('btnUploadCSV').style.display = 'inline-flex';
-      $('btnUploadCSV').disabled      = true; // disabled until checkbox ticked
-      naCheckEl?.addEventListener('change', () => {
-        $('btnUploadCSV').disabled = !naCheckEl.checked;
-      }, { once: true });
-    } else {
-      if (naDisclaimerEl) naDisclaimerEl.style.display = 'none';
-      $('btnUploadCSV').style.display = 'inline-flex';
-      $('btnUploadCSV').disabled      = false;
-    }
-  }
+const naCheckEl      = $('naDisclaimerCheck');
+if (csvHasNARows && naDisclaimerEl) {
+  // Inject highlighted field names dynamically
+  const fieldTags = [...naFieldsFound]
+    .map(f => `<code class="na-field-tag">${f.replace(/_/g, ' ')}</code>`)
+    .join(' ');
+  $('naDisclaimerFields').innerHTML = fieldTags;
+
+  naDisclaimerEl.style.display = 'block';
+  if (naCheckEl) naCheckEl.checked = false;
+  $('btnUploadCSV').style.display = 'inline-flex';
+  $('btnUploadCSV').disabled      = true;
+  naCheckEl?.addEventListener('change', () => {
+    $('btnUploadCSV').disabled = !naCheckEl.checked;
+  }, { once: true });
+} else {
+  if (naDisclaimerEl) naDisclaimerEl.style.display = 'none';
+  $('btnUploadCSV').style.display = 'inline-flex';
+  $('btnUploadCSV').disabled      = false;
+}
+}
 }
 
   // ── Upload to Edge Function ──────────────────────────────────
