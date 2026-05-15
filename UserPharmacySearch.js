@@ -65,7 +65,7 @@
         pharmacy_name:    'pharmacy_name',
         phone:            'phone_no',
         coordinates:      'coordinates',
-        profile_image:    'profile_image_path',  // FIX 11
+        profile_img: 'profile_img',
     };
 
     /* ==========================================================================
@@ -545,7 +545,7 @@
                         name:             row[COL.pharmacy_name]  || 'Pharmacy',
                         phone:            row[COL.phone]          || '',
                         coord,
-                        profileImagePath: row[COL.profile_image]  || null,  // FIX 11
+                        profileImagePath: row[COL.profile_img] || null,
                         distanceM:        coord && userLat !== null
                             ? haversine(userLat, userLng, coord.lat, coord.lng) * 1000
                             : Infinity,
@@ -745,24 +745,21 @@
                 </div>`;
         }
 
-        /* ── Profile image (FIX 11) ── */
+        /* ── Profile image ── */
         const initials = (pharmacy.name || '?').split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
         let profileImgHTML;
 
         if (pharmacy.profileImagePath) {
-            const imgUrl = supabaseClient.storage
-                .from('pharmacy-images')
-                .getPublicUrl(pharmacy.profileImagePath).data.publicUrl;
-            profileImgHTML = `
-                <img
-                    src="${escapeHtml(imgUrl)}"
-                    alt="${escapeHtml(pharmacy.name)}"
-                    class="card-profile-img"
-                    loading="lazy"
-                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
-                />
-                <div class="card-image__initials" style="display:none">${escapeHtml(initials)}</div>`;
-        } else {
+    profileImgHTML = `
+        <img
+            src="${escapeHtml(pharmacy.profileImagePath)}"
+            alt="${escapeHtml(pharmacy.name)}"
+            class="card-profile-img"
+            loading="lazy"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+        />
+        <div class="card-image__initials" style="display:none">${escapeHtml(initials)}</div>`;
+} else {
             profileImgHTML = `<div class="card-image__initials">${escapeHtml(initials)}</div>`;
         }
 
