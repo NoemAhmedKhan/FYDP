@@ -1,23 +1,17 @@
 'use strict';
 /* ============================================================
-   PharmInfoUpdate.js  —  v5 clean rewrite
-   Pharmacy Profile Update + Photo Upload
-   Supabase: profiles, pharmacies, storage (avatars bucket)
-   ============================================================
-
-   SECTIONS
-   1.  Supabase Client
-   2.  Sidebar Toggle
-   3.  Toast Helper
-   4.  Operating Hours Builder
-   5.  Profile Completion Calculator
-   6.  Sidebar Avatar Helper
-   7.  Photo Preview Helpers
-   8.  Load Profile  (READ)
-   9.  Save Profile  (UPDATE)
-   10. Photo Upload
-   11. Photo Remove
-   12. Init (single DOMContentLoaded)
+   PharmInfoUpdate.js  —  v6
+   All fixes applied:
+   1.  Profile verification section removed
+   2.  Avatar card at top (same UI/behavior as UserProfile)
+   3.  Pharmacist name shown beside avatar
+   4.  Image: local preview only → upload on "Save Profile Updates"
+   5.  Emergency contact field removed
+   6.  Logo green border removed (CSS)
+   7.  Sidebar shows email instead of "Pharmacist"
+   8.  Logout button (red on hover → signup.html)
+   9.  operating_hours column bug fixed → uses hours_json column
+   10. Clean, consistent UI with UserProfile patterns
    ============================================================ */
 
 /* ─────────────────────────────────────────
@@ -25,52 +19,46 @@
    ───────────────────────────────────────── */
 const SUPABASE_URL = 'https://ktzsshlllyjuzphprzso.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic';
-const PHARMACY_PROFILE_BUCKET = 'pharmacy-profile-photos';
 
-const { createClient } = supabase;
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+/* Bucket name — same pharmacy bucket already configured in project */
+const PHARMACY_BUCKET = 'pharmacy-profile-photos';
 
-let _selectedFile = null;
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ─────────────────────────────────────────
-   2. SIDEBAR TOGGLE
+   2. STATE
    ───────────────────────────────────────── */
-function initSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const hamBtn  = document.getElementById('hamBtn');
-  const overlay = document.getElementById('sOverlay');
+let _currentUser      = null;
+let _pendingAvatarFile = null;   // file chosen but NOT yet uploaded
+let _currentAvatarUrl  = null;   // currently saved URL in DB
+let _currentInitials   = '?';
 
-  if (!sidebar || !hamBtn || !overlay) return;
+/* ─────────────────────────────────────────
+   3. DOM HELPERS
+   ───────────────────────────────────────── */
+const $       = id  => document.getElementById(id);
+const val     = id  => $(id)?.value.trim() ?? '';
+const setVal  = (id, v) => { const el = $(id); if (el) el.value       = v ?? ''; };
+const setText = (id, v) => { const el = $(id); if (el) el.textContent = v ?? ''; };
 
-  function closeSidebar() {
-    sidebar.classList.remove('open');
-    hamBtn.setAttribute('aria-expanded', 'false');
-  }
-
-  hamBtn.addEventListener('click', function () {
-    var isOpen = sidebar.classList.toggle('open');
-    this.setAttribute('aria-expanded', String(isOpen));
-  });
-
-  overlay.addEventListener('click', closeSidebar);
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeSidebar();
-  });
+function getInitials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  const f = parts[0]?.[0] || '';
+  const l = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (f + l).toUpperCase() || '?';
 }
 
 /* ─────────────────────────────────────────
-   3. TOAST HELPER
+   4. TOAST
    ───────────────────────────────────────── */
-var _toastTimer = null;
+let _toastTimer = null;
 
 function showToast(message, type) {
-  var toast = document.getElementById('toast');
+  const toast = $('toast');
   if (!toast) return;
-
   if (_toastTimer) clearTimeout(_toastTimer);
 
-  var icons = {
+  const icons = {
     success: '<i class="fa-solid fa-circle-check"></i>',
     error:   '<i class="fa-solid fa-circle-xmark"></i>',
     info:    '<i class="fa-solid fa-circle-info"></i>'
@@ -80,18 +68,156 @@ function showToast(message, type) {
   toast.innerHTML = (icons[type] || icons.info) + ' ' + message;
   void toast.offsetWidth;
   toast.classList.add('show');
-
-  _toastTimer = setTimeout(function () {
-    toast.classList.remove('show');
-  }, 4000);
+  _toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 /* ─────────────────────────────────────────
-   4. OPERATING HOURS BUILDER
+   5. AVATAR RENDERING  (mirrors UserProfile)
    ───────────────────────────────────────── */
-var DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+function renderAvatar(containerId, imageUrl, initialsText) {
+  const container = $(containerId);
+  if (!container) return;
+  container.innerHTML = '';
 
-var DEFAULT_HOURS = {
+  if (imageUrl) {
+    const img     = document.createElement('img');
+    img.alt       = 'Profile Photo';
+    img.className = 'avatar-photo';
+
+    img.onerror = () => {
+      container.innerHTML = '';
+      const span       = document.createElement('span');
+      span.className   = 'avatar-initials-text';
+      span.textContent = initialsText || '?';
+      container.appendChild(span);
+    };
+
+    img.src = imageUrl;
+    container.appendChild(img);
+  } else {
+    const span       = document.createElement('span');
+    span.className   = 'avatar-initials-text';
+    span.textContent = initialsText || '?';
+    container.appendChild(span);
+  }
+}
+
+/* Render into sidebar circle — uses its own class names */
+function renderSidebarAvatar(imageUrl, initialsText) {
+  const container = $('sidebarAvatarInner');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (imageUrl) {
+    const img     = document.createElement('img');
+    img.alt       = 'Avatar';
+
+    img.onerror = () => {
+      container.innerHTML = '';
+      const span       = document.createElement('span');
+      span.className   = 's-avatar-initials-text';
+      span.textContent = initialsText || '?';
+      container.appendChild(span);
+    };
+
+    img.src = imageUrl;
+    container.appendChild(img);
+  } else {
+    const span       = document.createElement('span');
+    span.className   = 's-avatar-initials-text';
+    span.textContent = initialsText || '?';
+    container.appendChild(span);
+  }
+}
+
+/* ─────────────────────────────────────────
+   6. AVATAR FILE SELECTION
+   ─────────────────────────────────────────
+   Local preview only — no upload until Save.
+   ───────────────────────────────────────── */
+function initAvatarInput() {
+  const input      = $('avatarInput');
+  const sizeErrEl  = $('avatarSizeError');
+
+  if (!input) return;
+
+  input.addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+
+    /* 2 MB limit */
+    if (file.size > 2 * 1024 * 1024) {
+      if (sizeErrEl) {
+        sizeErrEl.textContent   = 'Image is too large. Maximum allowed size is 2 MB.';
+        sizeErrEl.style.display = 'block';
+      }
+      showToast('Image must be under 2 MB.', 'error');
+      this.value        = '';
+      _pendingAvatarFile = null;
+      return;
+    }
+
+    /* MIME validation */
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/svg+xml'];
+    if (!allowed.includes(file.type)) {
+      showToast('Only JPG, PNG or SVG images are allowed.', 'error');
+      this.value = '';
+      _pendingAvatarFile = null;
+      return;
+    }
+
+    if (sizeErrEl) sizeErrEl.style.display = 'none';
+    _pendingAvatarFile = file;
+
+    /* Local blob preview — no DB/storage touch */
+    const blobUrl = URL.createObjectURL(file);
+    renderAvatar('avatarImgContainer', blobUrl, _currentInitials);
+    renderSidebarAvatar(blobUrl, _currentInitials);
+  });
+}
+
+/* ─────────────────────────────────────────
+   7. STORAGE HELPERS
+   ───────────────────────────────────────── */
+async function deleteOldAvatar(existingUrl) {
+  if (!existingUrl) return;
+  try {
+    const cleanUrl  = existingUrl.split('?')[0];
+    const marker    = `/${PHARMACY_BUCKET}/`;
+    const idx       = cleanUrl.indexOf(marker);
+    if (idx === -1) return;
+    const oldPath   = cleanUrl.substring(idx + marker.length);
+    await db.storage.from(PHARMACY_BUCKET).remove([oldPath]);
+  } catch (err) {
+    console.warn('[PharmInfoUpdate] deleteOldAvatar warning:', err.message);
+  }
+}
+
+async function uploadAvatar(userId, file, existingUrl) {
+  await deleteOldAvatar(existingUrl);
+
+  const ext      = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const filePath = `${userId}/profile.${ext}`;
+
+  const { error: uploadErr } = await db.storage
+    .from(PHARMACY_BUCKET)
+    .upload(filePath, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
+
+  if (uploadErr) throw new Error('Photo upload failed: ' + uploadErr.message);
+
+  const { data: urlData } = db.storage.from(PHARMACY_BUCKET).getPublicUrl(filePath);
+  return urlData.publicUrl;
+}
+
+/* ─────────────────────────────────────────
+   8. OPERATING HOURS BUILDER
+   ─────────────────────────────────────────
+   DB column: hours_json  (text, stores JSON)
+   NOT operating_hours — that column does not exist.
+   ───────────────────────────────────────── */
+const DAY_NAMES = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+const DEFAULT_HOURS = {
   Monday:    { open: true,  from: '09:00 AM', to: '10:00 PM' },
   Tuesday:   { open: true,  from: '09:00 AM', to: '10:00 PM' },
   Wednesday: { open: true,  from: '09:00 AM', to: '10:00 PM' },
@@ -102,20 +228,20 @@ var DEFAULT_HOURS = {
 };
 
 function buildHoursUI(savedHours) {
-  var container = document.getElementById('hoursContainer');
+  const container = $('hoursContainer');
   if (!container) return;
   container.innerHTML = '';
 
-  var hours    = savedHours || DEFAULT_HOURS;
-  var fragment = document.createDocumentFragment();
+  const hours    = savedHours || DEFAULT_HOURS;
+  const fragment = document.createDocumentFragment();
 
-  DAY_NAMES.forEach(function (day, i) {
-    var dayData = hours[day] || { open: false, from: '', to: '' };
-    var fromId  = 'from-' + i;
-    var toId    = 'to-'   + i;
-    var chkId   = 'chk-'  + i;
+  DAY_NAMES.forEach((day, i) => {
+    const dayData = hours[day] || { open: false, from: '', to: '' };
+    const fromId  = 'from-' + i;
+    const toId    = 'to-'   + i;
+    const chkId   = 'chk-'  + i;
 
-    var row = document.createElement('div');
+    const row = document.createElement('div');
     row.className = 'hours-row';
     row.setAttribute('role', 'listitem');
     row.dataset.day = day;
@@ -136,11 +262,11 @@ function buildHoursUI(savedHours) {
         '<span class="toggle-slider"></span>' +
       '</label>';
 
-    var checkbox   = row.querySelector('input[type="checkbox"]');
-    var timeInputs = row.querySelectorAll('.hours-time input');
+    const checkbox   = row.querySelector('input[type="checkbox"]');
+    const timeInputs = row.querySelectorAll('.hours-time input');
 
     checkbox.addEventListener('change', function () {
-      timeInputs.forEach(function (inp) {
+      timeInputs.forEach(inp => {
         inp.disabled = !checkbox.checked;
         if (!checkbox.checked) inp.value = '';
       });
@@ -153,115 +279,50 @@ function buildHoursUI(savedHours) {
 }
 
 function collectHoursFromUI() {
-  var result = {};
-  var rows   = document.querySelectorAll('#hoursContainer .hours-row');
-
-  rows.forEach(function (row) {
-    var day     = row.dataset.day;
-    var inputs  = row.querySelectorAll('.hours-time input');
-    var checked = row.querySelector('input[type="checkbox"]').checked;
+  const result = {};
+  document.querySelectorAll('#hoursContainer .hours-row').forEach(row => {
+    const day     = row.dataset.day;
+    const inputs  = row.querySelectorAll('.hours-time input');
+    const checked = row.querySelector('input[type="checkbox"]').checked;
     result[day] = {
       open: checked,
       from: inputs[0] ? inputs[0].value.trim() : '',
       to:   inputs[1] ? inputs[1].value.trim() : ''
     };
   });
-
   return result;
 }
 
 /* ─────────────────────────────────────────
-   5. PROFILE COMPLETION CALCULATOR
+   9. SIDEBAR TOGGLE (mobile)
    ───────────────────────────────────────── */
-function calcCompletion(pharmacy, profile) {
-  var fields = [
-    pharmacy.pharmacy_name,
-    pharmacy.drug_license_no,
-    pharmacy.reg_no,
-    pharmacy.address,
-    pharmacy.city,
-    pharmacy.province,
-    pharmacy.coordinates,
-    pharmacy.operating_hours,
-    profile.full_name,
-    profile.phone_no
-  ];
+function initSidebar() {
+  const sidebar = $('sidebar');
+  const hamBtn  = $('hamBtn');
+  const overlay = $('sOverlay');
 
-  var filled = fields.filter(function (v) {
-    return v && String(v).trim() !== '';
-  }).length;
+  if (!sidebar || !hamBtn || !overlay) return;
 
-  return Math.round((filled / fields.length) * 100);
-}
+  const closeSidebar = () => {
+    sidebar.classList.remove('open');
+    hamBtn.setAttribute('aria-expanded', 'false');
+  };
 
-function updateCompletionUI(pct) {
-  var fill  = document.getElementById('progressFill');
-  var pctEl = document.getElementById('verifyPct');
-  var subEl = document.getElementById('verifySubText');
-  var bar   = document.getElementById('progressBar');
+  hamBtn.addEventListener('click', function () {
+    const isOpen = sidebar.classList.toggle('open');
+    this.setAttribute('aria-expanded', String(isOpen));
+  });
 
-  if (fill)  fill.style.width = pct + '%';
-  if (pctEl) pctEl.textContent = pct + '%';
-  if (bar)   bar.setAttribute('aria-valuenow', pct);
-
-  if (subEl) {
-    subEl.textContent = pct < 100
-      ? 'Your profile is ' + pct + '% complete. Fill in the missing fields to reach 100% and maintain your "Verified Pharmacy" badge on the patient portal.'
-      : 'Your profile is 100% complete. You have the "Verified Pharmacy" badge on the patient portal.';
-  }
+  overlay.addEventListener('click', closeSidebar);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
 }
 
 /* ─────────────────────────────────────────
-   6. SIDEBAR AVATAR HELPER
-   ───────────────────────────────────────── */
-function setSidebarAvatar(photoUrl, fullName) {
-  var avatarImg      = document.getElementById('sidebarAvatar');
-  var avatarInitials = document.getElementById('sidebarInitials');
-
-  if (photoUrl && avatarImg) {
-    avatarImg.src           = photoUrl;
-    avatarImg.style.display = 'block';
-    if (avatarInitials) avatarInitials.style.display = 'none';
-  } else {
-    if (avatarImg) avatarImg.style.display = 'none';
-    if (avatarInitials && fullName) {
-      var parts    = fullName.trim().split(' ');
-      var initials = parts.length >= 2
-        ? parts[0][0] + parts[parts.length - 1][0]
-        : parts[0].slice(0, 2);
-      avatarInitials.textContent   = initials.toUpperCase();
-      avatarInitials.style.display = 'flex';
-    }
-  }
-}
-
-/* ─────────────────────────────────────────
-   7. PHOTO PREVIEW HELPERS
-   ───────────────────────────────────────── */
-function setPhotoPreview(src) {
-  var img         = document.getElementById('photoPreviewImg');
-  var placeholder = document.getElementById('photoPlaceholder');
-  if (img) {
-    img.src           = src;
-    img.style.display = 'block';
-  }
-  if (placeholder) placeholder.style.display = 'none';
-}
-
-function clearPhotoPreview() {
-  var img         = document.getElementById('photoPreviewImg');
-  var placeholder = document.getElementById('photoPlaceholder');
-  if (img) { img.src = ''; img.style.display = 'none'; }
-  if (placeholder) placeholder.style.display = 'flex';
-}
-
-/* ─────────────────────────────────────────
-   8. LOAD PROFILE  (READ from Supabase)
+   10. LOAD PROFILE  (READ from Supabase)
    ───────────────────────────────────────── */
 async function loadProfile() {
   try {
-    var sessionResult = await db.auth.getSession();
-    var session = sessionResult.data.session;
+    const { data: { session } } = await db.auth.getSession();
 
     if (!session) {
       showToast('Session expired. Please log in again.', 'error');
@@ -269,39 +330,52 @@ async function loadProfile() {
       return;
     }
 
-    var userId = session.user.id;
-    var email  = session.user.email;
+    _currentUser = session.user;
+    const userId = session.user.id;
+    const email  = session.user.email;
 
-    var profileResult = await db
+    /* profiles table */
+    const { data: profileData } = await db
       .from('profiles')
       .select('full_name, phone_no, city, profile_img')
       .eq('user_id', userId)
       .single();
 
-    var profileData = profileResult.data;
-
-    var pharmResult = await db
+    /* pharmacies table — using hours_json (correct column name) */
+    const { data: pharmData, error: pharmErr } = await db
       .from('pharmacies')
-      .select('*')
+      .select('pharmacy_name, drug_license_no, reg_no, pharmacy_type, delivery, address, city, province, landmark, coordinates, hours_json')
       .eq('user_id', userId)
       .single();
 
-    var pharmData = pharmResult.data;
-
-    if (pharmResult.error || !pharmData) {
+    if (pharmErr || !pharmData) {
       showToast('Could not load pharmacy data.', 'error');
       hideLoader();
       return;
     }
 
-    /* General Information */
-    setValue('pharmacyName', pharmData.pharmacy_name);
-    setValue('licenseNum',   pharmData.drug_license_no);
-    setValue('branchId',     pharmData.reg_no);
-    setValue('pharmacyType', pharmData.pharmacy_type);
+    /* ── Sidebar ── */
+    setText('sidebarName',  profileData?.full_name || 'Pharmacist');
+    setText('sidebarEmail', email || '');
 
-    var deliveryToggle = document.getElementById('deliveryToggle');
-    var deliveryLabel  = document.getElementById('deliveryLabel');
+    const initials = getInitials(profileData?.full_name || '');
+    _currentInitials  = initials;
+    _currentAvatarUrl = profileData?.profile_img || null;
+    renderSidebarAvatar(_currentAvatarUrl, initials);
+
+    /* ── Avatar card ── */
+    setText('avatarName', profileData?.full_name || 'Pharmacist');
+    setText('avatarSub',  email || 'Pharmacist');
+    renderAvatar('avatarImgContainer', _currentAvatarUrl, initials);
+
+    /* ── General Information ── */
+    setVal('pharmacyName', pharmData.pharmacy_name);
+    setVal('licenseNum',   pharmData.drug_license_no);
+    setVal('branchId',     pharmData.reg_no);
+    setVal('pharmacyType', pharmData.pharmacy_type);
+
+    const deliveryToggle = $('deliveryToggle');
+    const deliveryLabel  = $('deliveryLabel');
     if (deliveryToggle) {
       deliveryToggle.checked = !!pharmData.delivery;
       if (deliveryLabel) deliveryLabel.textContent = pharmData.delivery ? 'Yes' : 'No';
@@ -310,90 +384,65 @@ async function loadProfile() {
       });
     }
 
-    /* Contact Details */
-    setValue('officialEmail', email);
-    if (profileData) {
-      setValue('ownerName',    profileData.full_name);
-      setValue('primaryPhone', profileData.phone_no);
-    }
+    /* ── Contact Details ── */
+    setVal('officialEmail', email);
+    setVal('ownerName',     profileData?.full_name || '');
+    setVal('primaryPhone',  profileData?.phone_no  || '');
 
-    /* Parse operating hours + extract emergency phone from _meta */
-    var parsedHours    = null;
-    var emergencyPhone = '';
+    /* ── Location Details ── */
+    setVal('streetAddress', pharmData.address);
+    setVal('city',          pharmData.city);
+    setVal('province',      pharmData.province);
+    setVal('landmark',      pharmData.landmark || '');
+    setVal('gpsCoords',     pharmData.coordinates);
 
-    if (pharmData.operating_hours) {
+    /* ── Operating Hours — parse from hours_json ── */
+    let parsedHours = null;
+    if (pharmData.hours_json) {
       try {
-        var parsed = JSON.parse(pharmData.operating_hours);
-        if (parsed._meta) {
-          emergencyPhone = parsed._meta.emergency_phone || '';
-          var hoursOnly  = {};
-          Object.keys(parsed).forEach(function (k) {
-            if (k !== '_meta') hoursOnly[k] = parsed[k];
-          });
-          parsedHours = hoursOnly;
-        } else {
-          parsedHours = parsed;
+        parsedHours = JSON.parse(pharmData.hours_json);
+        /* strip _meta if present (legacy) */
+        if (parsedHours._meta) {
+          const { _meta, ...rest } = parsedHours;
+          parsedHours = rest;
         }
       } catch (e) {
-        console.warn('operating_hours is not JSON:', pharmData.operating_hours);
+        console.warn('[PharmInfoUpdate] hours_json parse warning:', e.message);
       }
     }
-
-    setValue('emergencyPhone', emergencyPhone);
-
-    /* Location Details */
-    setValue('streetAddress', pharmData.address);
-    setValue('city',          pharmData.city);
-    setValue('province',      pharmData.province);
-    setValue('landmark',      pharmData.landmark || '');
-    setValue('gpsCoords',     pharmData.coordinates);
-
-    /* Operating Hours UI */
     buildHoursUI(parsedHours);
 
-    /* Sidebar name + avatar */
-    var sidebarName = document.getElementById('sidebarName');
-    if (sidebarName && profileData && profileData.full_name) {
-      sidebarName.textContent = profileData.full_name;
-    }
-
-    if (profileData && profileData.profile_img) {
-      setSidebarAvatar(profileData.profile_img, profileData.full_name);
-      setPhotoPreview(profileData.profile_img);
-      var removeBtn = document.getElementById('removePhotoBtn');
-      if (removeBtn) removeBtn.style.display = 'inline-flex';
-    } else if (profileData && profileData.full_name) {
-      setSidebarAvatar(null, profileData.full_name);
-    }
-
-    /* Profile completion */
-    var pct = calcCompletion(pharmData, profileData || {});
-    updateCompletionUI(pct);
-
-    /* Reveal content */
+    /* ── Reveal UI ── */
     hideLoader();
+    fadeIn('avatarCard');
     fadeIn('infoGrid');
-    fadeIn('verifyCard');
-    fadeIn('photoCard');
 
   } catch (err) {
-    console.error('Unexpected error in loadProfile:', err);
+    console.error('[PharmInfoUpdate] loadProfile error:', err);
     showToast('Unexpected error loading profile: ' + err.message, 'error');
     hideLoader();
   }
 }
 
 /* ─────────────────────────────────────────
-   9. SAVE PROFILE  (UPDATE to Supabase)
+   11. SAVE PROFILE  (UPDATE to Supabase)
+   ─────────────────────────────────────────
+   Flow:
+   1. If a new avatar file was selected → upload to storage,
+      delete old, get public URL.
+   2. Update profiles table (name, phone, city, profile_img).
+   3. Update pharmacies table — hours saved to hours_json column
+      (NOT operating_hours which does not exist in DB schema).
    ───────────────────────────────────────── */
 async function saveProfile() {
-  var saveBtn = document.getElementById('saveBtn');
+  const saveBtn = $('saveBtn');
 
-  var pharmacyName = getValue('pharmacyName');
-  var ownerName    = getValue('ownerName');
-  var primaryPhone = getValue('primaryPhone');
-  var city         = getValue('city');
-  var streetAddr   = getValue('streetAddress');
+  /* Basic validation */
+  const pharmacyName = val('pharmacyName');
+  const ownerName    = val('ownerName');
+  const primaryPhone = val('primaryPhone');
+  const city         = val('city');
+  const streetAddr   = val('streetAddress');
 
   if (!pharmacyName) { showToast('Pharmacy name is required.', 'error'); return; }
   if (!ownerName)    { showToast('Owner / Manager name is required.', 'error'); return; }
@@ -401,275 +450,141 @@ async function saveProfile() {
   if (!city)         { showToast('City is required.', 'error'); return; }
   if (!streetAddr)   { showToast('Street address is required.', 'error'); return; }
 
+  if (!_currentUser) { showToast('Session expired. Please refresh.', 'error'); return; }
+
   if (saveBtn) {
     saveBtn.disabled  = true;
-    saveBtn.innerHTML = '<span class="loader-spinner" style="width:16px;height:16px;border-width:2px;margin:0 4px;display:inline-block;"></span> Saving…';
+    saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
   }
 
+  let hasError = false;
+
   try {
-    var sessionResult = await db.auth.getSession();
-    var session = sessionResult.data.session;
-    if (!session) {
-      showToast('Session expired. Please log in again.', 'error');
-      resetSaveBtn(saveBtn);
-      return;
-    }
-    var userId = session.user.id;
+    const userId = _currentUser.id;
 
-    /* Collect hours + embed emergency phone */
-    var hoursObj = collectHoursFromUI();
-    hoursObj._meta = { emergency_phone: getValue('emergencyPhone') };
-    var hoursJSON = JSON.stringify(hoursObj);
-
-    /* Update profiles */
-    var profileUpdate = await db
-      .from('profiles')
-      .update({ full_name: ownerName, phone_no: primaryPhone, city: city })
-      .eq('user_id', userId);
-
-    if (profileUpdate.error) throw new Error('Profile update failed: ' + profileUpdate.error.message);
-
-    /* Update pharmacies */
-    var deliveryToggle = document.getElementById('deliveryToggle');
-    var pharmUpdate = await db
-      .from('pharmacies')
-      .update({
-        pharmacy_name:   pharmacyName,
-        address:         streetAddr,
-        city:            city,
-        province:        getValue('province'),
-        landmark:        getValue('landmark') || null,
-        coordinates:     getValue('gpsCoords'),
-        delivery:        deliveryToggle ? deliveryToggle.checked : true,
-        operating_hours: hoursJSON
-      })
-      .eq('user_id', userId);
-
-    if (pharmUpdate.error) throw new Error('Pharmacy update failed: ' + pharmUpdate.error.message);
-
-    /* Refresh completion */
-    var freshPharmResult   = await db.from('pharmacies').select('*').eq('user_id', userId).single();
-    var freshProfileResult = await db.from('profiles').select('full_name, phone_no, city').eq('user_id', userId).single();
-
-    if (freshPharmResult.data && freshProfileResult.data) {
-      updateCompletionUI(calcCompletion(freshPharmResult.data, freshProfileResult.data));
+    /* ── Step 1: Upload avatar if a new file was selected ── */
+    let newAvatarUrl = null;
+    if (_pendingAvatarFile) {
+      try {
+        newAvatarUrl      = await uploadAvatar(userId, _pendingAvatarFile, _currentAvatarUrl);
+        _pendingAvatarFile = null;
+      } catch (err) {
+        showToast(err.message, 'error');
+        hasError = true;
+      }
     }
 
-    var sidebarName = document.getElementById('sidebarName');
-    if (sidebarName) sidebarName.textContent = ownerName;
+    /* ── Step 2: Update profiles ── */
+    if (!hasError) {
+      const profilePayload = {
+        full_name:  ownerName,
+        phone_no:   primaryPhone,
+        city:       city,
+      };
+      if (newAvatarUrl) profilePayload.profile_img = newAvatarUrl;
 
-    showToast('Profile updated successfully!', 'success');
+      const { error: profileErr } = await db
+        .from('profiles')
+        .update(profilePayload)
+        .eq('user_id', userId);
+
+      if (profileErr) {
+        showToast('Profile update failed: ' + profileErr.message, 'error');
+        hasError = true;
+      } else {
+        /* Update local state & UI */
+        if (newAvatarUrl) {
+          _currentAvatarUrl = newAvatarUrl;
+          renderAvatar('avatarImgContainer', newAvatarUrl, _currentInitials);
+          renderSidebarAvatar(newAvatarUrl, _currentInitials);
+        }
+        _currentInitials = getInitials(ownerName);
+        setText('avatarName',   ownerName);
+        setText('sidebarName',  ownerName);
+      }
+    }
+
+    /* ── Step 3: Update pharmacies — hours_json column ── */
+    if (!hasError) {
+      const hoursObj  = collectHoursFromUI();
+      const hoursJSON = JSON.stringify(hoursObj);
+
+      const deliveryToggle = $('deliveryToggle');
+
+      const { error: pharmErr } = await db
+        .from('pharmacies')
+        .update({
+          pharmacy_name: pharmacyName,
+          address:       streetAddr,
+          city:          city,
+          province:      val('province'),
+          landmark:      val('landmark') || null,
+          coordinates:   val('gpsCoords'),
+          delivery:      deliveryToggle ? deliveryToggle.checked : true,
+          hours_json:    hoursJSON,   /* ← correct column, NOT operating_hours */
+        })
+        .eq('user_id', userId);
+
+      if (pharmErr) {
+        showToast('Pharmacy update failed: ' + pharmErr.message, 'error');
+        hasError = true;
+      }
+    }
+
+    if (!hasError) showToast('Profile updated successfully!', 'success');
 
   } catch (err) {
-    console.error('Save error:', err);
+    console.error('[PharmInfoUpdate] saveProfile error:', err);
     showToast(err.message || 'Failed to save profile.', 'error');
   } finally {
-    resetSaveBtn(saveBtn);
-  }
-}
-
-/* ─────────────────────────────────────────
-   10. PHOTO UPLOAD
-   ───────────────────────────────────────── */
-async function uploadPhoto() {
-  if (!_selectedFile) {
-    showToast('Please choose a photo first.', 'info');
-    return;
-  }
-
-  var uploadBtn = document.getElementById('uploadPhotoBtn');
-  if (uploadBtn) {
-    uploadBtn.disabled  = true;
-    uploadBtn.innerHTML = '<span class="loader-spinner" style="width:14px;height:14px;border-width:2px;margin:0 4px;display:inline-block;"></span> Uploading…';
-  }
-
-  try {
-    var sessionResult = await db.auth.getSession();
-    var session = sessionResult.data.session;
-    if (!session) { showToast('Session expired. Please log in again.', 'error'); return; }
-    var userId = session.user.id;
-
-    /* Delete old variants first to keep storage clean */
-    await db.storage.from(PHARMACY_PROFILE_BUCKET).remove([
-      userId + '/profile.jpg',
-      userId + '/profile.png',
-      userId + '/profile.webp'
-    ]);
-
-    /* Upload new file */
-    var ext      = _selectedFile.name.split('.').pop().toLowerCase();
-    var filePath = userId + '/profile.' + ext;
-
-    var uploadResult = await db.storage
-      .from(PHARMACY_PROFILE_BUCKET)
-      .upload(filePath, _selectedFile, { upsert: true, contentType: _selectedFile.type });
-
-    if (uploadResult.error) throw new Error('Upload failed: ' + uploadResult.error.message);
-
-    /* Get public URL */
-    var urlData    = db.storage.from(PHARMACY_PROFILE_BUCKET).getPublicUrl(filePath);
-    var publicUrl  = urlData.data.publicUrl;
-
-    /* Save to profiles.profile_img */
-    var dbResult = await db
-      .from('profiles')
-      .update({ profile_img: publicUrl })
-      .eq('user_id', userId);
-
-    if (dbResult.error) throw new Error('Could not save photo URL: ' + dbResult.error.message);
-
-    /* Update sidebar + show remove button */
-    var sidebarName = document.getElementById('sidebarName');
-    setSidebarAvatar(publicUrl, sidebarName ? sidebarName.textContent : '');
-
-    var removeBtn = document.getElementById('removePhotoBtn');
-    if (removeBtn) removeBtn.style.display = 'inline-flex';
-
-    var selectedNameEl = document.getElementById('photoSelectedName');
-    if (selectedNameEl) selectedNameEl.textContent = '';
-
-    _selectedFile = null;
-    showToast('Profile photo uploaded successfully!', 'success');
-
-  } catch (err) {
-    console.error('Photo upload error:', err);
-    showToast(err.message || 'Photo upload failed.', 'error');
-  } finally {
-    if (uploadBtn) {
-      uploadBtn.disabled  = false;
-      uploadBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo';
-      uploadBtn.disabled  = true;
+    if (saveBtn) {
+      saveBtn.disabled  = false;
+      saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Profile Updates';
     }
   }
 }
 
 /* ─────────────────────────────────────────
-   11. PHOTO REMOVE
+   12. LOGOUT
    ───────────────────────────────────────── */
-async function removePhoto() {
-  var removeBtn = document.getElementById('removePhotoBtn');
-  if (removeBtn) {
-    removeBtn.disabled  = true;
-    removeBtn.innerHTML = '<span class="loader-spinner" style="width:14px;height:14px;border-width:2px;border-top-color:var(--clr-red);background:transparent;margin:0 4px;display:inline-block;"></span> Removing…';
-  }
+function initLogout() {
+  const logoutBtn = $('logoutBtn');
+  if (!logoutBtn) return;
 
-  try {
-    var sessionResult = await db.auth.getSession();
-    var session = sessionResult.data.session;
-    if (!session) { showToast('Session expired.', 'error'); return; }
-    var userId = session.user.id;
-
-    await db.storage.from(PHARMACY_PROFILE_BUCKET).remove([
-      userId + '/profile.jpg',
-      userId + '/profile.png',
-      userId + '/profile.webp'
-    ]);
-
-    var dbResult = await db
-      .from('profiles')
-      .update({ profile_img: null })
-      .eq('user_id', userId);
-
-    if (dbResult.error) throw new Error('Could not clear photo: ' + dbResult.error.message);
-
-    clearPhotoPreview();
-    if (removeBtn) removeBtn.style.display = 'none';
-
-    var sidebarName = document.getElementById('sidebarName');
-    setSidebarAvatar(null, sidebarName ? sidebarName.textContent : '');
-
-    _selectedFile = null;
-    var fileInput = document.getElementById('photoFileInput');
-    if (fileInput) fileInput.value = '';
-    var nameDisplay = document.getElementById('photoSelectedName');
-    if (nameDisplay) nameDisplay.textContent = '';
-
-    showToast('Profile photo removed.', 'info');
-
-  } catch (err) {
-    console.error('Remove photo error:', err);
-    showToast(err.message || 'Could not remove photo.', 'error');
-  } finally {
-    if (removeBtn) {
-      removeBtn.disabled  = false;
-      removeBtn.innerHTML = '<i class="fa-solid fa-trash"></i> Remove Photo';
-    }
-  }
+  logoutBtn.addEventListener('click', async () => {
+    await db.auth.signOut();
+    window.location.href = 'signup.html';
+  });
 }
 
 /* ─────────────────────────────────────────
    UTILITY HELPERS
    ───────────────────────────────────────── */
-function getValue(id) {
-  var el = document.getElementById(id);
-  return el ? el.value.trim() : '';
-}
-
-function setValue(id, value) {
-  var el = document.getElementById(id);
-  if (el) el.value = value != null ? value : '';
-}
-
 function hideLoader() {
-  var loader = document.getElementById('pageLoader');
+  const loader = $('pageLoader');
   if (loader) loader.classList.add('hidden');
 }
 
 function fadeIn(id) {
-  var el = document.getElementById(id);
+  const el = $(id);
   if (el) el.style.opacity = '1';
 }
 
-function resetSaveBtn(btn) {
-  if (!btn) return;
-  btn.disabled  = false;
-  btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Profile Updates';
-}
-
 /* ─────────────────────────────────────────
-   12. INIT — single DOMContentLoaded
+   13. INIT
    ───────────────────────────────────────── */
-document.addEventListener('DOMContentLoaded', function () {
-
-  /* Sidebar */
+document.addEventListener('DOMContentLoaded', () => {
   initSidebar();
+  initAvatarInput();
+  initLogout();
 
-  /* Build default hours skeleton */
+  /* Build default hours skeleton while data loads */
   buildHoursUI(null);
 
-  /* Load real data from Supabase */
+  /* Wire save button */
+  const saveBtn = $('saveBtn');
+  if (saveBtn) saveBtn.addEventListener('click', saveProfile);
+
+  /* Load real data */
   loadProfile();
-
-  /* Wire photo file input */
-  var fileInput = document.getElementById('photoFileInput');
-  if (fileInput) {
-    fileInput.addEventListener('change', function () {
-      var file = this.files && this.files[0];
-      if (!file) return;
-
-      if (file.size > 2 * 1024 * 1024) {
-        showToast('Image must be under 2 MB.', 'error');
-        this.value = '';
-        return;
-      }
-
-      _selectedFile = file;
-
-      var reader = new FileReader();
-      reader.onload = function (e) { setPhotoPreview(e.target.result); };
-      reader.readAsDataURL(file);
-
-      var nameEl = document.getElementById('photoSelectedName');
-      if (nameEl) nameEl.textContent = file.name;
-
-      var uploadBtn = document.getElementById('uploadPhotoBtn');
-      if (uploadBtn) uploadBtn.disabled = false;
-    });
-  }
-
 });
-
-/* Expose to global scope for onclick in HTML */
-window.saveProfile  = saveProfile;
-window.uploadPhoto  = uploadPhoto;
-window.removePhoto  = removePhoto;
