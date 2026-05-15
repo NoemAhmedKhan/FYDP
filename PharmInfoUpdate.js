@@ -25,7 +25,7 @@
    ───────────────────────────────────────── */
 const SUPABASE_URL = 'https://ktzsshlllyjuzphprzso.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic';
-const AVATAR_BUCKET = 'avatars';
+const PHARMACY_PROFILE_BUCKET = 'pharmacy-profile-photos';
 
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -490,7 +490,7 @@ async function uploadPhoto() {
     var userId = session.user.id;
 
     /* Delete old variants first to keep storage clean */
-    await db.storage.from(AVATAR_BUCKET).remove([
+    await db.storage.from(PHARMACY_PROFILE_BUCKET).remove([
       userId + '/profile.jpg',
       userId + '/profile.png',
       userId + '/profile.webp'
@@ -501,13 +501,13 @@ async function uploadPhoto() {
     var filePath = userId + '/profile.' + ext;
 
     var uploadResult = await db.storage
-      .from(AVATAR_BUCKET)
+      .from(PHARMACY_PROFILE_BUCKET)
       .upload(filePath, _selectedFile, { upsert: true, contentType: _selectedFile.type });
 
     if (uploadResult.error) throw new Error('Upload failed: ' + uploadResult.error.message);
 
     /* Get public URL */
-    var urlData    = db.storage.from(AVATAR_BUCKET).getPublicUrl(filePath);
+    var urlData    = db.storage.from(PHARMACY_PROFILE_BUCKET).getPublicUrl(filePath);
     var publicUrl  = urlData.data.publicUrl;
 
     /* Save to profiles.profile_img */
@@ -559,7 +559,7 @@ async function removePhoto() {
     if (!session) { showToast('Session expired.', 'error'); return; }
     var userId = session.user.id;
 
-    await db.storage.from(AVATAR_BUCKET).remove([
+    await db.storage.from(PHARMACY_PROFILE_BUCKET).remove([
       userId + '/profile.jpg',
       userId + '/profile.png',
       userId + '/profile.webp'
