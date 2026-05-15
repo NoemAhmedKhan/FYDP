@@ -1,5 +1,4 @@
 'use strict';
-
 /* ============================================================
    PharmInfoUpdate.js  —  v5 clean rewrite
    Pharmacy Profile Update + Photo Upload
