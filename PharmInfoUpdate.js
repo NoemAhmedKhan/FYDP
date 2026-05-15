@@ -179,22 +179,11 @@ function initAvatarInput() {
 /* ─────────────────────────────────────────
    7. STORAGE HELPERS
    ───────────────────────────────────────── */
-async function deleteOldAvatar(existingUrl) {
-  if (!existingUrl) return;
-  try {
-    const cleanUrl  = existingUrl.split('?')[0];
-    const marker    = `/${PHARMACY_BUCKET}/`;
-    const idx       = cleanUrl.indexOf(marker);
-    if (idx === -1) return;
-    const oldPath   = cleanUrl.substring(idx + marker.length);
-    await db.storage.from(PHARMACY_BUCKET).remove([oldPath]);
-  } catch (err) {
-    console.warn('[PharmInfoUpdate] deleteOldAvatar warning:', err.message);
-  }
-}
 
-async function uploadAvatar(userId, file, existingUrl) {
-  await deleteOldAvatar(existingUrl);
+async function uploadAvatar(userId, file) {
+  /* Delete all possible old variants first */
+  const variants = ['jpg', 'jpeg', 'png', 'svg'].map(e => `${userId}/profile.${e}`);
+  await db.storage.from(PHARMACY_BUCKET).remove(variants).catch(() => {});
 
   const ext      = (file.name.split('.').pop() || 'jpg').toLowerCase();
   const filePath = `${userId}/profile.${ext}`;
@@ -206,7 +195,7 @@ async function uploadAvatar(userId, file, existingUrl) {
   if (uploadErr) throw new Error('Photo upload failed: ' + uploadErr.message);
 
   const { data: urlData } = db.storage.from(PHARMACY_BUCKET).getPublicUrl(filePath);
-  return urlData.publicUrl;
+  return urlData.publicUrl + '?t=' + Date.now();
 }
 
 /* ─────────────────────────────────────────
@@ -443,13 +432,14 @@ async function saveProfile() {
   const primaryPhone = val('primaryPhone');
   const city         = val('city');
   const streetAddr   = val('streetAddress');
+  const coordinates = val('gpsCoords');
 
   if (!pharmacyName) { showToast('Pharmacy name is required.', 'error'); return; }
   if (!ownerName)    { showToast('Owner / Manager name is required.', 'error'); return; }
   if (!primaryPhone) { showToast('Primary phone is required.', 'error'); return; }
   if (!city)         { showToast('City is required.', 'error'); return; }
   if (!streetAddr)   { showToast('Street address is required.', 'error'); return; }
-
+  if (!coordinates)  { showToast('GPS coordinates are required.', 'error'); return; }
   if (!_currentUser) { showToast('Session expired. Please refresh.', 'error'); return; }
 
   if (saveBtn) {
@@ -466,7 +456,7 @@ async function saveProfile() {
     let newAvatarUrl = null;
     if (_pendingAvatarFile) {
       try {
-        newAvatarUrl      = await uploadAvatar(userId, _pendingAvatarFile, _currentAvatarUrl);
+        newAvatarUrl      = await uploadAvatar(userId, _pendingAvatarFile);
         _pendingAvatarFile = null;
       } catch (err) {
         showToast(err.message, 'error');
@@ -483,10 +473,10 @@ async function saveProfile() {
       };
       if (newAvatarUrl) profilePayload.profile_img = newAvatarUrl;
 
-      const { error: profileErr } = await db
-        .from('profiles')
-        .update(profilePayload)
-        .eq('user_id', userId);
+const { error: profileErr } = await db
+  .from('profiles')
+  .update(profilePayload)
+  .eq('user_id', userId);
 
       if (profileErr) {
         showToast('Profile update failed: ' + profileErr.message, 'error');
@@ -519,7 +509,7 @@ async function saveProfile() {
           city:          city,
           province:      val('province'),
           landmark:      val('landmark') || null,
-          coordinates:   val('gpsCoords'),
+          coordinates: coordinates,
           delivery:      deliveryToggle ? deliveryToggle.checked : true,
           hours_json:    hoursJSON,   /* ← correct column, NOT operating_hours */
         })
