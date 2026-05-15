@@ -52,15 +52,19 @@
       </a>
     </nav>
 
+    <!-- Sidebar user footer — JS populates all content -->
     <div class="s-user">
-      <div class="s-avatar">
-        <img id="sidebarAvatar" src="" alt="User" style="display:none;">
-        <span class="s-avatar-initials" id="sidebarInitials"></span>
+      <div class="s-avatar-wrap">
+        <!-- JS renders img or initials inside this -->
+        <div class="s-avatar-inner" id="sidebarAvatarInner"></div>
       </div>
       <div class="s-umeta">
         <span class="s-uname" id="sidebarName">Loading…</span>
-        <span class="s-urole">Pharmacist</span>
+        <span class="s-uemail" id="sidebarEmail"></span>
       </div>
+      <button class="s-logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+      </button>
     </div>
 
   </div>
@@ -78,7 +82,7 @@
       <p>Manage your branch details and operational hours.</p>
     </div>
     <div class="topbar-actions">
-      <button class="btn-primary" id="saveBtn" onclick="saveProfile()">
+      <button class="btn-primary" id="saveBtn">
         <i class="fa-solid fa-floppy-disk"></i> Save Profile Updates
       </button>
     </div>
@@ -92,6 +96,31 @@
     <div class="loader-spinner"></div>
     <p>Loading your profile…</p>
   </div>
+
+  <!-- ── Avatar Card (top, same style as UserProfile) ── -->
+  <section class="profile-avatar-card" id="avatarCard" style="opacity:0; transition: opacity 0.4s;" aria-label="Profile photo">
+    <div class="avatar-wrap">
+      <!--
+        avatarImgContainer is intentionally empty.
+        JS renders either an <img> or a <span> (initials) inside it.
+      -->
+      <div class="avatar-img" id="avatarImgContainer"></div>
+
+      <label class="avatar-edit-btn" for="avatarInput"
+             title="Change photo" aria-label="Change profile photo">
+        <i class="fa-solid fa-pen"></i>
+      </label>
+      <input type="file" id="avatarInput"
+             accept="image/jpeg,image/jpg,image/png,image/svg+xml"
+             class="sr-only">
+    </div>
+
+    <div class="avatar-info">
+      <h2 class="avatar-info__name" id="avatarName">Loading…</h2>
+      <p class="avatar-info__sub" id="avatarSub">Pharmacist</p>
+      <p id="avatarSizeError" class="avatar-size-error" style="display:none;"></p>
+    </div>
+  </section>
 
   <!-- Info Grid -->
   <div class="info-grid" id="infoGrid" style="opacity:0; transition: opacity 0.4s;">
@@ -140,21 +169,15 @@
       </div>
     </section>
 
-    <!-- Contact Details -->
+    <!-- Contact Details (emergency contact removed) -->
     <section class="card" aria-labelledby="contactHeading">
       <div class="section-head">
         <i class="fa-solid fa-address-card section-icon--purple" aria-hidden="true"></i>
         <h2 id="contactHeading">Contact Details</h2>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label" for="primaryPhone">Primary Phone</label>
-          <input class="form-input" type="tel" id="primaryPhone" name="primaryPhone" placeholder="+92 300 0000000">
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="emergencyPhone">Emergency Contact</label>
-          <input class="form-input" type="tel" id="emergencyPhone" name="emergencyPhone" placeholder="+92 300 0000000">
-        </div>
+      <div class="form-group">
+        <label class="form-label" for="primaryPhone">Primary Phone</label>
+        <input class="form-input" type="tel" id="primaryPhone" name="primaryPhone" placeholder="+92 300 0000000">
       </div>
       <div class="form-group">
         <label class="form-label" for="officialEmail">
@@ -195,7 +218,7 @@
       <div class="form-group">
         <label class="form-label" for="gpsCoords">GPS Coordinates / Map Pin</label>
         <div class="input-wrap">
-          <input class="form-input" type="text" id="gpsCoords" name="gpsCoords" placeholder="e.g. 24.8607° N, 67.0011° E">
+          <input class="form-input" type="text" id="gpsCoords" name="gpsCoords" placeholder="e.g. 24.8607, 67.0011">
           <i class="fa-solid fa-map input-wrap-icon" aria-hidden="true"></i>
         </div>
       </div>
@@ -212,69 +235,10 @@
 
   </div>
 
-  <!-- Profile Photo Upload -->
-  <section class="card photo-card" id="photoCard" style="opacity:0; transition: opacity 0.4s;" aria-labelledby="photoHeading">
-    <div class="section-head">
-      <i class="fa-solid fa-camera section-icon--blue" aria-hidden="true"></i>
-      <h2 id="photoHeading">Profile Photo</h2>
-    </div>
-    <div class="photo-body">
-
-      <!-- Preview -->
-      <div class="photo-preview-wrap">
-        <div class="photo-preview" id="photoPreview">
-          <img id="photoPreviewImg" src="" alt="Profile photo" style="display:none;">
-          <div class="photo-placeholder" id="photoPlaceholder">
-            <i class="fa-solid fa-user"></i>
-          </div>
-          <!-- Overlay on hover -->
-          <label class="photo-overlay" for="photoFileInput" aria-label="Change photo">
-            <i class="fa-solid fa-camera"></i>
-            <span>Change</span>
-          </label>
-        </div>
-        <p class="photo-hint">JPG, PNG or WEBP · Max 2 MB</p>
-      </div>
-
-      <!-- Upload controls -->
-      <div class="photo-controls">
-        <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp" class="sr-only">
-        <label for="photoFileInput" class="btn-upload">
-          <i class="fa-solid fa-arrow-up-from-bracket"></i> Choose Photo
-        </label>
-        <button class="btn-primary" id="uploadPhotoBtn" onclick="uploadPhoto()" disabled>
-          <i class="fa-solid fa-cloud-arrow-up"></i> Upload Photo
-        </button>
-        <button class="btn-remove" id="removePhotoBtn" onclick="removePhoto()" style="display:none;">
-          <i class="fa-solid fa-trash"></i> Remove Photo
-        </button>
-        <p class="photo-selected-name" id="photoSelectedName"></p>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Profile Verification Banner -->
-  <aside class="verify-card" id="verifyCard" aria-label="Profile verification status" style="opacity:0; transition: opacity 0.4s;">
-    <div class="verify-icon" aria-hidden="true">
-      <i class="fa-solid fa-shield-halved"></i>
-    </div>
-    <div class="verify-info">
-      <p class="verify-title">Profile Verification Status</p>
-      <p class="verify-sub" id="verifySubText">Loading profile completion…</p>
-      <div class="verify-bar">
-        <div class="progress-bar" role="progressbar" id="progressBar" aria-valuemin="0" aria-valuemax="100" aria-label="Profile completion">
-          <div class="progress-fill" id="progressFill" style="width:0%"></div>
-        </div>
-      </div>
-    </div>
-    <p class="verify-pct" id="verifyPct" aria-hidden="true">0%</p>
-  </aside>
-
 </main>
 
 <!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="PharmInfoUpdate.js?v=5"></script>
+<script src="PharmInfoUpdate.js"></script>
 </body>
 </html>
