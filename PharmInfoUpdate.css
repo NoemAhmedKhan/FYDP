@@ -217,11 +217,22 @@ textarea.form-input          { resize: vertical; min-height: 80px; }
 .hours-row:last-child { border-bottom: none; }
 .hours-day            { width: 90px; font-size: 14px; font-weight: 500; flex-shrink: 0; }
 .hours-time           { display: flex; align-items: center; gap: 8px; flex: 1; }
-.hours-time input     { padding: 8px 10px; border: 1px solid var(--clr-gray-lt); border-radius: var(--radius-md); font-size: 13px; color: var(--clr-dark); background: var(--clr-white-pure); outline: none; width: 110px; font-family: inherit; transition: border-color .2s; }
-.hours-time input:focus    { border-color: var(--clr-green); }
-.hours-time input:disabled { background: var(--clr-gray-xlt); color: var(--clr-gray-md); }
+.hours-time input[type="time"] {
+  padding: 7px 10px;
+  border: 1px solid var(--clr-gray-lt);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--clr-dark);
+  background: var(--clr-white-pure);
+  outline: none;
+  width: 120px;
+  font-family: var(--font-family);
+  transition: border-color .2s;
+  cursor: pointer;
+}
+.hours-time input[type="time"]:focus    { border-color: var(--clr-green); }
+.hours-time input[type="time"]:disabled { background: var(--clr-gray-xlt); color: var(--clr-gray-md); cursor: not-allowed; }
 .hours-sep  { font-size: 12px; color: var(--clr-gray-md); }
-.hours-icon { color: var(--clr-gray-md); font-size: 12px; }
 
 /* ─────────────────────────────────────────
    12. DELIVERY WRAP
