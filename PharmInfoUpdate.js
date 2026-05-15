@@ -216,6 +216,31 @@ const DEFAULT_HOURS = {
   Sunday:    { open: false, from: '',          to: ''         }
 };
 
+/* "09:00 AM" / "10:00 PM" → "09:00" / "22:00"  (for input value) */
+function to24h(timeStr) {
+  if (!timeStr) return '';
+  // Already in HH:MM format (24h) — return as-is
+  if (/^\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+  // Convert from 12h AM/PM
+  const [time, modifier] = timeStr.trim().split(' ');
+  let [hours, minutes]   = time.split(':').map(Number);
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  if (modifier === 'PM' && hours !== 12) hours += 12;
+  return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0');
+}
+
+/* "09:00" / "22:00" → "09:00 AM" / "10:00 PM"  (for storing in hours_json) */
+function to12h(timeStr) {
+  if (!timeStr) return '';
+  // Already has AM/PM — return as-is
+  if (timeStr.includes('AM') || timeStr.includes('PM')) return timeStr;
+  let [hours, minutes] = timeStr.split(':').map(Number);
+  const modifier = hours >= 12 ? 'PM' : 'AM';
+  if (hours === 0)  hours = 12;
+  if (hours > 12)   hours -= 12;
+  return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ' ' + modifier;
+}
+
 function buildHoursUI(savedHours) {
   const container = $('hoursContainer');
   if (!container) return;
@@ -238,13 +263,9 @@ function buildHoursUI(savedHours) {
     row.innerHTML =
       '<span class="hours-day">' + day + '</span>' +
       '<div class="hours-time">' +
-        '<label class="sr-only" for="' + fromId + '">Open time for ' + day + '</label>' +
-        '<input id="' + fromId + '" type="text" value="' + (dayData.from || '') + '" placeholder="Closed"' + (dayData.open ? '' : ' disabled') + '>' +
-        '<i class="fa-regular fa-clock hours-icon" aria-hidden="true"></i>' +
-        '<span class="hours-sep" aria-hidden="true">to</span>' +
-        '<label class="sr-only" for="' + toId + '">Close time for ' + day + '</label>' +
-        '<input id="' + toId + '" type="text" value="' + (dayData.to || '') + '" placeholder="Closed"' + (dayData.open ? '' : ' disabled') + '>' +
-        '<i class="fa-regular fa-clock hours-icon" aria-hidden="true"></i>' +
+        '<input id="' + fromId + '" type="time" value="' + to24h(dayData.from) + '"' + (dayData.open ? '' : ' disabled') + '>' +
+'<span class="hours-sep" aria-hidden="true">to</span>' +
+'<input id="' + toId + '" type="time" value="' + to24h(dayData.to) + '"' + (dayData.open ? '' : ' disabled') + '>' +
       '</div>' +
       '<label class="toggle" aria-label="' + day + ' open">' +
         '<input type="checkbox" id="' + chkId + '"' + (dayData.open ? ' checked' : '') + '>' +
@@ -274,10 +295,10 @@ function collectHoursFromUI() {
     const inputs  = row.querySelectorAll('.hours-time input');
     const checked = row.querySelector('input[type="checkbox"]').checked;
     result[day] = {
-      open: checked,
-      from: inputs[0] ? inputs[0].value.trim() : '',
-      to:   inputs[1] ? inputs[1].value.trim() : ''
-    };
+  open: checked,
+  from: inputs[0] ? to12h(inputs[0].value.trim()) : '',
+  to:   inputs[1] ? to12h(inputs[1].value.trim()) : ''
+};
   });
   return result;
 }
