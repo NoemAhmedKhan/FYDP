@@ -553,7 +553,7 @@ function initLogout() {
 
   logoutBtn.addEventListener('click', async () => {
     await db.auth.signOut();
-    window.location.href = 'signup.html';
+    window.location.href = 'SignUp.html';
   });
 }
 
