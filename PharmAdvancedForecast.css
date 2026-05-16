@@ -295,36 +295,6 @@ input, textarea, select { font-family: inherit; }
   margin-bottom: 20px;
 }
 
-/* ── Low Demand Search Bar ─────────────────────────────────── */
-.low-demand-search-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  border: 1px solid var(--clr-gray-lt);
-  border-radius: var(--radius-md);
-  background: var(--clr-gray-xlt);
-  margin-bottom: 14px;
-}
-
-.low-demand-search-wrap i {
-  color: var(--clr-gray-md);
-  font-size: 13px;
-  flex-shrink: 0;
-}
-
-.low-demand-search-wrap input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-size: 14px;
-  color: var(--clr-dark);
-  outline: none;
-}
-
-.low-demand-search-wrap input::placeholder {
-  color: var(--clr-gray-md);
-}
 
 .card-title    { font-size: 17px; font-weight: 700; color: var(--clr-dark); }
 .card-subtitle { font-size: 12px; color: var(--clr-gray-md); margin-top: 3px; }
@@ -385,10 +355,11 @@ input, textarea, select { font-family: inherit; }
 .stat-trend       { font-size: 12px; color: var(--clr-green); display: flex; align-items: center; gap: 4px; }
 .stat-trend--down { color: var(--clr-red); }
 
-.stat-sub        { font-size: 12px; color: var(--clr-gray-md); }
-.stat-sub--red   { color: var(--clr-red);   font-weight: 500; cursor: pointer; }
-.stat-sub--green { color: var(--clr-green); }
-.stat-sub--amber { color: var(--clr-amber); font-weight: 600; }
+.stat-sub           { font-size: 12px; color: var(--clr-gray-md); }
+.stat-sub--red      { color: var(--clr-red);   font-weight: 500; cursor: pointer; }
+.stat-sub--green    { color: var(--clr-green); }
+.stat-sub--amber    { color: var(--clr-amber); font-weight: 600; }
+.stat-sub--top-name { font-size: 13px; margin-top: 2px; }
 
 /* ─── 8. TABLE ─── */
 .tbl-wrap { overflow-x: auto; }
@@ -755,20 +726,13 @@ tbody td {
   white-space: nowrap;
 }
 
-.trend-counts {
-  font-size: 12px;
-  color: var(--clr-gray-md);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 .trend-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 12px;
+  padding: 5px 14px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
   flex-shrink: 0;
@@ -776,63 +740,10 @@ tbody td {
 
 .trend-badge--up   { background: var(--clr-green-bg);  color: var(--clr-green);  }
 .trend-badge--down { background: var(--clr-red-bg);    color: var(--clr-red);    }
-.trend-badge--new  { background: var(--clr-blue-bg);   color: var(--clr-blue);   }
 .trend-badge--flat { background: var(--clr-gray-xlt);  color: var(--clr-gray);   }
 
 
-/* ── Low Demand Products ────────────────────────────────────── */
 
-/* Demand level badges */
-.demand-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: var(--radius-pill);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.demand-badge--very-low { background: var(--clr-red-bg);    color: var(--clr-red);    }
-.demand-badge--low      { background: var(--clr-amber-bg);  color: var(--clr-amber);  }
-.demand-badge--moderate { background: var(--clr-blue-bg);   color: var(--clr-blue);   }
-.demand-badge--high     { background: var(--clr-green-bg);  color: var(--clr-green);  }
-
-/* Pagination */
-.pagination-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding-top: 16px;
-  border-top: 1px solid var(--clr-gray-xlt);
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-
-.page-btn {
-  padding: 6px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--clr-gray-lt);
-  background: var(--clr-white-pure);
-  color: var(--clr-gray);
-  font-size: 13px;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.page-btn:hover:not(:disabled) {
-  border-color: var(--clr-green);
-  color: var(--clr-green);
-}
-
-.page-btn:disabled {
-  opacity: .4;
-  cursor: not-allowed;
-}
-
-.page-info {
-  font-size: 13px;
-  color: var(--clr-gray-md);
-}
 
 
 /* ── Sidebar — PharmInfoUpdate-style user footer ────────────── */
