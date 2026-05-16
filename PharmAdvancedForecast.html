@@ -13,7 +13,7 @@
 </head>
 <body>
 
-<!-- SIDEBAR — matches PharmDashboard exactly -->
+<!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
   <div class="s-overlay" id="sOverlay" aria-hidden="true"></div>
   <div class="s-inner">
@@ -53,7 +53,7 @@
       </a>
     </nav>
 
-<div class="s-user">
+    <div class="s-user">
       <div class="s-avatar-wrap">
         <div class="s-avatar-inner" id="sidebarAvatarInner"></div>
       </div>
@@ -81,14 +81,13 @@
     </div>
   </header>
 
-    <!-- Time Filters -->
+  <!-- Time Filters: 7 / 15 / 30 days only -->
   <div class="filter-bar" role="group" aria-label="Time period filter">
     <button class="filter-btn active" data-days="7">Last 7 Days</button>
-    <button class="filter-btn"        data-days="14">Last 14 Days</button>
-    <button class="filter-btn"        data-days="21">Last 21 Days</button>
+    <button class="filter-btn"        data-days="15">Last 15 Days</button>
     <button class="filter-btn"        data-days="30">Last 30 Days</button>
   </div>
-  
+
   <!-- Stat Cards -->
   <div class="stat-grid-3" role="list" aria-label="Forecast metrics">
     <article class="stat-card" role="listitem">
@@ -99,12 +98,12 @@
     <article class="stat-card" role="listitem">
       <p class="stat-label">Top Medicine Demand</p>
       <p class="stat-val stat-val--green stat-val--xl" id="statTopShare">—</p>
-      <p class="stat-sub" id="statTopName">Loading…</p>
+      <p class="stat-sub stat-sub--top-name" id="statTopName">Loading…</p>
     </article>
     <article class="stat-card" role="listitem">
       <p class="stat-label">Not in Your Stock</p>
       <p class="stat-val stat-val--red stat-val--xl" id="statMissingStock">—</p>
-      <p class="stat-sub">Popular searches you don’t carry</p>
+      <p class="stat-sub">Popular searches you don't carry</p>
     </article>
   </div>
 
@@ -116,39 +115,28 @@
       <section class="chart-card" aria-labelledby="forecastChartHeading">
         <div class="chart-head">
           <div>
-            <p class="card-title" id="forecastChartHeading">Top 10 Most Searched Medicines</p>
-            <p class="card-subtitle">Patient search demand on MediFinder (last 30 days)</p>
+            <p class="card-title" id="forecastChartHeading">Top 10 Most Searched Products</p>
+            <p class="card-subtitle" id="chartSubtitle">Patient search demand on MediFinder (last 7 days)</p>
           </div>
         </div>
         <div class="chart-wrap chart-wrap--lg">
-          <canvas id="forecastChart" aria-label="Bar chart of top 10 searched medicines" role="img"></canvas>
+          <canvas id="forecastChart" aria-label="Bar chart of top 10 searched products" role="img"></canvas>
         </div>
       </section>
 
       <section class="card" aria-labelledby="top10Heading">
         <div class="card-header">
-          <h2 class="card-title" id="top10Heading">Demand Forecast — Top 10 Searched Medicines</h2>
+          <h2 class="card-title" id="top10Heading">Demand Forecast — Top 10 Searched Products</h2>
           <span class="active-forecast" id="forecastPeriodBadge">
-            <i class="fa-solid fa-circle" aria-hidden="true"></i> Last 30 days
+            <i class="fa-solid fa-circle" aria-hidden="true"></i> Last 7 days
           </span>
         </div>
-        <!-- Low Demand Search Bar -->
-<div class="low-demand-search-wrap">
-  <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-  <input
-    type="search"
-    id="lowDemandSearch"
-    placeholder="Search by product name…"
-    aria-label="Search low demand products"
-    autocomplete="off"
-  />
-</div>
         <div class="tbl-wrap">
-          <table aria-label="Top 10 most searched medicines">
+          <table aria-label="Top 10 most searched products">
             <thead>
               <tr>
                 <th scope="col">Rank</th>
-                <th scope="col">Medicine</th>
+                <th scope="col">Product</th>
                 <th scope="col">Category</th>
                 <th scope="col">Searches</th>
                 <th scope="col">Share</th>
@@ -168,14 +156,14 @@
       <h2 class="insights-section-title" id="predictiveHeading">
         <i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Restock Suggestions
       </h2>
-      <p class="insights-intro">Based on platform search demand and your current inventory.</p>
+      <p class="insights-intro">Based on last 7 days platform search demand and your current inventory.</p>
       <div id="restockList" class="restock-list">
         <p class="tbl-loading">Loading…</p>
       </div>
     </aside>
   </div>
 
-  <!-- Demand Trend Comparison -->
+  <!-- Demand Trend -->
   <section class="card" aria-labelledby="trendHeading">
     <div class="card-header">
       <div>
@@ -195,40 +183,6 @@
     </div>
   </section>
 
-  <!-- Low Demand Products -->
-  <section class="card" aria-labelledby="lowDemandHeading">
-    <div class="card-header">
-      <div>
-        <h2 class="card-title" id="lowDemandHeading">
-          <i class="fa-solid fa-arrow-trend-down"
-             style="color:var(--clr-amber);margin-right:8px"
-             aria-hidden="true"></i>
-          Low Demand Products
-        </h2>
-        <p class="card-subtitle">
-          Products in your inventory with little or no patient searches
-        </p>
-      </div>
-    </div>
-    <!-- max-height + overflow-y gives vertical scroll for long lists -->
-    <div class="tbl-wrap" style="max-height:420px;overflow-y:auto;">
-      <table aria-label="Low demand products">
-        <thead>
-          <tr>
-            <th scope="col">Product</th>
-            <th scope="col">Searches</th>
-            <th scope="col">Demand %</th>
-            <th scope="col">Demand Level</th>
-          </tr>
-        </thead>
-        <tbody id="lowDemandBody">
-          <tr><td colspan="4" class="tbl-loading">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="pagination-bar" id="lowDemandPagination"></div>
-  </section>
-  
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
