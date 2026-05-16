@@ -262,12 +262,7 @@
       // Tier 1 — UUID (most reliable)
       stockByProductId.set(pid, entry);
       
-      // TEMPORARY DIAGNOSTIC — remove after confirming
-console.log('[Stock Maps]',
-  'byProductId:', stockByProductId.size,
-  'byNormName:', stockByNormName.size,
-  'keys:', [...stockByNormName.keys()].slice(0, 5)
-);
+
 
       // Tier 2 — normalized product_name
       const normName = norm(agg.product_name);
@@ -406,6 +401,14 @@ console.log('[Stock Maps]',
     const restockRows = activeDays === 7
       ? rows
       : (restock7dResult?.data || []);
+
+    // TEMPORARY DIAGNOSTIC — remove after confirming
+console.log('[Restock input rows]', restockRows.map(r => ({
+  name: r.product_name,
+  product_id: r.product_id,
+  stock: getStockStatus(r)
+})));
+    
     renderRestockSuggestions(restockRows);
   }
 
