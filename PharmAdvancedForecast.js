@@ -32,6 +32,7 @@
   let stockByProductId   = new Map();  // product_id UUID → entry
   let stockByNormName    = new Map();  // norm(product_name) → entry
   let stockByNormGeneric = new Map();  // norm(generic_name + ' ' + strength) → entry
+  let stockByNormBrand   = new Map();
 
   // ── Supabase client ───────────────────────────────────────
   const { createClient } = window.supabase;
@@ -303,37 +304,33 @@ function renderFilteredLowDemand() {
       const normGen = norm((row.generic_name || '') + ' ' + (row.strength || ''));
       if (normGen) stockByNormGeneric.set(normGen, entry);
 
-      let stockByNormBrand = new Map();  // norm(brand) → entry
       const normBrand = norm(row.brand || '');
 if (normBrand) stockByNormBrand.set(normBrand, entry);
     });
   }
 
   // [FIX] Three-tier resolution — eliminates false "Not In Stock" badges
-  function getStockStatus(item) {
+ function getStockStatus(item) {
   if (!pharmacyId) return { label: '—', cls: 'stock-unknown' };
 
-  // Tier 1: UUID match (most reliable)
+  // Tier 1: UUID
   const byId = item.product_id
     ? stockByProductId.get(item.product_id)
     : null;
 
-  // Tier 2a: normalized product_name exact match
+  // Tier 2a: normalized product_name
   const byName = stockByNormName.get(norm(item.product_name));
 
   // Tier 2b: brand name match
-const byBrand = item.product_name
-  ? stockByNormBrand.get(norm(item.product_name))
-  : null;
+  const byBrand = item.product_name
+    ? stockByNormBrand.get(norm(item.product_name))
+    : null;
 
-const stock = byId || byName || byBrand || byPartial || byGeneric;
-  
-  // Handles "Calpol 500" matching "Calpol" or vice versa
+  // Tier 2c: partial name match (handles "Calpol 500" vs "Calpol")
   let byPartial = null;
-  if (!byName) {
+  if (!byName && !byBrand) {
     const searchedNorm = norm(item.product_name);
     for (const [invName, entry] of stockByNormName) {
-      // Match if either name fully contains the other
       if (searchedNorm.startsWith(invName) ||
           invName.startsWith(searchedNorm) ||
           searchedNorm.includes(invName) ||
@@ -344,19 +341,19 @@ const stock = byId || byName || byBrand || byPartial || byGeneric;
     }
   }
 
-  // Tier 3: normalized generic_name + strength
+  // Tier 3: generic_name + strength
   const byGeneric = (item.generic_name || item.strength)
     ? stockByNormGeneric.get(norm(
         (item.generic_name || '') + ' ' + (item.strength || '')
       ))
     : null;
 
-  const stock = byId || byName || byPartial || byGeneric;
+  const stockEntry = byId || byName || byBrand || byPartial || byGeneric;
 
-  if (!stock)         return { label: 'Not In Stock', cls: 'stock-missing' };
-  if (stock.qty <= 0) return { label: 'Out of Stock',  cls: 'stock-oos'    };
-  if (stock.low)      return { label: `Low (${stock.qty})`, cls: 'stock-low' };
-  return { label: `In Stock (${stock.qty})`, cls: 'stock-ok' };
+  if (!stockEntry)            return { label: 'Not In Stock', cls: 'stock-missing' };
+  if (stockEntry.qty <= 0)    return { label: 'Out of Stock',  cls: 'stock-oos'    };
+  if (stockEntry.low)         return { label: `Low (${stockEntry.qty})`, cls: 'stock-low' };
+  return { label: `In Stock (${stockEntry.qty})`, cls: 'stock-ok' };
 }
 
   // ── Main demand forecast ──────────────────────────────────
