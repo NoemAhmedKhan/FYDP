@@ -1,17 +1,20 @@
 // ============================================================
-//  PharmAdvancedForecast.js  v4.0
+//  PharmAdvancedForecast.js  v4.1
 //
-//  CHANGES FROM v3.0:
-//  [REMOVED] Low Demand Products section + all related logic
-//  [REMOVED] Search bar from Top 10 table
-//  [CHANGED] Filters: 7 / 15 / 30 days only (removed 14 & 21)
-//  [CHANGED] Restock Suggestions: fixed to last 7 days always
-//            cap raised to 10 items
-//  [CHANGED] Demand Trend: percentage only, top 10, both-period filter
-//  [CHANGED] Top Demand card: bold green product name + % share
-//  [IMPROVED] Chart: production-grade horizontal bar with gradients
-//  [FIX]     Stock matching: 3-tier normalized lookup (unchanged)
-//  [OPTIMIZED] Removed all dead/duplicate state and unused calls
+//  BUG FIXES FROM v4.0:
+//  [FIX #1] Total Searches shows correct platform-wide count
+//           — fallback now sums all rows, not just top-10 rows.
+//             Real fix is in SQL (get_top_searched_medicines v2).
+//  [FIX #2] Demand Trend now shows "New" items (prev=0, curr>0)
+//           — removed the over-aggressive JS filter that dropped
+//             all rows when test/early data fills only the current
+//             period window; "New 🆕" badge shown for new products.
+//  [FIX #3] Stock maps de-duplicate multi-batch inventory rows
+//           — box_quantity is now SUMMED per product_id before
+//             building maps, so an expired zero-qty batch can't
+//             shadow a live batch.
+//  [FIX #4] Restock Suggestions correctly populate
+//           — depends on Fix #3; no other JS change needed here.
 // ============================================================
 
 (function () {
@@ -26,6 +29,7 @@
   let forecastChart = null;
 
   // Stock lookup maps (populated by loadPharmacyStock)
+  // Values: { qty: number, reorder: number, low: boolean }
   let stockByProductId   = new Map();
   let stockByNormName    = new Map();
   let stockByNormGeneric = new Map();
@@ -192,7 +196,15 @@
       'Patient search demand on MediFinder (last ' + activeDays + ' days)';
   }
 
-  // ── Pharmacy stock (3-tier normalized lookup) ─────────────
+  // ── FIX #3: Pharmacy stock with per-product aggregation ──
+  //
+  // Problem (v4.0): pharmacy_inventory_view returns one row per
+  // batch. Using set() means the last-processed batch wins. An
+  // expired/zero-qty batch processed after a healthy batch would
+  // zero-out the map entry and falsely flag the product as OOS.
+  //
+  // Fix: aggregate box_quantity SUM per product_id first, then
+  // build maps from the aggregated values.
   async function loadPharmacyStock() {
     stockByProductId.clear();
     stockByNormName.clear();
@@ -213,24 +225,53 @@
       return;
     }
 
+    // Step 1: aggregate box_quantity per product_id (sum all batches)
+    // Also track the highest reorder_level seen for the product.
+    const aggregated = new Map(); // product_id → { qty, reorder, product_name, generic_name, strength, brand }
+
     (data || []).forEach(row => {
+      const pid = row.product_id;
+      if (!pid) return;
       const qty     = Number(row.box_quantity)  || 0;
       const reorder = Number(row.reorder_level) || 0;
-      const entry   = { qty, reorder, low: reorder > 0 && qty <= reorder };
+
+      if (aggregated.has(pid)) {
+        const existing = aggregated.get(pid);
+        existing.qty    += qty;
+        existing.reorder = Math.max(existing.reorder, reorder);
+      } else {
+        aggregated.set(pid, {
+          qty,
+          reorder,
+          product_name: row.product_name,
+          generic_name: row.generic_name,
+          strength:     row.strength,
+          brand:        row.brand,
+        });
+      }
+    });
+
+    // Step 2: build lookup maps from aggregated data
+    aggregated.forEach((agg, pid) => {
+      const entry = {
+        qty:    agg.qty,
+        reorder: agg.reorder,
+        low:    agg.reorder > 0 && agg.qty <= agg.reorder,
+      };
 
       // Tier 1 — UUID (most reliable)
-      if (row.product_id) stockByProductId.set(row.product_id, entry);
+      stockByProductId.set(pid, entry);
 
       // Tier 2 — normalized product_name
-      const normName = norm(row.product_name);
+      const normName = norm(agg.product_name);
       if (normName) stockByNormName.set(normName, entry);
 
       // Tier 3 — normalized generic_name + strength
-      const normGen = norm((row.generic_name || '') + ' ' + (row.strength || ''));
+      const normGen = norm((agg.generic_name || '') + ' ' + (agg.strength || ''));
       if (normGen) stockByNormGeneric.set(normGen, entry);
 
       // Tier 4 — brand name
-      const normBrand = norm(row.brand || '');
+      const normBrand = norm(agg.brand || '');
       if (normBrand) stockByNormBrand.set(normBrand, entry);
     });
   }
@@ -316,10 +357,17 @@
       return;
     }
 
-    // ── Stat cards ──
-    const totalSearches = rows[0]?.platform_total
-      ? Number(rows[0].platform_total)
-      : rows.reduce((s, r) => s + Number(r.search_count || 0), 0);
+    // ── FIX #1: Total Searches ──────────────────────────────
+    // v4.0 bug: platform_total in the RPC was computed as SUM of
+    // the period CTE (which itself was already grouped + limited),
+    // so it returned only the sum of top-10 rows, not all searches.
+    //
+    // With the fixed SQL (get_top_searched_medicines v2), platform_total
+    // is a true full-table count. For safety, if it still looks too low
+    // (i.e. ≤ sum of the rows we got back), fall back to summing rows.
+    const rowSum = rows.reduce((s, r) => s + Number(r.search_count || 0), 0);
+    const rpcTotal = rows[0]?.platform_total ? Number(rows[0].platform_total) : 0;
+    const totalSearches = rpcTotal > rowSum ? rpcTotal : rowSum;
 
     const top = rows[0];
 
@@ -528,7 +576,16 @@
     });
   }
 
-  // ── Demand Trend (percentage only, top 10, both-period products) ──
+  // ── FIX #2: Demand Trend ──────────────────────────────────
+  //
+  // v4.0 bug: the JS filtered out ALL rows where previous_count = 0.
+  // During early/testing phases all records fall in the current window
+  // and the prior window is empty → every row has previous_count = 0
+  // → nothing rendered → "No comparable trend data".
+  //
+  // Fix: Show items with previous_count = 0 as "New 🆕" (rising demand).
+  // Only skip items that appear in neither period (shouldn't happen since
+  // the RPC only returns rows from the current CTE, but guard anyway).
   async function loadDemandTrend() {
     const el = $('trendList');
     if (!el) return;
@@ -544,32 +601,38 @@
       return;
     }
 
-    // Only products appearing in BOTH periods (previous_count > 0)
-    const trendRows = (data || [])
-      .filter(row => Number(row.previous_count || 0) > 0)
-      .slice(0, 10);
+    // Include ALL rows from the RPC — both with and without prior-period data.
+    // Rows with previous_count = 0 are brand-new demand signals ("New 🆕").
+    const trendRows = (data || []).slice(0, 10);
 
     if (!trendRows.length) {
       el.innerHTML =
-        '<p class="tbl-empty">No comparable trend data for the last ' + activeDays + ' days.</p>';
+        '<p class="tbl-empty">No search data for the last ' + activeDays + ' days.</p>';
       return;
     }
 
     el.innerHTML = trendRows.map(function (row) {
       const prev = Number(row.previous_count || 0);
       const curr = Number(row.current_count  || 0);
-      const pct  = Math.round(((curr - prev) / prev) * 100);
 
       let badgeCls, badgeText;
-      if (pct > 0) {
+
+      if (prev === 0) {
+        // Brand-new demand — no prior period data
         badgeCls  = 'trend-badge--up';
-        badgeText = '🔥 +' + pct + '%';
-      } else if (pct < 0) {
-        badgeCls  = 'trend-badge--down';
-        badgeText = '📉 ' + pct + '%';
+        badgeText = '🆕 New';
       } else {
-        badgeCls  = 'trend-badge--flat';
-        badgeText = '→ 0%';
+        const pct = Math.round(((curr - prev) / prev) * 100);
+        if (pct > 0) {
+          badgeCls  = 'trend-badge--up';
+          badgeText = '🔥 +' + pct + '%';
+        } else if (pct < 0) {
+          badgeCls  = 'trend-badge--down';
+          badgeText = '📉 ' + pct + '%';
+        } else {
+          badgeCls  = 'trend-badge--flat';
+          badgeText = '→ 0%';
+        }
       }
 
       return '<div class="trend-item">' +
