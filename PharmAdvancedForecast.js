@@ -541,79 +541,63 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
     });
   }
 
-    console.log('------BEFORE loadDemandTrend() ');
-
   // ── [NEW] Demand Trend ────────────────────────────────────
   // Calls get_demand_trend(p_days) — returns current vs previous period counts
-  async function loadDemandTrend() {
-    const el = $('trendList');
-    if (!el) return;
-    el.innerHTML = '<p class="tbl-loading">Loading trends…</p>';
+async function loadDemandTrend() {
+  const el = $('trendList');
+  if (!el) return;
+  el.innerHTML = '<p class="tbl-loading">Loading trends…</p>';
 
-    const { data, error } = await sb.rpc('get_demand_trend', {
-      p_days: activeDays,
-    });
+  const { data, error } = await sb.rpc('get_demand_trend', {
+    p_days: activeDays,
+  });
 
-    if (error) {
-      el.innerHTML =
-        `<p class="tbl-empty">Could not load trend data: ${esc(error.message)}</p>`;
-      return;
-    }
-
-    if (!data || !data.length) {
-      el.innerHTML =
-        `<p class="tbl-empty">No trend data available for the last ${activeDays} days.</p>`;
-      return;
-    }
-
-    el.innerHTML = data.map(row => {
-      // Slice to top 10 (RPC should already LIMIT but guard client-side)
-const trendRows = (data || []).slice(0, 10);
-
-if (!trendRows.length) {
-  el.innerHTML = `<p class="tbl-empty">No trend data available for the last ${activeDays} days.</p>`;
-  return;
-}
-
-el.innerHTML = trendRows.map(row => {
-  let badgeCls, badgeText;
-  const prev = Number(row.previous_count || 0);
-  const curr = Number(row.current_count  || 0);
-
-  if (prev === 0 && curr > 0) {
-    badgeCls  = 'trend-badge--new';
-    badgeText = '🆕 New';
-  } else if (prev === 0 && curr === 0) {
-    badgeCls  = 'trend-badge--flat';
-    badgeText = '→ No data';
-  } else {
-    // Recalculate client-side for accuracy (don't blindly trust RPC value)
-    const pct = Math.round(((curr - prev) / prev) * 100);
-    if (pct > 0) {
-      badgeCls  = 'trend-badge--up';
-      badgeText = `🔥 +${pct}%`;
-    } else if (pct < 0) {
-      badgeCls  = 'trend-badge--down';
-      badgeText = `📉 ${pct}%`;
-    } else {
-      badgeCls  = 'trend-badge--flat';
-      badgeText = '→ Stable';
-    }
+  if (error) {
+    el.innerHTML =
+      '<p class="tbl-empty">Could not load trend data: ' + esc(error.message) + '</p>';
+    return;
   }
 
-  return `
-    <div class="trend-item">
-      <span class="trend-name" title="${esc(row.product_name)}">${esc(row.product_name)}</span>
-      <span class="trend-counts">
-        ${curr.toLocaleString()} now
-        &nbsp;/&nbsp;
-        ${prev.toLocaleString()} before
-      </span>
-      <span class="trend-badge ${badgeCls}">${badgeText}</span>
-    </div>`;
-}).join('');
+  const trendRows = (data || []).slice(0, 10);
+
+  if (!trendRows.length) {
+    el.innerHTML =
+      '<p class="tbl-empty">No trend data available for the last ' + activeDays + ' days.</p>';
+    return;
+  }
+
+  el.innerHTML = trendRows.map(function(row) {
+    let badgeCls, badgeText;
+    const prev = Number(row.previous_count || 0);
+    const curr = Number(row.current_count  || 0);
+
+    if (prev === 0 && curr > 0) {
+      badgeCls  = 'trend-badge--new';
+      badgeText = '🆕 New';
+    } else if (prev === 0 && curr === 0) {
+      badgeCls  = 'trend-badge--flat';
+      badgeText = '→ No data';
+    } else {
+      const pct = Math.round(((curr - prev) / prev) * 100);
+      if (pct > 0) {
+        badgeCls  = 'trend-badge--up';
+        badgeText = '🔥 +' + pct + '%';
+      } else if (pct < 0) {
+        badgeCls  = 'trend-badge--down';
+        badgeText = '📉 ' + pct + '%';
+      } else {
+        badgeCls  = 'trend-badge--flat';
+        badgeText = '→ Stable';
+      }
     }
-  console.log('------AFTER LINE 613 - loadDemandTrend() ');
+
+    return '<div class="trend-item">' +
+      '<span class="trend-name" title="' + esc(row.product_name) + '">' + esc(row.product_name) + '</span>' +
+      '<span class="trend-counts">' + curr.toLocaleString() + ' now &nbsp;/&nbsp; ' + prev.toLocaleString() + ' before</span>' +
+      '<span class="trend-badge ' + badgeCls + '">' + badgeText + '</span>' +
+      '</div>';
+  }).join('');
+}
 
   // ── [NEW] Low Demand Products ─────────────────────────────
 async function loadLowDemandProducts() {
