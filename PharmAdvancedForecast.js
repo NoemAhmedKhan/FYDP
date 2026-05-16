@@ -541,6 +541,8 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
     });
   }
 
+    console.log('------BEFORE loadDemandTrend() ');
+
   // ── [NEW] Demand Trend ────────────────────────────────────
   // Calls get_demand_trend(p_days) — returns current vs previous period counts
   async function loadDemandTrend() {
@@ -610,7 +612,8 @@ el.innerHTML = trendRows.map(row => {
       <span class="trend-badge ${badgeCls}">${badgeText}</span>
     </div>`;
 }).join('');
-
+    }
+  console.log('------AFTER LINE 613 - loadDemandTrend() ');
 
   // ── [NEW] Low Demand Products ─────────────────────────────
 async function loadLowDemandProducts() {
