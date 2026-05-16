@@ -198,7 +198,7 @@
 
     const periodBadge = $('forecastPeriodBadge');
     if (periodBadge) periodBadge.innerHTML =
-      `<i class="fa-solid fa-circle" aria-hidden="true"></i> Last ${activeDays} days`;
+      '<i class="fa-solid fa-circle" aria-hidden="true"></i> Last ' + activeDays + ' days';
 
     const trendSub = $('trendSubtitle');
     if (trendSub) trendSub.textContent =
@@ -352,7 +352,7 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
 
   if (!stockEntry)            return { label: 'Not In Stock', cls: 'stock-missing' };
   if (stockEntry.qty <= 0)    return { label: 'Out of Stock',  cls: 'stock-oos'    };
-  if (stockEntry.low)         return { label: `Low (${stockEntry.qty})`, cls: 'stock-low' };
+  if (stockEntry.low)         return { label: 'Low (' + stockEntry.qty + ')', cls: 'stock-low' };
   return { label: `In Stock (${stockEntry.qty})`, cls: 'stock-ok' };
 }
 
@@ -373,7 +373,7 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
         : 'Could not load forecast: ' + error.message;
       renderEmptyState(hint);
       $('restockList')
-        && ($('restockList').innerHTML = `<p class="tbl-empty">${esc(hint)}</p>`);
+        && ($('restockList').innerHTML = '<p class="tbl-empty">' + esc(hint) + '</p>';
       return;
     }
 
@@ -415,7 +415,7 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
   function renderEmptyState(message) {
     const tbody = $('top10Body');
     if (tbody) tbody.innerHTML =
-      `<tr><td colspan="6" class="tbl-empty">${esc(message)}</td></tr>`;
+      '<tr><td colspan="6" class="tbl-empty">' + esc(message) + '</td></tr>';
     if ($('statTotalSearches')) $('statTotalSearches').textContent = '0';
     if ($('statTopShare'))      $('statTopShare').textContent      = '—';
     if ($('statTopName'))       $('statTopName').textContent       = 'No data';
@@ -623,7 +623,8 @@ async function loadLowDemandProducts() {
 
   if (error) {
     tbody.innerHTML =
-      `<tr><td colspan="4" class="tbl-empty">${esc(error.message)}</td></tr>`;
+      tbody.innerHTML =
+  '<tr><td colspan="4" class="tbl-empty">' + esc(error.message) + '</td></tr>';
     renderLowDemandPagination(false, false);
     return;
   }
