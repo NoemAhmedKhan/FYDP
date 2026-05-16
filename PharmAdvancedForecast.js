@@ -239,37 +239,56 @@
       //   handles brand-name searches matching generic-name inventory
       const normGen = norm((row.generic_name || '') + ' ' + (row.strength || ''));
       if (normGen) stockByNormGeneric.set(normGen, entry);
+
+      let stockByNormBrand = new Map();  // norm(brand) → entry
+      const normBrand = norm(row.brand || '');
+if (normBrand) stockByNormBrand.set(normBrand, entry);
     });
   }
 
   // [FIX] Three-tier resolution — eliminates false "Not In Stock" badges
   function getStockStatus(item) {
-    if (!pharmacyId) return { label: '—', cls: 'stock-unknown' };
+  if (!pharmacyId) return { label: '—', cls: 'stock-unknown' };
 
-    // Tier 1: UUID (get_top_searched_medicines returns NULL::uuid currently,
-    //         but future-proofed for when product_id is populated)
-    const byId = item.product_id
-      ? stockByProductId.get(item.product_id)
-      : null;
+  // Tier 1: UUID match (most reliable)
+  const byId = item.product_id
+    ? stockByProductId.get(item.product_id)
+    : null;
 
-    // Tier 2: normalized product_name from search history vs inventory
-    const byName = stockByNormName.get(norm(item.product_name));
+  // Tier 2a: normalized product_name exact match
+  const byName = stockByNormName.get(norm(item.product_name));
 
-    // Tier 3: normalized generic_name + strength
-    //         (item may carry these if the RPC ever joins products)
-    const byGeneric = (item.generic_name || item.strength)
-      ? stockByNormGeneric.get(norm(
-          (item.generic_name || '') + ' ' + (item.strength || '')
-        ))
-      : null;
-
-    const stock = byId || byName || byGeneric;
-
-    if (!stock)          return { label: 'Not In Stock', cls: 'stock-missing' };
-    if (stock.qty <= 0)  return { label: 'Out of Stock',  cls: 'stock-oos'     };
-    if (stock.low)       return { label: `Low (${stock.qty})`, cls: 'stock-low' };
-    return { label: `In Stock (${stock.qty})`, cls: 'stock-ok' };
+  // Tier 2b: each word of the searched name checked against all inventory names
+  // Handles "Calpol 500" matching "Calpol" or vice versa
+  let byPartial = null;
+  if (!byName) {
+    const searchedNorm = norm(item.product_name);
+    for (const [invName, entry] of stockByNormName) {
+      // Match if either name fully contains the other
+      if (searchedNorm.startsWith(invName) ||
+          invName.startsWith(searchedNorm) ||
+          searchedNorm.includes(invName) ||
+          invName.includes(searchedNorm)) {
+        byPartial = entry;
+        break;
+      }
+    }
   }
+
+  // Tier 3: normalized generic_name + strength
+  const byGeneric = (item.generic_name || item.strength)
+    ? stockByNormGeneric.get(norm(
+        (item.generic_name || '') + ' ' + (item.strength || '')
+      ))
+    : null;
+
+  const stock = byId || byName || byPartial || byGeneric;
+
+  if (!stock)         return { label: 'Not In Stock', cls: 'stock-missing' };
+  if (stock.qty <= 0) return { label: 'Out of Stock',  cls: 'stock-oos'    };
+  if (stock.low)      return { label: `Low (${stock.qty})`, cls: 'stock-low' };
+  return { label: `In Stock (${stock.qty})`, cls: 'stock-ok' };
+}
 
   // ── Main demand forecast ──────────────────────────────────
   async function loadDemandForecast() {
@@ -302,9 +321,9 @@
     }
 
     // Stat cards
-    const totalSearches = rows.reduce(
-      (s, r) => s + Number(r.search_count || 0), 0
-    );
+    const totalSearches = rows[0]?.platform_total
+  ? Number(rows[0].platform_total)
+  : rows.reduce((s, r) => s + Number(r.search_count || 0), 0);
     const top = rows[0];
     if ($('statTotalSearches'))
       $('statTotalSearches').textContent = totalSearches.toLocaleString();
