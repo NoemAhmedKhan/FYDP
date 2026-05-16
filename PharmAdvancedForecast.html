@@ -53,16 +53,19 @@
       </a>
     </nav>
 
-    <div class="s-user" id="sUserBtn" role="button" tabindex="0">
-      <div class="s-avatar">
-        <img src="Images/PharmAvatar.jpg" alt="" onerror="this.style.display='none'">
+<div class="s-user">
+      <div class="s-avatar-wrap">
+        <div class="s-avatar-inner" id="sidebarAvatarInner"></div>
       </div>
       <div class="s-umeta">
-        <span class="s-uname">Pharmacist</span>
-        <span class="s-urole">Lead Pharmacist</span>
+        <span class="s-uname" id="sidebarNameEl">Loading…</span>
+        <span class="s-uemail" id="sidebarEmailEl"></span>
       </div>
+      <button class="s-logout-btn" id="logoutBtn"
+              title="Log out" aria-label="Log out">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+      </button>
     </div>
-
   </div>
 </aside>
 
@@ -78,10 +81,18 @@
     </div>
   </header>
 
+    <!-- Time Filters -->
+  <div class="filter-bar" role="group" aria-label="Time period filter">
+    <button class="filter-btn active" data-days="7">Last 7 Days</button>
+    <button class="filter-btn"        data-days="14">Last 14 Days</button>
+    <button class="filter-btn"        data-days="21">Last 21 Days</button>
+    <button class="filter-btn"        data-days="30">Last 30 Days</button>
+  </div>
+  
   <!-- Stat Cards -->
   <div class="stat-grid-3" role="list" aria-label="Forecast metrics">
     <article class="stat-card" role="listitem">
-      <p class="stat-label">Total Searches (30d)</p>
+      <p class="stat-label" id="statTotalLabel">Total Searches (7d)</p>
       <p class="stat-val stat-val--green stat-val--xl" id="statTotalSearches">—</p>
       <p class="stat-sub">Platform-wide patient demand</p>
     </article>
@@ -151,8 +162,62 @@
         <p class="tbl-loading">Loading…</p>
       </div>
     </aside>
-
   </div>
+
+  <!-- Demand Trend Comparison -->
+  <section class="card" aria-labelledby="trendHeading">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="trendHeading">
+          <i class="fa-solid fa-arrow-trend-up"
+             style="color:var(--clr-green);margin-right:8px"
+             aria-hidden="true"></i>
+          Demand Trend
+        </h2>
+        <p class="card-subtitle" id="trendSubtitle">
+          Comparing last 7 days vs previous 7 days
+        </p>
+      </div>
+    </div>
+    <div id="trendList" class="trend-list">
+      <p class="tbl-loading">Loading trends…</p>
+    </div>
+  </section>
+
+  <!-- Low Demand Products -->
+  <section class="card" aria-labelledby="lowDemandHeading">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="lowDemandHeading">
+          <i class="fa-solid fa-arrow-trend-down"
+             style="color:var(--clr-amber);margin-right:8px"
+             aria-hidden="true"></i>
+          Low Demand Products
+        </h2>
+        <p class="card-subtitle">
+          Products in your inventory with little or no patient searches
+        </p>
+      </div>
+    </div>
+    <!-- max-height + overflow-y gives vertical scroll for long lists -->
+    <div class="tbl-wrap" style="max-height:420px;overflow-y:auto;">
+      <table aria-label="Low demand products">
+        <thead>
+          <tr>
+            <th scope="col">Product</th>
+            <th scope="col">Searches</th>
+            <th scope="col">Demand %</th>
+            <th scope="col">Demand Level</th>
+          </tr>
+        </thead>
+        <tbody id="lowDemandBody">
+          <tr><td colspan="4" class="tbl-loading">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination-bar" id="lowDemandPagination"></div>
+  </section>
+  
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
