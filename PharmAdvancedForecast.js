@@ -610,7 +610,7 @@ el.innerHTML = trendRows.map(row => {
       <span class="trend-badge ${badgeCls}">${badgeText}</span>
     </div>`;
 }).join('');
-  }
+
 
   // ── [NEW] Low Demand Products ─────────────────────────────
 async function loadLowDemandProducts() {
