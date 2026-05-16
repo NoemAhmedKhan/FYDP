@@ -250,13 +250,13 @@ function renderFilteredLowDemand() {
     const badgeCls = demandBadgeMap[row.demand_level] || 'demand-badge--low';
     const tr = document.createElement('tr');
     tr.innerHTML =
-      `<td>
-         <p class="med-name">${esc(row.product_name)}</p>
-         <span class="med-category">${esc(row.generic_name || '')} ${esc(row.strength || '')}</span>
-       </td>` +
-      `<td><strong>${Number(row.search_count).toLocaleString()}</strong></td>` +
-      `<td>${row.demand_pct ?? 0}%</td>` +
-      `<td><span class="demand-badge ${badgeCls}">${esc(row.demand_level)}</span></td>`;
+  '<td>' +
+  '<p class="med-name">' + esc(row.product_name) + '</p>' +
+  '<span class="med-category">' + esc(row.generic_name || '') + ' ' + esc(row.strength || '') + '</span>' +
+  '</td>' +
+  '<td><strong>' + Number(row.search_count).toLocaleString() + '</strong></td>' +
+  '<td>' + (row.demand_pct ?? 0) + '%</td>' +
+  '<td><span class="demand-badge ' + badgeCls + '">' + esc(row.demand_level) + '</span></td>';
     frag.appendChild(tr);
   });
   tbody.innerHTML = '';
