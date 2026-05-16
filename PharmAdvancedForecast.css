@@ -295,6 +295,37 @@ input, textarea, select { font-family: inherit; }
   margin-bottom: 20px;
 }
 
+/* ── Low Demand Search Bar ─────────────────────────────────── */
+.low-demand-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 1px solid var(--clr-gray-lt);
+  border-radius: var(--radius-md);
+  background: var(--clr-gray-xlt);
+  margin-bottom: 14px;
+}
+
+.low-demand-search-wrap i {
+  color: var(--clr-gray-md);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.low-demand-search-wrap input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: var(--clr-dark);
+  outline: none;
+}
+
+.low-demand-search-wrap input::placeholder {
+  color: var(--clr-gray-md);
+}
+
 .card-title    { font-size: 17px; font-weight: 700; color: var(--clr-dark); }
 .card-subtitle { font-size: 12px; color: var(--clr-gray-md); margin-top: 3px; }
 
