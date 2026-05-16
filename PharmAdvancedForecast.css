@@ -666,3 +666,210 @@ tbody td {
   .topbar-title h1 { font-size: 22px; }
   .stat-grid-3 { grid-template-columns: 1fr; }
 }
+
+/* ── Filter bar ─────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--clr-gray-lt);
+  background: var(--clr-white-pure);
+  color: var(--clr-gray);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.filter-btn:hover {
+  border-color: var(--clr-green);
+  color: var(--clr-green);
+}
+
+.filter-btn.active {
+  background: var(--clr-green);
+  color: #fff;
+  border-color: var(--clr-green);
+}
+
+
+/* ── Demand Trend list ──────────────────────────────────────── */
+.trend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--clr-gray-lt);
+  border-radius: var(--radius-lg);
+}
+
+.trend-name {
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trend-counts {
+  font-size: 12px;
+  color: var(--clr-gray-md);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.trend-badge--up   { background: var(--clr-green-bg);  color: var(--clr-green);  }
+.trend-badge--down { background: var(--clr-red-bg);    color: var(--clr-red);    }
+.trend-badge--new  { background: var(--clr-blue-bg);   color: var(--clr-blue);   }
+.trend-badge--flat { background: var(--clr-gray-xlt);  color: var(--clr-gray);   }
+
+
+/* ── Low Demand Products ────────────────────────────────────── */
+
+/* Demand level badges */
+.demand-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.demand-badge--very-low { background: var(--clr-red-bg);    color: var(--clr-red);    }
+.demand-badge--low      { background: var(--clr-amber-bg);  color: var(--clr-amber);  }
+.demand-badge--moderate { background: var(--clr-blue-bg);   color: var(--clr-blue);   }
+.demand-badge--high     { background: var(--clr-green-bg);  color: var(--clr-green);  }
+
+/* Pagination */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--clr-gray-xlt);
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.page-btn {
+  padding: 6px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-gray-lt);
+  background: var(--clr-white-pure);
+  color: var(--clr-gray);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--clr-green);
+  color: var(--clr-green);
+}
+
+.page-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 13px;
+  color: var(--clr-gray-md);
+}
+
+
+/* ── Sidebar — PharmInfoUpdate-style user footer ────────────── */
+
+/* Avatar circle wrapper */
+.s-avatar-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--clr-green-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.s-avatar-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.s-avatar-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Initials fallback text inside sidebar avatar */
+.s-avatar-initials-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--clr-green);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Email line replaces the old s-urole "Lead Pharmacist" */
+.s-uemail {
+  font-size: 11px;
+  color: var(--clr-gray-md);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Logout button */
+.s-logout-btn {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: none;
+  background: none;
+  color: var(--clr-gray-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.s-logout-btn:hover {
+  background: var(--clr-red-bg);
+  color: var(--clr-red);
+}
