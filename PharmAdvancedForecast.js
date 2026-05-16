@@ -25,6 +25,8 @@
   let pharmacyId    = null;
   let forecastChart = null;
   let lowDemandPage = 0;
+  let lowDemandFilter = '';     // search bar filter text
+  let lowDemandAllRows = [];    // full unfiltered result set for current page group
 
   // Stock lookup maps (populated by loadPharmacyStock)
   let stockByProductId   = new Map();  // product_id UUID → entry
@@ -157,6 +159,7 @@
 
     initSidebar();
     initFilterBar();
+    initLowDemandSearch(); 
 
     // Load stock first — all render functions depend on it
     await loadPharmacyStock();
@@ -201,6 +204,66 @@
       `Comparing last ${activeDays} days vs previous ${activeDays} days`;
   }
 
+  function initLowDemandSearch() {
+  const input = $('lowDemandSearch');
+  if (!input) return;
+  input.addEventListener('input', function () {
+    lowDemandFilter = this.value.trim().toLowerCase();
+    lowDemandPage   = 0;   // reset to page 1 on new search
+    renderFilteredLowDemand();
+  });
+}
+
+function renderFilteredLowDemand() {
+  const tbody = $('lowDemandBody');
+  if (!tbody) return;
+
+  const filtered = lowDemandFilter
+    ? lowDemandAllRows.filter(r =>
+        (r.product_name  || '').toLowerCase().includes(lowDemandFilter) ||
+        (r.generic_name  || '').toLowerCase().includes(lowDemandFilter)
+      )
+    : lowDemandAllRows;
+
+  const start   = lowDemandPage * LOW_PAGE_SIZE;
+  const pageRows = filtered.slice(start, start + LOW_PAGE_SIZE);
+  const hasPrev  = lowDemandPage > 0;
+  const hasNext  = filtered.length > start + LOW_PAGE_SIZE;
+
+  if (!pageRows.length) {
+    tbody.innerHTML =
+      '<tr><td colspan="4" class="tbl-empty">No products match your search.</td></tr>';
+    renderLowDemandPagination(hasPrev, hasNext);
+    return;
+  }
+
+  const demandBadgeMap = {
+    'Very Low': 'demand-badge--very-low',
+    'Low':      'demand-badge--low',
+    'Moderate': 'demand-badge--moderate',
+    'High':     'demand-badge--high',
+  };
+
+  const frag = document.createDocumentFragment();
+  pageRows.forEach(row => {
+    const badgeCls = demandBadgeMap[row.demand_level] || 'demand-badge--low';
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>
+         <p class="med-name">${esc(row.product_name)}</p>
+         <span class="med-category">${esc(row.generic_name || '')} ${esc(row.strength || '')}</span>
+       </td>` +
+      `<td><strong>${Number(row.search_count).toLocaleString()}</strong></td>` +
+      `<td>${row.demand_pct ?? 0}%</td>` +
+      `<td><span class="demand-badge ${badgeCls}">${esc(row.demand_level)}</span></td>`;
+    frag.appendChild(tr);
+  });
+  tbody.innerHTML = '';
+  tbody.appendChild(frag);
+
+  renderLowDemandPagination(hasPrev, hasNext);
+}
+  
   // ── Pharmacy stock (3-tier normalized lookup) ─────────────
   // [FIX] Build three maps so getStockStatus can match reliably
   //       regardless of how the searched product name was stored
@@ -258,7 +321,13 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
   // Tier 2a: normalized product_name exact match
   const byName = stockByNormName.get(norm(item.product_name));
 
-  // Tier 2b: each word of the searched name checked against all inventory names
+  // Tier 2b: brand name match
+const byBrand = item.product_name
+  ? stockByNormBrand.get(norm(item.product_name))
+  : null;
+
+const stock = byId || byName || byBrand || byPartial || byGeneric;
+  
   // Handles "Calpol 500" matching "Calpol" or vice versa
   let byPartial = null;
   if (!byName) {
@@ -499,133 +568,113 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
     }
 
     el.innerHTML = data.map(row => {
-      // change_pct is NULL when previous_count = 0 (brand-new demand this period)
-      let badgeCls, badgeText;
+      // Slice to top 10 (RPC should already LIMIT but guard client-side)
+const trendRows = (data || []).slice(0, 10);
 
-      if (row.change_pct === null || row.change_pct === undefined) {
-        badgeCls  = 'trend-badge--new';
-        badgeText = '🆕 New demand';
-      } else {
-        const pct = Number(row.change_pct);
-        if (pct > 0) {
-          badgeCls  = 'trend-badge--up';
-          badgeText = `🔥 +${pct}%`;
-        } else if (pct < 0) {
-          badgeCls  = 'trend-badge--down';
-          badgeText = `📉 ${pct}%`;
-        } else {
-          badgeCls  = 'trend-badge--flat';
-          badgeText = '→ Stable';
-        }
-      }
+if (!trendRows.length) {
+  el.innerHTML = `<p class="tbl-empty">No trend data available for the last ${activeDays} days.</p>`;
+  return;
+}
 
-      return `
-        <div class="trend-item">
-          <span class="trend-name"
-                title="${esc(row.product_name)}">${esc(row.product_name)}</span>
-          <span class="trend-counts">
-            ${Number(row.current_count).toLocaleString()} now
-            &nbsp;/&nbsp;
-            ${Number(row.previous_count).toLocaleString()} before
-          </span>
-          <span class="trend-badge ${badgeCls}">${badgeText}</span>
-        </div>`;
-    }).join('');
+el.innerHTML = trendRows.map(row => {
+  let badgeCls, badgeText;
+  const prev = Number(row.previous_count || 0);
+  const curr = Number(row.current_count  || 0);
+
+  if (prev === 0 && curr > 0) {
+    badgeCls  = 'trend-badge--new';
+    badgeText = '🆕 New';
+  } else if (prev === 0 && curr === 0) {
+    badgeCls  = 'trend-badge--flat';
+    badgeText = '→ No data';
+  } else {
+    // Recalculate client-side for accuracy (don't blindly trust RPC value)
+    const pct = Math.round(((curr - prev) / prev) * 100);
+    if (pct > 0) {
+      badgeCls  = 'trend-badge--up';
+      badgeText = `🔥 +${pct}%`;
+    } else if (pct < 0) {
+      badgeCls  = 'trend-badge--down';
+      badgeText = `📉 ${pct}%`;
+    } else {
+      badgeCls  = 'trend-badge--flat';
+      badgeText = '→ Stable';
+    }
+  }
+
+  return `
+    <div class="trend-item">
+      <span class="trend-name" title="${esc(row.product_name)}">${esc(row.product_name)}</span>
+      <span class="trend-counts">
+        ${curr.toLocaleString()} now
+        &nbsp;/&nbsp;
+        ${prev.toLocaleString()} before
+      </span>
+      <span class="trend-badge ${badgeCls}">${badgeText}</span>
+    </div>`;
+}).join('');
   }
 
   // ── [NEW] Low Demand Products ─────────────────────────────
-  // Calls get_low_demand_products(p_days, p_limit, p_offset)
-  // pharmacy_id is resolved SERVER-SIDE from auth.uid() — no client param needed
-  async function loadLowDemandProducts() {
-    const tbody = $('lowDemandBody');
-    if (!tbody) return;
+async function loadLowDemandProducts() {
+  const tbody = $('lowDemandBody');
+  if (!tbody) return;
 
-    // pharmacy_id still needed client-side to decide whether to even call
-    // (avoids a confusing "no data" state when pharmacy isn't set up yet)
-    if (!pharmacyId) {
-      tbody.innerHTML =
-        '<tr><td colspan="4" class="tbl-empty">No pharmacy record found.</td></tr>';
-      return;
-    }
-
+  if (!pharmacyId) {
     tbody.innerHTML =
-      '<tr><td colspan="4" class="tbl-loading">Loading…</td></tr>';
-
-    const { data, error } = await sb.rpc('get_low_demand_products', {
-      p_days:   activeDays,
-      p_limit:  LOW_PAGE_SIZE + 1,   // fetch one extra to detect whether next page exists
-      p_offset: lowDemandPage * LOW_PAGE_SIZE,
-    });
-
-    if (error) {
-      tbody.innerHTML =
-        `<tr><td colspan="4" class="tbl-empty">${esc(error.message)}</td></tr>`;
-      renderLowDemandPagination(false, false);
-      return;
-    }
-
-    const hasNext = (data || []).length > LOW_PAGE_SIZE;
-    const rows    = (data || []).slice(0, LOW_PAGE_SIZE);
-
-    if (!rows.length) {
-      tbody.innerHTML =
-        '<tr><td colspan="4" class="tbl-empty">No low-demand products found for this period.</td></tr>';
-      renderLowDemandPagination(lowDemandPage > 0, false);
-      return;
-    }
-
-    const demandBadgeMap = {
-      'Very Low': 'demand-badge--very-low',
-      'Low':      'demand-badge--low',
-      'Moderate': 'demand-badge--moderate',
-      'High':     'demand-badge--high',
-    };
-
-    const frag = document.createDocumentFragment();
-    rows.forEach(row => {
-      const badgeCls = demandBadgeMap[row.demand_level] || 'demand-badge--low';
-      const tr = document.createElement('tr');
-      tr.innerHTML =
-        `<td>
-           <p class="med-name">${esc(row.product_name)}</p>
-           <span class="med-category">${esc(row.generic_name)} ${esc(row.strength)}</span>
-         </td>` +
-        `<td><strong>${Number(row.search_count).toLocaleString()}</strong></td>` +
-        `<td>${row.demand_pct}%</td>` +
-        `<td><span class="demand-badge ${badgeCls}">${esc(row.demand_level)}</span></td>`;
-      frag.appendChild(tr);
-    });
-    tbody.innerHTML = '';
-    tbody.appendChild(frag);
-
-    renderLowDemandPagination(lowDemandPage > 0, hasNext);
+      '<tr><td colspan="4" class="tbl-empty">No pharmacy record found.</td></tr>';
+    return;
   }
+
+  tbody.innerHTML =
+    '<tr><td colspan="4" class="tbl-loading">Loading…</td></tr>';
+
+  // Fetch a large batch (e.g. 500) for client-side search+paginate
+  // This avoids server round-trips on every search keystroke
+  const { data, error } = await sb.rpc('get_low_demand_products', {
+    p_days:   activeDays,
+    p_limit:  500,
+    p_offset: 0,
+  });
+
+  if (error) {
+    tbody.innerHTML =
+      `<tr><td colspan="4" class="tbl-empty">${esc(error.message)}</td></tr>`;
+    renderLowDemandPagination(false, false);
+    return;
+  }
+
+  lowDemandAllRows = data || [];
+  lowDemandFilter  = '';
+  lowDemandPage    = 0;
+
+  // Reset search input
+  const searchInput = $('lowDemandSearch');
+  if (searchInput) searchInput.value = '';
+
+  renderFilteredLowDemand();
+}
 
   function renderLowDemandPagination(hasPrev, hasNext) {
-    const bar = $('lowDemandPagination');
-    if (!bar) return;
+  const bar = $('lowDemandPagination');
+  if (!bar) return;
 
-    if (!hasPrev && !hasNext) {
-      bar.innerHTML = '';
-      return;
-    }
+  if (!hasPrev && !hasNext) { bar.innerHTML = ''; return; }
 
-    bar.innerHTML = `
-      <button class="page-btn" id="ldPrev"
-              ${hasPrev ? '' : 'disabled'}>← Prev</button>
-      <span class="page-info">Page ${lowDemandPage + 1}</span>
-      <button class="page-btn" id="ldNext"
-              ${hasNext ? '' : 'disabled'}>Next →</button>`;
+  bar.innerHTML = `
+    <button class="page-btn" id="ldPrev" ${hasPrev ? '' : 'disabled'}>← Prev</button>
+    <span class="page-info">Page ${lowDemandPage + 1}</span>
+    <button class="page-btn" id="ldNext" ${hasNext ? '' : 'disabled'}>Next →</button>`;
 
-    $('ldPrev')?.addEventListener('click', async () => {
-      lowDemandPage = Math.max(0, lowDemandPage - 1);
-      await loadLowDemandProducts();
-    });
-    $('ldNext')?.addEventListener('click', async () => {
-      lowDemandPage++;
-      await loadLowDemandProducts();
-    });
-  }
+  $('ldPrev')?.addEventListener('click', () => {
+    lowDemandPage = Math.max(0, lowDemandPage - 1);
+    renderFilteredLowDemand();
+  });
+  $('ldNext')?.addEventListener('click', () => {
+    lowDemandPage++;
+    renderFilteredLowDemand();
+  });
+}
 
   // ── Boot ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', init);
