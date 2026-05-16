@@ -586,6 +586,50 @@ tbody td {
 
 .rec-reason i { font-size: 8px; flex-shrink: 0; }
 
+/* Demand forecast table */
+.tbl-loading,
+.tbl-empty {
+  text-align: center;
+  padding: 28px 16px;
+  color: var(--clr-gray-md);
+  font-size: 14px;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 4px 8px;
+  background: var(--clr-green-bg);
+  color: var(--clr-green);
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.stock-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stock-ok      { background: var(--clr-green-bg); color: var(--clr-green); }
+.stock-low     { background: var(--clr-amber-bg); color: var(--clr-amber); }
+.stock-oos,
+.stock-missing { background: var(--clr-red-bg); color: var(--clr-red); }
+.stock-unknown { background: var(--clr-gray-xlt); color: var(--clr-gray); }
+
+.insights-intro {
+  font-size: 13px;
+  color: var(--clr-gray-md);
+  margin: -8px 0 14px;
+}
+
+.restock-list .risk-card:last-child { margin-bottom: 0; }
+
 /* ─── 12. RESPONSIVE ─── */
 @media (max-width: 1100px) {
   .forecast-layout { grid-template-columns: 1fr; }

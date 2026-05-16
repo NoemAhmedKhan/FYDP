@@ -76,6 +76,7 @@
 
     initSidebar();
     initChart();
+    loadDemandPreview();
 
     // ── Start heartbeat AFTER auth is confirmed ─────────────
     // FIX: uses `sb` (local var), not `supabaseClient` (undefined here)
@@ -192,6 +193,43 @@
         }
       });
     });
+  }
+
+  // ── Top searched medicines preview ────────────────────────
+  async function loadDemandPreview() {
+    const listEl = document.getElementById('demandTopList');
+    if (!listEl) return;
+
+    const { data, error } = await sb.rpc('get_top_searched_medicines', {
+      p_limit: 5,
+      p_days:  30,
+    });
+
+    if (error) {
+      const hint = /function|not found|schema cache/i.test(error.message)
+        ? 'Deploy the demand forecast SQL migration in Supabase.'
+        : 'Could not load search trends.';
+      listEl.innerHTML = '<li class="demand-top-empty">' + hint + '</li>';
+      return;
+    }
+
+    if (!data || !data.length) {
+      listEl.innerHTML = '<li class="demand-top-empty">No patient searches recorded yet.</li>';
+      return;
+    }
+
+    listEl.innerHTML = data.map((row, i) => {
+      const rank = row.rank != null ? row.rank : i + 1;
+      const name = row.product_name || 'Unknown';
+      const count = Number(row.search_count || 0).toLocaleString();
+      return (
+        '<li class="demand-top-item">' +
+          '<span class="demand-top-rank">#' + rank + '</span>' +
+          '<span class="demand-top-name" title="' + name.replace(/"/g, '&quot;') + '">' + name + '</span>' +
+          '<span class="demand-top-count">' + count + '</span>' +
+        '</li>'
+      );
+    }).join('');
   }
 
   // ── Boot ──────────────────────────────────────────────────

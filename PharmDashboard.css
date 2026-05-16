@@ -538,6 +538,67 @@ button {
   color: white;
 }
 
+.demand-top-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.demand-top-item {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, .13);
+  border-radius: var(--r-md);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.demand-top-rank {
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.demand-top-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demand-top-count {
+  font-weight: 700;
+  font-size: 12px;
+  color: rgba(255, 255, 255, .9);
+}
+
+.demand-top-loading,
+.demand-top-empty {
+  font-size: 13px;
+  color: rgba(255, 255, 255, .75);
+  padding: 4px 0;
+}
+
+.btn-demand-more {
+  display: block;
+  text-align: center;
+  margin-top: 4px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, .2);
+  border-radius: var(--r-md);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  transition: var(--t);
+}
+
+.btn-demand-more:hover {
+  background: rgba(255, 255, 255, .3);
+}
+
 /* === SMART PRICING === */
 .sp-card {
   background: var(--white-pure);

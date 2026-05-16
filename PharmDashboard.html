@@ -144,21 +144,17 @@
 
     <!-- RIGHT COL -->
     <div class="right-col">
-      <!-- AI Insights -->
-      <div class="ai-card">
+      <!-- Demand forecast preview -->
+      <div class="ai-card" id="demandForecastCard">
         <div class="ai-head">
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
-          <h3>AI Insights</h3>
+          <i class="fa-solid fa-magnifying-glass-chart"></i>
+          <h3>Top Searched Medicines</h3>
         </div>
-        <p class="ai-text">Based on local health trends, expect a 20% increase in allergy medication demand next week.</p>
-        <div class="ai-item">
-          <span class="ai-item-lbl">Demand Forecast</span>
-          <span class="ai-item-val">High: Antihistamines</span>
-        </div>
-        <div class="ai-item">
-          <span class="ai-item-lbl">Seasonal Alert</span>
-          <span class="ai-item-val">Pollen surge detected</span>
-        </div>
+        <p class="ai-text">What patients are searching for on MediFinder (last 30 days).</p>
+        <ol id="demandTopList" class="demand-top-list">
+          <li class="demand-top-loading">Loading…</li>
+        </ol>
+        <a href="PharmAdvancedForecast.html" class="btn-demand-more">View full forecast</a>
       </div>
 
       <!-- Smart Pricing -->
