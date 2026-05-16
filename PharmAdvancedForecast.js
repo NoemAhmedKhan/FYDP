@@ -401,15 +401,7 @@
     const restockRows = activeDays === 7
       ? rows
       : (restock7dResult?.data || []);
-
-    // TEMPORARY DIAGNOSTIC — remove after confirming
-console.log('[Restock input rows]', restockRows.map(r => ({
-  name: r.product_name,
-  product_id: r.product_id,
-  stock: getStockStatus(r)
-})));
-    
-    renderRestockSuggestions(restockRows);
+      renderRestockSuggestions(restockRows);
   }
 
   function renderEmptyState(message) {
