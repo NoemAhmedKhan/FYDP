@@ -194,15 +194,14 @@
 
   function updatePeriodLabels() {
     const totalLabel = $('statTotalLabel');
-    if (totalLabel) totalLabel.textContent = `Total Searches (${activeDays}d)`;
+    if (totalLabel) totalLabel.textContent = 'Total Searches (' + activeDays + 'd)';
 
     const periodBadge = $('forecastPeriodBadge');
     if (periodBadge) periodBadge.innerHTML =
       '<i class="fa-solid fa-circle" aria-hidden="true"></i> Last ' + activeDays + ' days';
 
     const trendSub = $('trendSubtitle');
-    if (trendSub) trendSub.textContent =
-      `Comparing last ${activeDays} days vs previous ${activeDays} days`;
+    if (trendSub) trendSub.textContent = 'Comparing last ' + activeDays + ' days vs previous ' + activeDays + ' days';
   }
 
   function initLowDemandSearch() {
@@ -372,8 +371,8 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
         ? 'Deploy the demand forecast SQL migration in Supabase.'
         : 'Could not load forecast: ' + error.message;
       renderEmptyState(hint);
-      $('restockList')
-        && ($('restockList').innerHTML = '<p class="tbl-empty">' + esc(hint) + '</p>';
+      const restockEl = $('restockList');
+      if (restockEl) restockEl.innerHTML = '<p class="tbl-empty">' + esc(hint) + '</p>';
       return;
     }
 
@@ -622,9 +621,7 @@ async function loadLowDemandProducts() {
   });
 
   if (error) {
-    tbody.innerHTML =
-      tbody.innerHTML =
-  '<tr><td colspan="4" class="tbl-empty">' + esc(error.message) + '</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="tbl-empty">' + esc(error.message) + '</td></tr>';
     renderLowDemandPagination(false, false);
     return;
   }
@@ -646,10 +643,10 @@ async function loadLowDemandProducts() {
 
   if (!hasPrev && !hasNext) { bar.innerHTML = ''; return; }
 
-  bar.innerHTML = `
-    <button class="page-btn" id="ldPrev" ${hasPrev ? '' : 'disabled'}>← Prev</button>
-    <span class="page-info">Page ${lowDemandPage + 1}</span>
-    <button class="page-btn" id="ldNext" ${hasNext ? '' : 'disabled'}>Next →</button>`;
+  bar.innerHTML =
+  '<button class="page-btn" id="ldPrev" ' + (hasPrev ? '' : 'disabled') + '>← Prev</button>' +
+  '<span class="page-info">Page ' + (lowDemandPage + 1) + '</span>' +
+  '<button class="page-btn" id="ldNext" ' + (hasNext ? '' : 'disabled') + '>Next →</button>';
 
   $('ldPrev')?.addEventListener('click', () => {
     lowDemandPage = Math.max(0, lowDemandPage - 1);
