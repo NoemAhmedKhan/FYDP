@@ -373,7 +373,7 @@ if (normBrand) stockByNormBrand.set(normBrand, entry);
       renderEmptyState(hint);
       const restockEl = $('restockList');
       if (restockEl) restockEl.innerHTML = '<p class="tbl-empty">' + esc(hint) + '</p>';
-      return;
+          return
     }
 
     const rows = data || [];
