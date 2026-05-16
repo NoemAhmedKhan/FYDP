@@ -589,60 +589,98 @@
   // Only skip items that appear in neither period (shouldn't happen since
   // the RPC only returns rows from the current CTE, but guard anyway).
   async function loadDemandTrend() {
-    const el = $('trendList');
-    if (!el) return;
-    el.innerHTML = '<p class="tbl-loading">Loading trends…</p>';
+  const el = $('trendList');
+  if (!el) return;
+  el.innerHTML = '<p class="tbl-loading">Loading trends…</p>';
 
-    const { data, error } = await sb.rpc('get_demand_trend', {
-      p_days: activeDays,
-    });
+  const { data, error } = await sb.rpc('get_demand_trend', {
+    p_days: activeDays,
+  });
 
-    if (error) {
-      el.innerHTML =
-        '<p class="tbl-empty">Could not load trend data: ' + esc(error.message) + '</p>';
-      return;
-    }
-
-    // Include ALL rows from the RPC — both with and without prior-period data.
-    // Rows with previous_count = 0 are brand-new demand signals ("New 🆕").
-    const trendRows = (data || []).slice(0, 10);
-
-    if (!trendRows.length) {
-      el.innerHTML =
-        '<p class="tbl-empty">No search data for the last ' + activeDays + ' days.</p>';
-      return;
-    }
-
-    el.innerHTML = trendRows.map(function (row) {
-      const prev = Number(row.previous_count || 0);
-      const curr = Number(row.current_count  || 0);
-
-      let badgeCls, badgeText;
-
-      if (prev === 0) {
-        // Brand-new demand — no prior period data
-        badgeCls  = 'trend-badge--up';
-        badgeText = '🆕 New';
-      } else {
-        const pct = Math.round(((curr - prev) / prev) * 100);
-        if (pct > 0) {
-          badgeCls  = 'trend-badge--up';
-          badgeText = '🔥 +' + pct + '%';
-        } else if (pct < 0) {
-          badgeCls  = 'trend-badge--down';
-          badgeText = '📉 ' + pct + '%';
-        } else {
-          badgeCls  = 'trend-badge--flat';
-          badgeText = '→ 0%';
-        }
-      }
-
-      return '<div class="trend-item">' +
-        '<span class="trend-name" title="' + esc(row.product_name) + '">' + esc(row.product_name) + '</span>' +
-        '<span class="trend-badge ' + badgeCls + '">' + badgeText + '</span>' +
-        '</div>';
-    }).join('');
+  if (error) {
+    el.innerHTML =
+      '<p class="tbl-empty">Could not load trend data: ' + esc(error.message) + '</p>';
+    return;
   }
+
+  const trendRows = (data || []).slice(0, 10);
+
+  if (!trendRows.length) {
+    el.innerHTML =
+      '<p class="tbl-empty">No search data for the last ' + activeDays + ' days.</p>';
+    return;
+  }
+
+  el.innerHTML = trendRows.map(function (row) {
+    const prev       = Number(row.previous_count  || 0);
+    const curr       = Number(row.current_count   || 0);
+    const changePct  = row.change_pct  != null ? Number(row.change_pct)  : null;
+    const shareChg   = row.share_change != null ? Number(row.share_change) : null;
+    const currShare  = row.current_share  != null ? Number(row.current_share)  : 0;
+    const prevShare  = row.previous_share != null ? Number(row.previous_share) : 0;
+
+    // ── Primary badge: raw count % change ──
+    let badgeCls, badgeText;
+    if (prev === 0) {
+      badgeCls  = 'trend-badge--up';
+      badgeText = '🆕 New · ' + curr.toLocaleString() + ' searches';
+    } else if (changePct > 0) {
+      badgeCls  = 'trend-badge--up';
+      badgeText = '🔥 +' + changePct + '%';
+    } else if (changePct < 0) {
+      badgeCls  = 'trend-badge--down';
+      badgeText = '📉 ' + changePct + '%';
+    } else {
+      badgeCls  = 'trend-badge--flat';
+      badgeText = '→ 0%';
+    }
+
+    // ── Secondary line: share % side by side ──
+    let shareLine = '';
+    if (prev === 0) {
+      // New product: just show current share
+      shareLine =
+        '<span class="trend-share">' +
+          'Share: <strong>' + currShare + '%</strong> of demand' +
+        '</span>';
+    } else {
+      // Show previous share → current share + change
+      const shareSign  = shareChg >= 0 ? '+' : '';
+      const shareColor = shareChg > 0
+        ? 'var(--clr-green)'
+        : shareChg < 0 ? '#ef4444' : '#6b7280';
+      shareLine =
+        '<span class="trend-share">' +
+          'Share: ' + prevShare + '% → <strong>' + currShare + '%</strong>' +
+          ' <span style="color:' + shareColor + ';font-weight:600;">' +
+            '(' + shareSign + shareChg + ' pp)' +
+          '</span>' +
+        '</span>';
+    }
+
+    // ── Raw counts sub-line ──
+    const countsLine = prev === 0
+      ? ''
+      : '<span class="trend-counts">' +
+          prev.toLocaleString() + ' → ' + curr.toLocaleString() + ' searches' +
+        '</span>';
+
+    return (
+      '<div class="trend-item trend-item--rich">' +
+        '<div class="trend-main">' +
+          '<span class="trend-name" title="' + esc(row.product_name) + '">' +
+            esc(row.product_name) +
+          '</span>' +
+          '<span class="trend-badge ' + badgeCls + '">' + badgeText + '</span>' +
+        '</div>' +
+        '<div class="trend-meta">' +
+          shareLine +
+          countsLine +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
 
   // ── Boot ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', init);
