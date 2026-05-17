@@ -511,6 +511,80 @@ input, textarea, select { font-family: inherit; }
   }
 }
 
+/* ─── 13. EXPIRY ITEM — sub-text under product name ─── */
+.exp-name-wrap { display: flex; flex-direction: column; gap: 2px; }
+.exp-sub       { font-size: 12px; color: var(--clr-gray-md); }
+
+/* ─── 14. EMPTY STATE ─── */
+.empty-state {
+  list-style: none;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--clr-gray-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.empty-state i      { font-size: 16px; color: var(--clr-green); }
+.empty-state.error  { color: var(--clr-red); }
+.empty-state.error i { color: var(--clr-red); }
+
+/* ─── 15. LIST LOADING ─── */
+.list-loading {
+  list-style: none;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--clr-gray-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--clr-gray-lt);
+  border-top-color: var(--clr-green);
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── 16. PAGINATION ─── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--clr-gray-xlt);
+  margin-top: 8px;
+}
+
+.pg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-gray-lt);
+  background: var(--clr-white-pure);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--clr-dark);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.pg-btn:hover:not(:disabled) { background: var(--clr-green-bg); color: var(--clr-green); border-color: var(--clr-green-brd); }
+.pg-btn.active                { background: var(--clr-green); color: var(--clr-white-pure); border-color: var(--clr-green); }
+.pg-btn:disabled              { opacity: 0.4; cursor: not-allowed; }
+.pg-prev i, .pg-next i        { font-size: 11px; }
+
 @media (max-width: 480px) {
   .main { padding: 16px 12px 40px; }
   .topbar-title h1 { font-size: 22px; }
