@@ -107,6 +107,38 @@
   // ── DOM helper ──────────────────────────────────────────────
   function $(id) { return document.getElementById(id); }
 
+  // ── Avatar Helpers (matching PharmInfoUpdate pattern) ─────────
+function getInitials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  const f = parts[0]?.[0] || '';
+  const l = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (f + l).toUpperCase() || '?';
+}
+
+function renderSidebarAvatar(imageUrl, initialsText) {
+  const container = document.getElementById('sidebarAvatarInner');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.alt = 'Avatar';
+    img.onerror = () => {
+      container.innerHTML = '';
+      const span = document.createElement('span');
+      span.className   = 's-avatar-initials-text';
+      span.textContent = initialsText || '?';
+      container.appendChild(span);
+    };
+    img.src = imageUrl;
+    container.appendChild(img);
+  } else {
+    const span = document.createElement('span');
+    span.className   = 's-avatar-initials-text';
+    span.textContent = initialsText || '?';
+    container.appendChild(span);
+  }
+}
   // ══════════════════════════════════════════════════════════════
   //  INIT
   // ══════════════════════════════════════════════════════════════
@@ -129,20 +161,26 @@
 
     pharmacyId = pharmacy?.id || null;
 
-    const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'Pharmacist';
-    const nameEl = document.querySelector('.s-uname');
-    const roleEl = document.querySelector('.s-urole');
-    if (nameEl) nameEl.textContent = displayName;
-    if (roleEl) roleEl.textContent = session.user.email || '';
+    // AFTER
+const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'Pharmacist';
+const email       = session.user.email || '';
 
-    // Logout
-    const sUserBtn = $('sUserBtn');
-    if (sUserBtn) {
-      sUserBtn.title = 'Click to log out';
-      sUserBtn.addEventListener('click', () =>
-        sb.auth.signOut().then(() => { window.location.href = 'Login.html'; })
-      );
-    }
+// Sidebar user footer — matches PharmInfoUpdate pattern
+const nameEl  = $('sidebarName');
+const emailEl = $('sidebarEmail');
+if (nameEl)  nameEl.textContent  = displayName;
+if (emailEl) emailEl.textContent = email;
+
+// Sidebar avatar — initials
+renderSidebarAvatar(null, getInitials(displayName));
+
+// Logout — wire to #logoutBtn
+const logoutBtn = $('logoutBtn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () =>
+    sb.auth.signOut().then(() => { window.location.href = 'Login.html'; })
+  );
+}
 
     initSidebar();
     initSearch();
