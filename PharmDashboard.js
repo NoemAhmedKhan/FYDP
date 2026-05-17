@@ -26,9 +26,10 @@
   const salesChartCanvas = document.getElementById('salesChart');
 
   let heartbeatInterval = null;
+}
 
-/* ─────────────────────────────────────────
-   5. AVATAR RENDERING  (mirrors UserProfile)
+ /* ─────────────────────────────────────────
+       AVATAR RENDERING
    ───────────────────────────────────────── */
 function renderAvatar(containerId, imageUrl, initialsText) {
   const container = $(containerId);
@@ -74,7 +75,7 @@ function renderSidebarAvatar(imageUrl, initialsText) {
       span.className   = 's-avatar-initials-text';
       span.textContent = initialsText || '?';
       container.appendChild(span);
-    };
+    }
 
     img.src = imageUrl;
     container.appendChild(img);
@@ -84,7 +85,6 @@ function renderSidebarAvatar(imageUrl, initialsText) {
     span.textContent = initialsText || '?';
     container.appendChild(span);
   }
-}
   
   // ── Auth Guard + Load User ────────────────────────────────
   async function init() {
