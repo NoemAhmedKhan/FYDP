@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
-  <link rel="stylesheet" href="PharmAlerts.css" />
+  <link rel="stylesheet" href="PharmStockAlerts.css" />
 </head>
 <body>
 
@@ -85,13 +85,13 @@
     <div class="summary-banner sb-amber" role="listitem">
       <div class="sb-icon" aria-hidden="true"><i class="fa-solid fa-triangle-exclamation"></i></div>
       <p class="sb-label">Low Stock Alerts</p>
-      <p class="sb-val">18</p>
+      <p class="sb-val" id="summaryLowCount">—</p>
       <p class="sb-sub">Requires immediate reordering</p>
     </div>
     <div class="summary-banner sb-red" role="listitem">
       <div class="sb-icon" aria-hidden="true"><i class="fa-regular fa-calendar-xmark"></i></div>
       <p class="sb-label">Items Expiring Soon</p>
-      <p class="sb-val">42</p>
+      <p class="sb-val" id="summaryExpCount">—</p>
       <p class="sb-sub">Within 30 days window</p>
     </div>
   </div>
@@ -113,6 +113,7 @@
         <div class="tbl-col-right"><span>Current Qty</span><span>Threshold</span></div>
       </div>
       <ul id="lowStockList" class="stock-list" aria-label="Low stock medications"></ul>
+      <div id="lowStockPagination"></div>
     </section>
 
     <!-- Near Expiry -->
@@ -128,12 +129,13 @@
         <span>Medication</span><span>Batch ID</span><span>Expiry Date</span><span>Status</span>
       </div>
       <ul id="expiryList" class="expiry-list" aria-label="Near-expiry medications"></ul>
+      <div id="expiryPagination"></div>
     </section>
 
   </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="PharmAlerts.js"></script>
+<script src="PharmStockAlerts.js"></script>
 </body>
 </html>
