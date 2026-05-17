@@ -13,17 +13,12 @@
 (function () {
   'use strict';
 
-/* ─────────────────────────────────────────
-   1. SUPABASE CLIENT
-   ───────────────────────────────────────── */
-const SUPABASE_URL = 'https://ktzsshlllyjuzphprzso.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic';
-
-/* Bucket name — same pharmacy bucket already configured in project */
-const PHARMACY_BUCKET = 'pharmacy-profile-photos';
-
-const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+  const { createClient } = window.supabase;
+  const sb = createClient(
+    'https://ktzsshlllyjuzphprzso.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic'
+  );
+  
   // ── DOM Elements ──────────────────────────────────────────
   const sidebar          = document.getElementById('sidebar');
   const hamBtn           = document.getElementById('hamBtn');
