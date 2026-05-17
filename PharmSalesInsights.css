@@ -117,7 +117,7 @@ input, textarea, select { font-family: inherit; }
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: var(--clr-green);
+  background: var(--green-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -133,7 +133,7 @@ input, textarea, select { font-family: inherit; }
 }
 
 .s-logo-icon .mf-abbr {
-  color: var(--clr-white-pure);
+  color: var(--green);
   font-weight: 700;
   font-size: 17px;
   display: none;
@@ -180,16 +180,38 @@ input, textarea, select { font-family: inherit; }
   border: 1px solid var(--clr-gray-lt);
 }
 
-.s-avatar {
+.s-avatar-wrap {
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  overflow: hidden;
+  background: linear-gradient(135deg, #208B3A, #52B167);
   flex-shrink: 0;
-  background: var(--clr-gray-lt);
+  overflow: hidden;
 }
 
-.s-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.s-avatar-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.s-avatar-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.s-avatar-inner .s-avatar-initials-text {
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1;
+}
 
 .s-umeta {
   flex: 1;
@@ -199,8 +221,18 @@ input, textarea, select { font-family: inherit; }
   line-height: 1.3;
 }
 
-.s-uname { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.s-urole { font-size: 10px; color: var(--clr-green); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
+.s-uname  { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-uemail { font-size: 10px; color: var(--gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.s-logout-btn {
+  color: var(--gray);
+  font-size: 14px;
+  padding: 4px;
+  border-radius: var(--r-sm);
+  transition: var(--t);
+  flex-shrink: 0;
+}
+.s-logout-btn:hover { color: var(--red); }
 
 /* ─── 4. MAIN LAYOUT & TOPBAR ─── */
 .main {
