@@ -109,11 +109,12 @@ function renderSidebarAvatar(imageUrl, initialsText) {
       return;
     }
 
-    const { data: profile } = await sb
-      .from('profiles')
-      .select('full_name')
-      .eq('user_id', userId)
-      .single();
+  
+const { data: profile } = await sb
+  .from('profiles')
+  .select('full_name, profile_img')
+  .eq('user_id', userId)
+  .single();
 
 const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'Pharmacist';
 const email       = session.user.email || '';
@@ -124,8 +125,8 @@ const emailEl = document.getElementById('sidebarEmail');
 if (nameEl)  nameEl.textContent  = displayName;
 if (emailEl) emailEl.textContent = email;
 
-// Sidebar avatar — render initials (no profile_img fetch needed on dashboard)
-renderSidebarAvatar(null, getInitials(displayName));
+// Sidebar avatar — render initials
+renderSidebarAvatar(profile?.profile_img || null, getInitials(displayName));
 
 // Topbar welcome
 const greetEl = document.querySelector('.topbar-title p');
