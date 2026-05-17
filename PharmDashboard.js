@@ -1,24 +1,17 @@
 // ============================================================
-//  PharmDashboard.js — MediFinder Pharmacist Dashboard  v2.0
-//  ─────────────────────────────────────────────────────────
-//  CHANGES IN v2.0:
-//  · Fixed heartbeat: was calling supabaseClient (undefined here)
-//    now correctly uses sb (the local Supabase client instance)
-//  · Heartbeat fires on init() completion (after auth verified),
-//    not at module load time — prevents firing before auth check
-//  · clearInterval on beforeunload preserved
-//  Everything else unchanged from v1.0.
+//  PharmDashboard.js — MediFinder Pharmacist Dashboard  v2.1
 // ============================================================
 
 (function () {
   'use strict';
 
+  // ── Supabase Client ───────────────────────────────────────
   const { createClient } = window.supabase;
   const sb = createClient(
     'https://ktzsshlllyjuzphprzso.supabase.co',
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic'
   );
-  
+
   // ── DOM Elements ──────────────────────────────────────────
   const sidebar          = document.getElementById('sidebar');
   const hamBtn           = document.getElementById('hamBtn');
@@ -26,66 +19,40 @@
   const salesChartCanvas = document.getElementById('salesChart');
 
   let heartbeatInterval = null;
-}
 
- /* ─────────────────────────────────────────
-       AVATAR RENDERING
-   ───────────────────────────────────────── */
-function renderAvatar(containerId, imageUrl, initialsText) {
-  const container = $(containerId);
-  if (!container) return;
-  container.innerHTML = '';
-
-  if (imageUrl) {
-    const img     = document.createElement('img');
-    img.alt       = 'Profile Photo';
-    img.className = 'avatar-photo';
-
-    img.onerror = () => {
-      container.innerHTML = '';
-      const span       = document.createElement('span');
-      span.className   = 'avatar-initials-text';
-      span.textContent = initialsText || '?';
-      container.appendChild(span);
-    };
-
-    img.src = imageUrl;
-    container.appendChild(img);
-  } else {
-    const span       = document.createElement('span');
-    span.className   = 'avatar-initials-text';
-    span.textContent = initialsText || '?';
-    container.appendChild(span);
+  // ── Avatar Helpers ────────────────────────────────────────
+  function getInitials(name) {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    const f = parts[0]?.[0] || '';
+    const l = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return (f + l).toUpperCase() || '?';
   }
-}
 
-/* Render into sidebar circle — uses its own class names */
-function renderSidebarAvatar(imageUrl, initialsText) {
-  const container = $('sidebarAvatarInner');
-  if (!container) return;
-  container.innerHTML = '';
+  function renderSidebarAvatar(imageUrl, initialsText) {
+    const container = document.getElementById('sidebarAvatarInner');
+    if (!container) return;
+    container.innerHTML = '';
 
-  if (imageUrl) {
-    const img     = document.createElement('img');
-    img.alt       = 'Avatar';
-
-    img.onerror = () => {
-      container.innerHTML = '';
-      const span       = document.createElement('span');
+    if (imageUrl) {
+      const img = document.createElement('img');
+      img.alt = 'Avatar';
+      img.onerror = () => {
+        container.innerHTML = '';
+        const span = document.createElement('span');
+        span.className   = 's-avatar-initials-text';
+        span.textContent = initialsText || '?';
+        container.appendChild(span);
+      };
+      img.src = imageUrl;
+      container.appendChild(img);
+    } else {
+      const span = document.createElement('span');
       span.className   = 's-avatar-initials-text';
       span.textContent = initialsText || '?';
       container.appendChild(span);
     }
-
-    img.src = imageUrl;
-    container.appendChild(img);
-  } else {
-    const span       = document.createElement('span');
-    span.className   = 's-avatar-initials-text';
-    span.textContent = initialsText || '?';
-    container.appendChild(span);
   }
-  
+
   // ── Auth Guard + Load User ────────────────────────────────
   async function init() {
     const { data: { session } } = await sb.auth.getSession();
@@ -109,39 +76,35 @@ function renderSidebarAvatar(imageUrl, initialsText) {
       return;
     }
 
-  
-const { data: profile } = await sb
-  .from('profiles')
-  .select('full_name, profile_img')
-  .eq('user_id', userId)
-  .single();
+    const { data: profile } = await sb
+      .from('profiles')
+      .select('full_name, profile_img')
+      .eq('user_id', userId)
+      .single();
 
-const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'Pharmacist';
-const email       = session.user.email || '';
+    const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'Pharmacist';
+    const email       = session.user.email || '';
 
-// Sidebar user footer — matches PharmInfoUpdate pattern
-const nameEl  = document.getElementById('sidebarName');
-const emailEl = document.getElementById('sidebarEmail');
-if (nameEl)  nameEl.textContent  = displayName;
-if (emailEl) emailEl.textContent = email;
+    // Sidebar user footer
+    const nameEl  = document.getElementById('sidebarName');
+    const emailEl = document.getElementById('sidebarEmail');
+    if (nameEl)  nameEl.textContent  = displayName;
+    if (emailEl) emailEl.textContent = email;
 
-// Sidebar avatar — render initials
-renderSidebarAvatar(profile?.profile_img || null, getInitials(displayName));
+    // Sidebar avatar
+    renderSidebarAvatar(profile?.profile_img || null, getInitials(displayName));
 
-// Topbar welcome
-const greetEl = document.querySelector('.topbar-title p');
-if (greetEl) greetEl.textContent = `Welcome back, ${displayName}.`;
+    // Topbar welcome
+    const greetEl = document.querySelector('.topbar-title p');
+    if (greetEl) greetEl.textContent = `Welcome back, ${displayName}.`;
 
-// Logout button — wire to #logoutBtn, not .s-user click
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+    // Logout button
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
     initSidebar();
     initChart();
     loadDemandPreview();
-
-    // ── Start heartbeat AFTER auth is confirmed ─────────────
-    // FIX: uses `sb` (local var), not `supabaseClient` (undefined here)
     startHeartbeat();
   }
 
@@ -152,18 +115,14 @@ if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     window.location.href = 'Login.html';
   }
 
-  // ── Pharmacist Heartbeat ──────────────────────────────────
-  // Keeps this pharmacy's last_seen timestamp fresh so
-  // search_medicine RPC includes it in user results.
-  // Fires immediately on auth, then every 60 seconds.
-  // Stops when tab is closed or pharmacist logs out.
+  // ── Heartbeat ─────────────────────────────────────────────
   async function sendHeartbeat() {
     const { error } = await sb.rpc('pharmacy_heartbeat');
     if (error) console.warn('Heartbeat failed:', error.message);
   }
 
   function startHeartbeat() {
-    sendHeartbeat();                                    // fire immediately
+    sendHeartbeat();
     heartbeatInterval = setInterval(sendHeartbeat, 60_000);
   }
 
@@ -174,7 +133,6 @@ if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     }
   }
 
-  // Stop when tab closes / refreshes
   window.addEventListener('beforeunload', stopHeartbeat);
 
   // ── Sidebar ───────────────────────────────────────────────
@@ -249,15 +207,15 @@ if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
         this.classList.add('active');
         const d = chartData[this.dataset.period];
         if (d) {
-          salesChart.data.labels            = d.labels;
-          salesChart.data.datasets[0].data  = d.data;
+          salesChart.data.labels           = d.labels;
+          salesChart.data.datasets[0].data = d.data;
           salesChart.update();
         }
       });
     });
   }
 
-  // ── Top searched medicines preview ────────────────────────
+  // ── Top Searched Medicines ────────────────────────────────
   async function loadDemandPreview() {
     const listEl = document.getElementById('demandTopList');
     if (!listEl) return;
@@ -281,8 +239,8 @@ if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     }
 
     listEl.innerHTML = data.map((row, i) => {
-      const rank = row.rank != null ? row.rank : i + 1;
-      const name = row.product_name || 'Unknown';
+      const rank  = row.rank != null ? row.rank : i + 1;
+      const name  = row.product_name || 'Unknown';
       const count = Number(row.search_count || 0).toLocaleString();
       return (
         '<li class="demand-top-item">' +
