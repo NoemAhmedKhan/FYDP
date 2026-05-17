@@ -28,33 +28,59 @@
 
   let heartbeatInterval = null;
 
-  // ── Avatar Helpers (matching PharmInfoUpdate pattern) ─────────
-function getInitials(name) {
-  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
-  const f = parts[0]?.[0] || '';
-  const l = parts.length > 1 ? parts[parts.length - 1][0] : '';
-  return (f + l).toUpperCase() || '?';
-}
-
-function renderSidebarAvatar(imageUrl, initialsText) {
-  const container = document.getElementById('sidebarAvatarInner');
+/* ─────────────────────────────────────────
+   5. AVATAR RENDERING  (mirrors UserProfile)
+   ───────────────────────────────────────── */
+function renderAvatar(containerId, imageUrl, initialsText) {
+  const container = $(containerId);
   if (!container) return;
   container.innerHTML = '';
 
   if (imageUrl) {
-    const img = document.createElement('img');
-    img.alt = 'Avatar';
+    const img     = document.createElement('img');
+    img.alt       = 'Profile Photo';
+    img.className = 'avatar-photo';
+
     img.onerror = () => {
       container.innerHTML = '';
-      const span = document.createElement('span');
+      const span       = document.createElement('span');
+      span.className   = 'avatar-initials-text';
+      span.textContent = initialsText || '?';
+      container.appendChild(span);
+    };
+
+    img.src = imageUrl;
+    container.appendChild(img);
+  } else {
+    const span       = document.createElement('span');
+    span.className   = 'avatar-initials-text';
+    span.textContent = initialsText || '?';
+    container.appendChild(span);
+  }
+}
+
+/* Render into sidebar circle — uses its own class names */
+function renderSidebarAvatar(imageUrl, initialsText) {
+  const container = $('sidebarAvatarInner');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (imageUrl) {
+    const img     = document.createElement('img');
+    img.alt       = 'Avatar';
+
+    img.onerror = () => {
+      container.innerHTML = '';
+      const span       = document.createElement('span');
       span.className   = 's-avatar-initials-text';
       span.textContent = initialsText || '?';
       container.appendChild(span);
     };
+
     img.src = imageUrl;
     container.appendChild(img);
   } else {
-    const span = document.createElement('span');
+    const span       = document.createElement('span');
     span.className   = 's-avatar-initials-text';
     span.textContent = initialsText || '?';
     container.appendChild(span);
