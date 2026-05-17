@@ -72,7 +72,7 @@ function showToast(message, type) {
 }
 
 /* ─────────────────────────────────────────
-   5. AVATAR RENDERING  (mirrors UserProfile)
+   5. AVATAR RENDERING
    ───────────────────────────────────────── */
 function renderAvatar(containerId, imageUrl, initialsText) {
   const container = $(containerId);
