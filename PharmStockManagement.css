@@ -86,16 +86,24 @@ input, select, textarea { font-family: inherit; }
 }
 
 .s-logo-icon {
-  width: 40px; height: 40px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
+  background: var(--green-bg);
   display: flex;
-  align-items: center; justify-content: center;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
 }
 
 .s-logo-icon img { width: 28px; height: 28px; object-fit: contain; border-radius: 50%; }
-.s-logo-icon .mf-abbr { color: white; font-weight: 700; font-size: 17px; display: none; }
+.s-logo-icon .mf-abbr {
+  color: var(--green);
+  font-weight: 700;
+  font-size: 17px;
+  display: none;
+}
 .s-logo-text { display: flex; flex-direction: column; line-height: 1.25; }
 .s-brand { font-size: 16px; font-weight: 700; color: var(--dark); }
 .s-portal { font-size: 11px; color: var(--gray); }
@@ -129,11 +137,59 @@ input, select, textarea { font-family: inherit; }
 }
 
 .s-user:hover { border-color: var(--red); }
-.s-avatar { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: var(--gray-lt); }
-.s-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.s-umeta { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
-.s-uname { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.s-urole { font-size: 10px; color: var(--gray); font-weight: 400; text-transform: none; letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s-avatar-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #208B3A, #52B167);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.s-avatar-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.s-avatar-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.s-avatar-inner .s-avatar-initials-text {
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.s-umeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.s-uname  { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-uemail { font-size: 10px; color: var(--gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.s-logout-btn {
+  color: var(--gray);
+  font-size: 14px;
+  padding: 4px;
+  border-radius: var(--r-sm);
+  transition: var(--t);
+  flex-shrink: 0;
+}
+.s-logout-btn:hover { color: var(--red); }
 
 /* === MAIN === */
 .main {
