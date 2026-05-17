@@ -28,6 +28,39 @@
 
   let heartbeatInterval = null;
 
+  // ── Avatar Helpers (matching PharmInfoUpdate pattern) ─────────
+function getInitials(name) {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  const f = parts[0]?.[0] || '';
+  const l = parts.length > 1 ? parts[parts.length - 1][0] : '';
+  return (f + l).toUpperCase() || '?';
+}
+
+function renderSidebarAvatar(imageUrl, initialsText) {
+  const container = document.getElementById('sidebarAvatarInner');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (imageUrl) {
+    const img = document.createElement('img');
+    img.alt = 'Avatar';
+    img.onerror = () => {
+      container.innerHTML = '';
+      const span = document.createElement('span');
+      span.className   = 's-avatar-initials-text';
+      span.textContent = initialsText || '?';
+      container.appendChild(span);
+    };
+    img.src = imageUrl;
+    container.appendChild(img);
+  } else {
+    const span = document.createElement('span');
+    span.className   = 's-avatar-initials-text';
+    span.textContent = initialsText || '?';
+    container.appendChild(span);
+  }
+}
+  
   // ── Auth Guard + Load User ────────────────────────────────
   async function init() {
     const { data: { session } } = await sb.auth.getSession();
@@ -57,22 +90,25 @@
       .eq('user_id', userId)
       .single();
 
-    const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'Pharmacist';
+const displayName = profile?.full_name || session.user.email?.split('@')[0] || 'Pharmacist';
+const email       = session.user.email || '';
 
-    const nameEl = document.querySelector('.s-uname');
-    const roleEl = document.querySelector('.s-urole');
-    if (nameEl) nameEl.textContent = displayName;
-    if (roleEl) roleEl.textContent = 'Pharmacist';
+// Sidebar user footer — matches PharmInfoUpdate pattern
+const nameEl  = document.getElementById('sidebarName');
+const emailEl = document.getElementById('sidebarEmail');
+if (nameEl)  nameEl.textContent  = displayName;
+if (emailEl) emailEl.textContent = email;
 
-    const greetEl = document.querySelector('.topbar-title p');
-    if (greetEl) greetEl.textContent = `Welcome back, ${displayName}.`;
+// Sidebar avatar — render initials (no profile_img fetch needed on dashboard)
+renderSidebarAvatar(null, getInitials(displayName));
 
-    const sUser = document.querySelector('.s-user');
-    if (sUser) {
-      sUser.style.cursor = 'pointer';
-      sUser.title        = 'Click to log out';
-      sUser.addEventListener('click', handleLogout);
-    }
+// Topbar welcome
+const greetEl = document.querySelector('.topbar-title p');
+if (greetEl) greetEl.textContent = `Welcome back, ${displayName}.`;
+
+// Logout button — wire to #logoutBtn, not .s-user click
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 
     initSidebar();
     initChart();
