@@ -16,6 +16,7 @@
 <body>
 
 <!-- SIDEBAR -->
+<!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <div class="s-overlay" id="sOverlay"></div>
   <div class="s-inner">
@@ -29,7 +30,6 @@
         <span class="s-portal">Pharmacist Portal</span>
       </div>
     </div>
-
     <nav class="s-nav">
       <a href="PharmDashboard.html" class="nav-a active">
         <i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span>
@@ -53,15 +53,17 @@
         <i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span>
       </a>
     </nav>
-
     <div class="s-user">
-      <div class="s-avatar">
-        <img src="Images/PharmAvatar.jpg" alt="Arsalan Ahmed" onerror="this.style.display='none'">
+      <div class="s-avatar-wrap">
+        <div class="s-avatar-inner" id="sidebarAvatarInner"></div>
       </div>
       <div class="s-umeta">
-        <span class="s-uname">Arsalan Ahmed</span>
-        <span class="s-urole">Lead Pharmacist</span>
+        <span class="s-uname" id="sidebarName">Loading…</span>
+        <span class="s-uemail" id="sidebarEmail"></span>
       </div>
+      <button class="s-logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+      </button>
     </div>
   </div>
 </aside>
