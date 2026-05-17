@@ -468,19 +468,6 @@ input, textarea, select { font-family: inherit; }
 .exp-status--warning  { color: var(--clr-amber);  }
 .exp-status--safe     { color: var(--clr-gray-md); }
 
-/* ─── 11. MISC ─── */
-.view-all {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--clr-green);
-  cursor: pointer;
-  transition: var(--transition);
-  background: none;
-  border: none;
-}
-
-.view-all:hover { opacity: .75; }
-
 /* ─── 12. RESPONSIVE ─── */
 @media (max-width: 1000px) {
   .alerts-grid { grid-template-columns: 1fr; }
