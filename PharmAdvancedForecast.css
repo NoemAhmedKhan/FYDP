@@ -129,7 +129,7 @@ input, textarea, select { font-family: inherit; }
   width: 28px;
   height: 28px;
   object-fit: contain;
-  border-radius: 50%;
+  /*border-radius: 50%;*/
 }
 
 .s-logo-icon .mf-abbr {
