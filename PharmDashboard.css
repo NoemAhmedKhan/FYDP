@@ -141,7 +141,7 @@ button {
 }
 
 .s-logo-icon .mf-abbr {
-  color: white;
+  color: var(--green);
   font-weight: 700;
   font-size: 17px;
   display: none;
