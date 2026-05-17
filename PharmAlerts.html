@@ -13,12 +13,12 @@
 <body>
 
 <!-- SIDEBAR — matches PharmDashboard exactly -->
-<aside class="sidebar" id="sidebar" aria-label="Main navigation">
-  <div class="s-overlay" id="sOverlay" aria-hidden="true"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="s-overlay" id="sOverlay"></div>
   <div class="s-inner">
 
     <div class="s-logo">
-      <div class="s-logo-icon" aria-hidden="true">
+      <div class="s-logo-icon">
         <img src="Images/Logo.png" alt="MediFinder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
         <span class="mf-abbr">MF</span>
       </div>
@@ -28,38 +28,41 @@
       </div>
     </div>
 
-    <nav class="s-nav" aria-label="Dashboard navigation">
+    <nav class="s-nav">
       <a href="PharmDashboard.html" class="nav-a">
-        <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span>Dashboard</span>
+        <i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span>
       </a>
       <a href="PharmInfoUpdate.html" class="nav-a">
-        <i class="fa-solid fa-gear" aria-hidden="true"></i><span>Information Update</span>
+        <i class="fa-solid fa-gear"></i><span>Information Update</span>
       </a>
       <a href="PharmStockManagement.html" class="nav-a">
-        <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Stock Management</span>
+        <i class="fa-solid fa-boxes-stacked"></i><span>Stock Management</span>
       </a>
       <a href="PharmBillingHistory.html" class="nav-a">
-        <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i><span>Billing &amp; Transaction History</span>
+        <i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span>
       </a>
-      <a href="PharmExpiryAlerts.html" class="nav-a active" aria-current="page">
-        <i class="fa-solid fa-bell" aria-hidden="true"></i><span>Expiry Alerts</span>
+      <a href="PharmAlerts.html" class="nav-a active">
+        <i class="fa-solid fa-bell"></i><span>Alerts</span>
       </a>
       <a href="PharmSalesInsights.html" class="nav-a">
-        <i class="fa-solid fa-chart-bar" aria-hidden="true"></i><span>Sales Insights</span>
+        <i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span>
       </a>
       <a href="PharmAdvancedForecast.html" class="nav-a">
-        <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i><span>Advanced Forecasting</span>
+        <i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span>
       </a>
     </nav>
 
     <div class="s-user">
-      <div class="s-avatar">
-        <img src="Images/PharmAvatar.jpg" alt="Arsalan Ahmed" onerror="this.style.display='none'">
+      <div class="s-avatar-wrap">
+        <div class="s-avatar-inner" id="sidebarAvatarInner"></div>
       </div>
       <div class="s-umeta">
-        <span class="s-uname">Arsalan Ahmed</span>
-        <span class="s-urole">Lead Pharmacist</span>
+        <span class="s-uname" id="sidebarName">Loading…</span>
+        <span class="s-uemail" id="sidebarEmail"></span>
       </div>
+      <button class="s-logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+      </button>
     </div>
 
   </div>
@@ -130,6 +133,7 @@
   </div>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="PharmAlerts.js"></script>
 </body>
 </html>
