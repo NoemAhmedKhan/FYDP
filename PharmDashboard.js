@@ -4,7 +4,7 @@
 
 (function () {
   'use strict';
-
+  
   // ── Supabase Client ───────────────────────────────────────
   const { createClient } = window.supabase;
   const sb = createClient(
