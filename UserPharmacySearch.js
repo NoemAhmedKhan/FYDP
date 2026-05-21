@@ -748,20 +748,20 @@
         /* ── Profile image ── */
         const initials = (pharmacy.name || '?').split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
         let profileImgHTML;
-
-        if (pharmacy.profileImagePath) {
-    profileImgHTML = `
-        <img
-            src="${escapeHtml(pharmacy.profileImagePath)}"
-            alt="${escapeHtml(pharmacy.name)}"
-            class="card-profile-img"
-            loading="lazy"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
-        />
-        <div class="card-image__initials" style="display:none">${escapeHtml(initials)}</div>`;
-} else {
+       if (pharmacy.profileImagePath) {
+            profileImgHTML = `
+                <img
+                    src="${escapeHtml(pharmacy.profileImagePath)}"
+                    alt="${escapeHtml(pharmacy.name)}"
+                    class="card-profile-img"
+                    loading="lazy"
+                    onerror="this.style.display='none';this.nextElementSibling.style.removeProperty('display')"
+                />
+                <div class="card-image__initials" style="display:none">${escapeHtml(initials)}</div>`;
+        } else {
             profileImgHTML = `<div class="card-image__initials">${escapeHtml(initials)}</div>`;
         }
+        
 
         /* ── View Route button ── */
         let routeBtnHTML = '';
