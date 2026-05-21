@@ -195,7 +195,7 @@ ul { list-style:none; }
     font-size: 13px; font-weight: var(--fw-m);
     color: var(--gray); background: var(--white-pure);
 }
-.sort-btn:hover   { border-color: var(--green); color: var(--gray); transition: var(--t); }
+.sort-btn:hover   { border-color: var(--green); color: var(--green); transition: var(--t); }
 .sort-btn--active { background: var(--green); border-color: var(--green); color: var(--white-pure); transition: var(--t); }
 
 /* =============================================
