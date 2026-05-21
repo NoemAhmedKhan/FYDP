@@ -1,6 +1,5 @@
 // ============================================================
 //  PharmAdvancedForecast.js  v4.1
-//
 //  BUG FIXES FROM v4.0:
 //  [FIX #1] Total Searches shows correct platform-wide count
 //           — fallback now sums all rows, not just top-10 rows.
