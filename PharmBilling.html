@@ -3,216 +3,316 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MediFinder - Billing &amp; Transaction</title>
-
+  <title>MediFinder – Generate New Bill</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
-
+  <!-- jsPDF for client-side PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <link rel="stylesheet" href="PharmBilling.css" />
 </head>
 <body>
 
-<!-- MODAL OVERLAY -->
-<div class="modal-overlay open">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-
-    <!-- Modal Header -->
-    <div class="m-head">
-      <div>
-        <h2 class="m-pharmacy">Medix Pharma</h2>
-        <h1 class="m-title" id="modalTitle">Billing &amp; Transaction</h1>
-        <p class="m-sub">Generate a new invoice for customer purchase</p>
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar" aria-label="Main navigation">
+  <div class="s-overlay" id="sOverlay" aria-hidden="true"></div>
+  <div class="s-inner">
+    <div class="s-logo">
+      <div class="s-logo-icon" aria-hidden="true">
+        <img src="Images/Logo.png" alt="MediFinder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+        <span class="mf-abbr">MF</span>
       </div>
-      <div class="m-head-right">
-        <span class="live-badge">
-          <span class="live-dot"></span> Live Inventory Link Active
-        </span>
-        <a href="PharmDashboard.html" class="m-close" aria-label="Close">
-          <i class="fa-solid fa-xmark"></i>
-        </a>
+      <div class="s-logo-text">
+        <span class="s-brand">MediFinder</span>
+        <span class="s-portal">Pharmacist Portal</span>
       </div>
     </div>
-
-    <!-- Customer Info -->
-    <div class="cust-row">
-      <div class="fg">
-        <label>Customer Name</label>
-        <input type="text" placeholder="Search or enter name">
+    <nav class="s-nav" aria-label="Dashboard navigation">
+      <a href="PharmDashboard.html"        class="nav-a"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a>
+      <a href="PharmInfoUpdate.html"       class="nav-a"><i class="fa-solid fa-gear"></i><span>Information Update</span></a>
+      <a href="PharmStockManagement.html"  class="nav-a"><i class="fa-solid fa-boxes-stacked"></i><span>Stock Management</span></a>
+      <a href="PharmBillingHistory.html"   class="nav-a"><i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span></a>
+      <a href="PharmStockAlerts.html"      class="nav-a"><i class="fa-solid fa-bell"></i><span>Stock Alerts</span></a>
+      <a href="PharmSalesInsights.html"    class="nav-a"><i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span></a>
+      <a href="PharmAdvancedForecast.html" class="nav-a"><i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span></a>
+    </nav>
+    <div class="s-user">
+      <div class="s-avatar-wrap">
+        <div class="s-avatar-inner" id="sidebarAvatarInner"></div>
       </div>
-      <div class="fg">
-        <label>Phone Number</label>
-        <input type="tel" placeholder="+92 3XX XXXXXXX">
+      <div class="s-umeta">
+        <span class="s-uname"  id="sidebarName">Loading…</span>
+        <span class="s-uemail" id="sidebarEmail"></span>
       </div>
-      <div class="fg">
-        <label>Bill ID</label>
-        <input type="text" value="INV-2023-8842" readonly>
-      </div>
-      <div class="fg">
-        <label>Date</label>
-        <input type="date" value="2023-10-27">
-      </div>
-    </div>
-
-    <!-- Items Table with Fixed Height & Scroll -->
-    <div class="bill-wrap">
-      <div class="bill-head">
-        <span>Item Search / Scanner</span>
-        <span>Type</span>
-        <span>Batch No</span>
-        <span>Availability</span>
-        <span>Qty</span>
-        <span>Price (PKR)</span>
-        <span>Disc%</span>
-        <span>Subtotal</span>
-        <span></span>
-      </div>
-      
-      <!-- Scrollable Body Container -->
-      <div class="bill-body-scroll">
-        <div class="bill-body" id="billBody">
-          <!-- Row 1 -->
-          <div class="bill-row">
-            <div class="bi-name">
-              <i class="fa-solid fa-barcode"></i>
-              <span>Panadol CF 500mg</span>
-            </div>
-            <span class="tbadge tb-med">
-              <i class="fa-solid fa-kit-medical"></i> Medicine
-            </span>
-            <span>BN-88291</span>
-            <span class="abadge ab-ok">50 Units Left</span>
-            <input type="number" class="qty-in" value="2" min="1">
-            <span class="price-cell">450.00</span>
-            <input type="number" class="disc-input" value="0" min="0" max="100" step="1">
-            <span class="subtotal-cell fw7">900.00</span>
-            <button type="button" class="del-btn" aria-label="Delete row">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-          <!-- Row 2 -->
-          <div class="bill-row">
-            <div class="bi-name">
-              <i class="fa-solid fa-magnifying-glass"></i>
-              <input class="bi-srch" type="text" placeholder="Search item...">
-            </div>
-            <span class="tbadge tb-surg">
-              <i class="fa-solid fa-plus"></i> Surgical
-            </span>
-            <span>SG-1102</span>
-            <span class="abadge ab-low">12 Units Left</span>
-            <input type="number" class="qty-in" value="1" min="1">
-            <span class="price-cell">1200.00</span>
-            <input type="number" class="disc-input" value="5" min="0" max="100" step="1">
-            <span class="subtotal-cell fw7">1140.00</span>
-            <button type="button" class="del-btn" aria-label="Delete row">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Add Row Button (always visible below scroll area) -->
-      <button type="button" class="add-row-btn" id="addRowBtn">
-        <i class="fa-solid fa-circle-plus"></i> Add Row
+      <button class="s-logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
       </button>
     </div>
-
-    <!-- Payment + Summary -->
-    <div class="pay-sum">
-
-      <!-- Payment Section -->
-      <div>
-        <p class="sec-lbl">Payment Method</p>
-        <div class="pay-methods">
-          <button type="button" class="pm-btn active" data-method="cash">
-            <i class="fa-solid fa-money-bill-wave"></i> Cash
-          </button>
-          <button type="button" class="pm-btn" data-method="online">
-            <i class="fa-solid fa-globe"></i> Online
-          </button>
-        </div>
-
-        <!-- Cash Fields -->
-        <div class="cash-fields" id="cashFields">
-          <div class="cash-row">
-            <span>Cash Received</span>
-            <input type="number" class="cash-in" id="cashReceived" value="3000.00">
-          </div>
-          <div class="cash-row">
-            <span>Balance Return</span>
-            <span class="bal-ret" id="balanceReturn">PKR 960.00</span>
-          </div>
-        </div>
-
-        <!-- Online Fields -->
-        <div class="online-fields" id="onlineFields" style="display:none;">
-          <p class="online-lbl">Select Payment Service</p>
-          <div class="online-methods">
-            <label class="online-opt">
-              <input type="radio" name="onlineMethod" value="easypaisa">
-              <div class="opt-card">
-                <i class="fa-solid fa-mobile-screen-button"></i>
-                <span>EasyPaisa</span>
-              </div>
-            </label>
-            <label class="online-opt">
-              <input type="radio" name="onlineMethod" value="jazzcash">
-              <div class="opt-card">
-                <i class="fa-solid fa-mobile-screen"></i>
-                <span>JazzCash</span>
-              </div>
-            </label>
-          </div>
-          <div class="fg phone-search-field" id="phoneField" style="display:none;">
-            <label>Search or Enter Phone Number</label>
-            <div class="phone-input-wrap">
-              <i class="fa-solid fa-magnifying-glass"></i>
-              <input type="tel" class="online-phone" id="onlinePhone" placeholder="+92 3XX XXXXXXX">
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Summary Section -->
-      <div>
-        <div class="sum-rows">
-          <div class="sum-row">
-            <span>Sub-total</span>
-            <span id="subtotalValue">PKR 2,100.00</span>
-          </div>
-          <div class="sum-row gst-row">
-            <span>GST (%)</span>
-            <div class="gst-input-wrap">
-              <input type="number" class="gst-input" id="gstInput" value="17" min="0" max="100" step="0.5">
-              <span class="percent-symbol">%</span>
-            </div>
-            <span id="gstValue">PKR 357.00</span>
-          </div>
-          <div class="sum-row disc">
-            <span>Discount Applied</span>
-            <span id="discountValue">- PKR 60.00</span>
-          </div>
-          <div class="sum-row total">
-            <span>Grand Total</span>
-            <span id="grandTotal">PKR 2,040.00</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Action Buttons -->
-    <div class="action-bar">
-      <a href="PharmDashboard.html" class="btn-cancel-tx">Cancel Transaction</a>
-      <button type="button" class="btn-confirm">
-        <i class="fa-solid fa-file-invoice"></i> Confirm &amp; Generate Invoice
-      </button>
-    </div>
-
   </div>
-</div>
+</aside>
 
+<!-- MAIN -->
+<main class="main">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <button class="topbar-ham" id="hamBtn" aria-label="Toggle sidebar" aria-expanded="false" aria-controls="sidebar">
+      <i class="fa-solid fa-bars" aria-hidden="true"></i>
+    </button>
+    <div class="topbar-left">
+      <a href="PharmBillingHistory.html" class="back-btn" aria-label="Back to Billing History">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+      </a>
+      <div class="topbar-title">
+        <h1>Generate New Bill</h1>
+        <p>Create a customer invoice and deduct inventory automatically.</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Bill Form -->
+  <div class="bill-layout">
+
+    <!-- LEFT COLUMN: Customer + Products -->
+    <div class="bill-left">
+
+      <!-- Customer Info Card -->
+      <section class="card" aria-labelledby="custHeading">
+        <div class="card-header">
+          <h2 class="card-title" id="custHeading">
+            <i class="fa-solid fa-user-circle" aria-hidden="true"></i> Customer Information
+          </h2>
+        </div>
+        <div class="card-body">
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label class="field-label" for="custName">Customer Name <span class="req">*</span></label>
+              <input type="text" id="custName" class="field-input" placeholder="Full name" maxlength="120" autocomplete="off" />
+              <p class="field-error" id="custNameErr" hidden></p>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="custPhone">Phone Number <span class="req">*</span></label>
+              <input type="tel" id="custPhone" class="field-input" placeholder="03XXXXXXXXX or +92XXXXXXXXXX"
+                     maxlength="16" autocomplete="off" inputmode="tel" />
+              <p class="field-error" id="custPhoneErr" hidden></p>
+            </div>
+          </div>
+          <div class="form-grid-2">
+            <div class="field-group">
+              <label class="field-label" for="billId">Bill ID <span class="badge-auto">Auto-generated</span></label>
+              <input type="text" id="billId" class="field-input field-input--mono" readonly disabled
+                     placeholder="Generating…" aria-label="Auto-generated Bill ID" />
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="billDate">Date &amp; Time</label>
+              <input type="text" id="billDate" class="field-input" readonly disabled
+                     aria-label="Bill date and time" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Product Search + Table -->
+      <section class="card" aria-labelledby="prodHeading">
+        <div class="card-header">
+          <h2 class="card-title" id="prodHeading">
+            <i class="fa-solid fa-pills" aria-hidden="true"></i> Products
+          </h2>
+          <p class="card-sub">Search and add medicines from your inventory.</p>
+        </div>
+        <div class="card-body">
+
+          <!-- Product search bar -->
+          <div class="prod-search-wrap" role="search">
+            <div class="prod-search-bar" id="prodSearchBar">
+              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+              <input type="search"
+                     id="prodSearchInput"
+                     class="prod-search-input"
+                     placeholder="Search medicines by name, generic or brand…"
+                     autocomplete="off"
+                     aria-label="Search inventory"
+                     aria-expanded="false"
+                     aria-haspopup="listbox"
+                     aria-controls="prodSearchResults" />
+              <span class="prod-search-spinner" id="prodSearchSpinner" hidden aria-hidden="true"></span>
+            </div>
+            <!-- Dropdown results -->
+            <ul class="prod-results" id="prodSearchResults" role="listbox" aria-label="Matching products" hidden>
+              <!-- Populated by JS -->
+            </ul>
+          </div>
+
+          <!-- Products table -->
+          <div class="prod-tbl-wrap" id="prodTblWrap" aria-label="Billed products">
+            <table class="prod-table" aria-label="Products in bill">
+              <thead>
+                <tr>
+                  <th scope="col">Product</th>
+                  <th scope="col">Qty</th>
+                  <th scope="col">Unit Price</th>
+                  <th scope="col">Disc %</th>
+                  <th scope="col">Subtotal</th>
+                  <th scope="col" class="col-remove"><span class="sr-only">Remove</span></th>
+                </tr>
+              </thead>
+              <tbody id="prodTbody">
+                <!-- Empty rows -->
+                <tr class="prod-empty-row" id="prodEmptyRow">
+                  <td colspan="6">
+                    <div class="prod-empty">
+                      <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                      <p>No products added yet.<br>Search above to add medicines.</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- Prescription flag -->
+          <p class="rx-warning" id="rxWarning" hidden>
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            One or more items require a prescription. Confirm patient has a valid prescription before billing.
+          </p>
+
+        </div>
+      </section>
+
+      <!-- Notes -->
+      <section class="card">
+        <div class="card-body">
+          <div class="field-group">
+            <label class="field-label" for="billNotes">Notes <span class="field-optional">(optional)</span></label>
+            <textarea id="billNotes" class="field-textarea" placeholder="Add any notes for this bill…" rows="2" maxlength="500"></textarea>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /bill-left -->
+
+    <!-- RIGHT COLUMN: Totals + Payment -->
+    <div class="bill-right">
+
+      <!-- Totals Card -->
+      <section class="card totals-card" aria-labelledby="totalsHeading">
+        <div class="card-header">
+          <h2 class="card-title" id="totalsHeading">
+            <i class="fa-solid fa-calculator" aria-hidden="true"></i> Bill Summary
+          </h2>
+        </div>
+        <div class="card-body">
+          <div class="summary-rows">
+            <div class="summary-row">
+              <span class="summary-label">Subtotal</span>
+              <span class="summary-value" id="sumSubtotal">PKR 0.00</span>
+            </div>
+            <div class="summary-row summary-row--discount" id="sumDiscountRow">
+              <span class="summary-label">Total Discount</span>
+              <span class="summary-value summary-value--red" id="sumDiscount">−PKR 0.00</span>
+            </div>
+            <div class="summary-row summary-row--gst" id="sumGstRow">
+              <span class="summary-label">GST (17%)</span>
+              <span class="summary-value summary-value--amber" id="sumGst">+PKR 0.00</span>
+            </div>
+            <div class="summary-divider"></div>
+            <div class="summary-row summary-row--grand">
+              <span class="summary-grand-label">Grand Total</span>
+              <span class="summary-grand-amount" id="sumGrand">PKR 0.00</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Payment Card -->
+      <section class="card" aria-labelledby="payHeading">
+        <div class="card-header">
+          <h2 class="card-title" id="payHeading">
+            <i class="fa-solid fa-credit-card" aria-hidden="true"></i> Payment
+          </h2>
+        </div>
+        <div class="card-body">
+          <!-- Method selector -->
+          <div class="field-group">
+            <label class="field-label">Payment Method <span class="req">*</span></label>
+            <div class="method-grid" role="group" aria-label="Select payment method">
+              <button class="method-btn active" data-method="cash"      type="button" aria-pressed="true">
+                <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i> Cash
+              </button>
+              <button class="method-btn" data-method="jazzcash"   type="button" aria-pressed="false">
+                <i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> JazzCash
+              </button>
+              <button class="method-btn" data-method="easypaisa"  type="button" aria-pressed="false">
+                <i class="fa-solid fa-mobile-screen" aria-hidden="true"></i> EasyPaisa
+              </button>
+              <button class="method-btn" data-method="card"       type="button" aria-pressed="false">
+                <i class="fa-solid fa-credit-card" aria-hidden="true"></i> Card
+              </button>
+            </div>
+          </div>
+
+          <!-- Cash panel -->
+          <div class="pay-panel" id="panelCash">
+            <div class="field-group">
+              <label class="field-label" for="cashReceived">Cash Received (PKR) <span class="req">*</span></label>
+              <input type="number" id="cashReceived" class="field-input" placeholder="0.00" min="0" step="0.01" />
+              <p class="field-error" id="cashReceivedErr" hidden></p>
+            </div>
+            <div class="cash-return-row" id="cashReturnRow">
+              <span class="cash-return-label">Change to Return</span>
+              <span class="cash-return-amount" id="cashReturn">PKR 0.00</span>
+            </div>
+          </div>
+
+          <!-- Online panel (JazzCash / EasyPaisa) -->
+          <div class="pay-panel" id="panelOnline" hidden>
+            <div class="field-group">
+              <label class="field-label" for="onlineTxnRef">Transaction Reference <span class="req">*</span></label>
+              <input type="text" id="onlineTxnRef" class="field-input field-input--mono" placeholder="e.g. JC-XXXXXXXX" maxlength="60" />
+              <p class="field-error" id="onlineTxnRefErr" hidden></p>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="onlineAmountPaid">Amount Paid (PKR) <span class="req">*</span></label>
+              <input type="number" id="onlineAmountPaid" class="field-input" placeholder="0.00" min="0" step="0.01" />
+              <p class="field-error" id="onlineAmountPaidErr" hidden></p>
+            </div>
+          </div>
+
+          <!-- Card panel -->
+          <div class="pay-panel" id="panelCard" hidden>
+            <div class="field-group">
+              <label class="field-label" for="cardLast4">Card Last 4 Digits <span class="req">*</span></label>
+              <input type="text" id="cardLast4" class="field-input field-input--mono" placeholder="XXXX" maxlength="4" inputmode="numeric" />
+              <p class="field-error" id="cardLast4Err" hidden></p>
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="cardAmountPaid">Amount Charged (PKR) <span class="req">*</span></label>
+              <input type="number" id="cardAmountPaid" class="field-input" placeholder="0.00" min="0" step="0.01" />
+              <p class="field-error" id="cardAmountPaidErr" hidden></p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Confirm Button -->
+      <button class="btn-confirm" id="confirmBtn" type="button" disabled>
+        <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
+        Confirm &amp; Generate Invoice
+      </button>
+
+      <p class="confirm-hint">A PDF invoice will be generated and inventory will be updated automatically.</p>
+
+    </div><!-- /bill-right -->
+  </div><!-- /bill-layout -->
+
+</main>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="PharmBilling.js"></script>
 </body>
 </html>
