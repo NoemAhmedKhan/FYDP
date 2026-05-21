@@ -221,21 +221,30 @@ ul { list-style:none; }
 
 /* Image / status block */
 .card-image {
-    width: 140px; height: auto; min-height: 110px;
-    border-radius: var(--r-lg); overflow: hidden;
-    position: relative; flex-shrink: 0;
-    background: var(--gray-light); margin-right: 20px;
+    width: 140px;
+    height: 140px;           /* ← fixed height, no more auto/min-height */
+    flex-shrink: 0;
+    border-radius: var(--r-lg);
+    overflow: hidden;        /* clips any oversized image to the box */
+    position: relative;
+    background: var(--gray-light);
+    margin-right: 20px;
 }
-.card-image img { width:100%; height:100%; object-fit:cover; }
+.card-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .card-image--fallback {
-    display: flex; align-items: flex-end; justify-content: flex-start;
+    /* Only used when there is NO profile image (initials shown).
+       Do NOT apply the gradient when an <img> is present — the img covers it. */
     background: linear-gradient(135deg, var(--green), var(--green-light));
+    display: flex; align-items: flex-end; justify-content: flex-start;
 }
 .card-profile-img {
+    position: absolute;      /* sits inside the fixed box, ignores flow */
+    inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    border-radius: var(--r-md);
+    object-fit: cover;       /* fills box, crops excess — no stretching */
+    object-position: center;
+    border-radius: 0;        /* parent already clips via overflow:hidden + border-radius */
     display: block;
 }
 
