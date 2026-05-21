@@ -3,20 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MediFinder – Transaction Receipt #TXN-84920</title>
+  <title>MediFinder – Transaction Receipt</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
+  <!-- jsPDF for client-side PDF generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <link rel="stylesheet" href="PharmBillingReceipt.css" />
 </head>
 <body>
 
-<!-- SIDEBAR — matches PharmDashboard exactly -->
+<!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
   <div class="s-overlay" id="sOverlay" aria-hidden="true"></div>
   <div class="s-inner">
-
     <div class="s-logo">
       <div class="s-logo-icon" aria-hidden="true">
         <img src="Images/Logo.png" alt="MediFinder" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
@@ -27,41 +29,24 @@
         <span class="s-portal">Pharmacist Portal</span>
       </div>
     </div>
-
     <nav class="s-nav" aria-label="Dashboard navigation">
-      <a href="PharmDashboard.html" class="nav-a">
-        <i class="fa-solid fa-table-cells-large" aria-hidden="true"></i><span>Dashboard</span>
-      </a>
-      <a href="PharmInfoUpdate.html" class="nav-a">
-        <i class="fa-solid fa-gear" aria-hidden="true"></i><span>Information Update</span>
-      </a>
-      <a href="PharmStockManagement.html" class="nav-a">
-        <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i><span>Stock Management</span>
-      </a>
-      <a href="PharmBillingHistory.html" class="nav-a active" aria-current="page">
-        <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i><span>Billing &amp; Transaction History</span>
-      </a>
-      <a href="PharmExpiryAlerts.html" class="nav-a">
-        <i class="fa-solid fa-bell" aria-hidden="true"></i><span>Expiry Alerts</span>
-      </a>
-      <a href="PharmSalesInsights.html" class="nav-a">
-        <i class="fa-solid fa-chart-bar" aria-hidden="true"></i><span>Sales Insights</span>
-      </a>
-      <a href="PharmAdvancedForecast.html" class="nav-a">
-        <i class="fa-solid fa-arrow-trend-up" aria-hidden="true"></i><span>Advanced Forecasting</span>
-      </a>
+      <a href="PharmDashboard.html"        class="nav-a"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a>
+      <a href="PharmInfoUpdate.html"       class="nav-a"><i class="fa-solid fa-gear"></i><span>Information Update</span></a>
+      <a href="PharmStockManagement.html"  class="nav-a"><i class="fa-solid fa-boxes-stacked"></i><span>Stock Management</span></a>
+      <a href="PharmBillingHistory.html"   class="nav-a active" aria-current="page"><i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span></a>
+      <a href="PharmStockAlerts.html"      class="nav-a"><i class="fa-solid fa-bell"></i><span>Stock Alerts</span></a>
+      <a href="PharmSalesInsights.html"    class="nav-a"><i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span></a>
+      <a href="PharmAdvancedForecast.html" class="nav-a"><i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span></a>
     </nav>
-
     <div class="s-user">
       <div class="s-avatar">
-        <img src="Images/PharmAvatar.jpg" alt="Arsalan Ahmed" onerror="this.style.display='none'">
+        <div class="s-avatar-inner" id="sidebarAvatarInner"></div>
       </div>
       <div class="s-umeta">
-        <span class="s-uname">Arsalan Ahmed</span>
+        <span class="s-uname"  id="sidebarName">Loading…</span>
         <span class="s-urole">Lead Pharmacist</span>
       </div>
     </div>
-
   </div>
 </aside>
 
@@ -75,12 +60,12 @@
         <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
       </a>
       <div class="topbar-meta">
-        <h1>Transaction Receipt — #TXN-84920</h1>
+        <h1 id="receiptPageTitle">Transaction Receipt</h1>
         <p>Detailed breakdown of the customer transaction.</p>
       </div>
     </div>
     <div class="topbar-actions">
-      <button class="btn-secondary">
+      <button class="btn-secondary" id="downloadPdfBtn">
         <i class="fa-solid fa-file-pdf" aria-hidden="true"></i> Download PDF
       </button>
       <button class="btn-primary" onclick="window.print()">
@@ -89,9 +74,22 @@
     </div>
   </div>
 
+  <!-- Loading state -->
+  <div id="receiptLoading" class="receipt-loading">
+    <div class="spinner-lg"></div>
+    <p>Loading receipt…</p>
+  </div>
+
+  <!-- Error state -->
+  <div id="receiptError" class="receipt-error" hidden>
+    <i class="fa-solid fa-circle-exclamation"></i>
+    <p id="receiptErrorMsg">Could not load receipt.</p>
+    <a href="PharmBillingHistory.html" class="back-btn">Back to History</a>
+  </div>
+
   <!-- Receipt document -->
-  <article class="receipt-wrap" aria-label="Transaction receipt">
-    <div class="receipt-doc">
+  <article class="receipt-wrap" id="receiptDoc" aria-label="Transaction receipt" hidden>
+    <div class="receipt-doc" id="receiptPrintArea">
 
       <!-- Header -->
       <header class="receipt-header">
@@ -100,18 +98,13 @@
             <i class="fa-solid fa-briefcase-medical"></i>
           </div>
           <div>
-            <p class="receipt-pharmacy-name">CureWell Pharma &amp; Wellness</p>
-            <address class="receipt-address">
-              123 Medical Avenue,<br>
-              Healthcare City, Karachi,<br>
-              Pakistan<br>
-              <a href="tel:+922134567890">+92 21 3456789</a>
-            </address>
+            <p class="receipt-pharmacy-name" id="rPharmName">—</p>
+            <address class="receipt-address" id="rPharmAddress">—</address>
           </div>
         </div>
         <div class="receipt-meta">
           <span class="paid-badge">PAID</span>
-          <p class="receipt-txn-id">Transaction ID: #TXN-84920</p>
+          <p class="receipt-txn-id" id="rBillNo">—</p>
         </div>
       </header>
 
@@ -120,20 +113,20 @@
         <section aria-labelledby="custLabel">
           <p class="party-label" id="custLabel">Customer Information</p>
           <div class="cust-row">
-            <div class="cust-avatar" aria-hidden="true">ZS</div>
+            <div class="cust-avatar" id="rCustAvatar" aria-hidden="true">—</div>
             <div>
-              <p class="cust-name">Zeeshan Sheikh</p>
-              <p class="cust-phone"><a href="tel:+923001234567">+92 300 1234567</a></p>
-              <p class="served-by">Served by: <strong>Arsalan Ahmed</strong></p>
+              <p class="cust-name"  id="rCustName">—</p>
+              <p class="cust-phone" id="rCustPhone">—</p>
+              <p class="served-by"  id="rServedBy">—</p>
             </div>
           </div>
         </section>
         <section aria-labelledby="txnLabel">
           <p class="party-label" id="txnLabel">Transaction Details</p>
-          <time class="txn-date" datetime="2023-10-24T10:30">Oct 24, 2023, 10:30 AM</time>
+          <time class="txn-date" id="rBilledAt">—</time>
           <div class="txn-payment-row">
-            <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
-            <span class="txn-payment-method">Visa **9923</span>
+            <i class="fa-solid fa-credit-card" id="rPaymentIcon" aria-hidden="true"></i>
+            <span class="txn-payment-method" id="rPaymentMethod">—</span>
           </div>
         </section>
       </div>
@@ -144,49 +137,20 @@
           <span>Item Description</span>
           <span>Price (PKR)</span>
         </div>
-        <div class="item-row">
-          <div>
-            <p class="item-name">Panadol 500mg</p>
-            <p class="item-qty">Quantity: 2 strips</p>
-          </div>
-          <p class="item-price">200.00</p>
-        </div>
-        <div class="item-row">
-          <div>
-            <p class="item-name">Amoxicillin 250mg</p>
-            <p class="item-qty">Quantity: 1 pack</p>
-          </div>
-          <p class="item-price">1,200.00</p>
-        </div>
-        <div class="item-row">
-          <div>
-            <p class="item-name">Surgical Masks (Box of 50)</p>
-            <p class="item-qty">Quantity: 1 unit</p>
-          </div>
-          <p class="item-price">3,100.00</p>
+        <div id="rItemsList">
+          <!-- Rows injected by JS -->
         </div>
       </section>
 
       <!-- Totals -->
-      <div class="totals" aria-label="Price breakdown">
-        <div class="total-row">
-          <span class="total-row-label">Subtotal</span>
-          <span>4,500 PKR</span>
-        </div>
-        <div class="total-row">
-          <span class="total-row-label">Discount (5%)</span>
-          <span class="total-row-discount">−225 PKR</span>
-        </div>
-        <div class="total-row">
-          <span class="total-row-label">GST (17%)</span>
-          <span class="total-row-tax">+765 PKR</span>
-        </div>
+      <div class="totals" id="rTotals" aria-label="Price breakdown">
+        <!-- Injected by JS -->
       </div>
 
       <div class="grand-total">
         <span class="grand-total-label">Total Amount</span>
         <div>
-          <p class="grand-amount">5,040 PKR</p>
+          <p class="grand-amount" id="rGrandTotal">—</p>
           <p class="grand-incl">Inclusive of All Taxes</p>
         </div>
       </div>
@@ -194,20 +158,24 @@
       <!-- Footer -->
       <footer class="receipt-footer">
         <p class="receipt-tagline">"Serving health, delivering hope."</p>
-        <p class="receipt-thank">Thank You for Choosing CureWell Pharma &amp; Wellness</p>
+        <p class="receipt-thank" id="rThankPharm">Thank You for Choosing MediFinder</p>
       </footer>
 
     </div>
 
     <!-- Signature note -->
-    <p class="receipt-signed">
+    <p class="receipt-signed" id="rSignedNote">
       <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
-      Digitally signed and verified receipt generated by Pharmacist Arsalan Ahmed on Oct 24, 2023
+      Digitally signed receipt generated by MediFinder
     </p>
   </article>
 
 </main>
 
+<!-- Toast -->
+<div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="PharmBillingReceipt.js"></script>
 </body>
 </html>
