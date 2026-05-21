@@ -221,8 +221,8 @@
     if (!listEl) return;
 
     const { data, error } = await sb.rpc('get_top_searched_medicines', {
-      p_limit: 5,
-      p_days:  30,
+        p_limit: 5,
+        p_days:  7,
     });
 
     if (error) {
