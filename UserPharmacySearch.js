@@ -563,51 +563,51 @@
     }
 
     /* ==========================================================================
-       SECTION 18 — ENRICH WITH ROAD DISTANCES  (FIX 10: TOP_N=5 + cache)
+       SECTION 18 — ENRICH WITH ROAD DISTANCES
        ========================================================================== */
-    async function enrichWithRoadDistances(groups) {
-        const BATCH_SIZE = 25; // Distance Matrix API limit per request
-const withCoords = groups.filter(g => g.pharmacy.coord);
-if (!withCoords.length) return;
+//     async function enrichWithRoadDistances(groups) {
+//         const BATCH_SIZE = 25; // Distance Matrix API limit per request
+// const withCoords = groups.filter(g => g.pharmacy.coord);
+// if (!withCoords.length) return;
 
-// Check cache; only call API for uncached pharmacies
-const toEnrich = [];
-withCoords.forEach(g => {
-    const cacheKey = _distanceCacheKey(g.pharmacy.id);
-    if (cacheKey && _distanceCache.has(cacheKey)) {
-        Object.assign(g.pharmacy, _distanceCache.get(cacheKey));
-    } else {
-        toEnrich.push(g);
-    }
-});
+// // Check cache; only call API for uncached pharmacies
+// const toEnrich = [];
+// withCoords.forEach(g => {
+//     const cacheKey = _distanceCacheKey(g.pharmacy.id);
+//     if (cacheKey && _distanceCache.has(cacheKey)) {
+//         Object.assign(g.pharmacy, _distanceCache.get(cacheKey));
+//     } else {
+//         toEnrich.push(g);
+//     }
+// });
 
-if (!toEnrich.length) return;
+// if (!toEnrich.length) return;
 
-// Process ALL pharmacies in batches of 25
-for (let i = 0; i < toEnrich.length; i += BATCH_SIZE) {
-    const batch        = toEnrich.slice(i, i + BATCH_SIZE);
-    const destinations = batch.map(g => g.pharmacy.coord);
-    const dmResults    = await getDistanceMatrix(destinations);
+// // Process ALL pharmacies in batches of 25
+// for (let i = 0; i < toEnrich.length; i += BATCH_SIZE) {
+//     const batch        = toEnrich.slice(i, i + BATCH_SIZE);
+//     const destinations = batch.map(g => g.pharmacy.coord);
+//     const dmResults    = await getDistanceMatrix(destinations);
 
-    dmResults.forEach((result, idx) => {
-        const pharm        = batch[idx].pharmacy;
-        pharm.distanceM    = result.distanceM;
-        pharm.distanceText = result.distanceText;
-        pharm.durationText = result.durationText;
-        pharm.isApprox     = result.isApprox;
+//     dmResults.forEach((result, idx) => {
+//         const pharm        = batch[idx].pharmacy;
+//         pharm.distanceM    = result.distanceM;
+//         pharm.distanceText = result.distanceText;
+//         pharm.durationText = result.durationText;
+//         pharm.isApprox     = result.isApprox;
 
-        const cacheKey = _distanceCacheKey(pharm.id);
-        if (cacheKey) {
-            _distanceCache.set(cacheKey, {
-                distanceM:    result.distanceM,
-                distanceText: result.distanceText,
-                durationText: result.durationText,
-                isApprox:     result.isApprox,
-            });
-        }
-    });
-   } // closes the for batch loop    
-}
+//         const cacheKey = _distanceCacheKey(pharm.id);
+//         if (cacheKey) {
+//             _distanceCache.set(cacheKey, {
+//                 distanceM:    result.distanceM,
+//                 distanceText: result.distanceText,
+//                 durationText: result.durationText,
+//                 isApprox:     result.isApprox,
+//             });
+//         }
+//     });
+//    } // closes the for batch loop    
+// }
 
     /* ==========================================================================
        SECTION 19 — SORT + RENDER RESULTS  (FIX 1: batch alts, no async forEach)
