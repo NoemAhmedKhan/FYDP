@@ -565,54 +565,54 @@
     /* ==========================================================================
        SECTION 18 — ENRICH WITH ROAD DISTANCES  (FIX 10: TOP_N=5 + cache)
        ========================================================================== */
-    async function enrichWithRoadDistances(groups) {
-        const TOP_N      = 5;
-        const withCoords = groups.filter(g => g.pharmacy.coord);
-        if (!withCoords.length) return;
+    // async function enrichWithRoadDistances(groups) {
+    //     const TOP_N      = 5;
+    //     const withCoords = groups.filter(g => g.pharmacy.coord);
+    //     if (!withCoords.length) return;
 
-        // Sort by Haversine first to pick the nearest TOP_N
-        const sorted = [...withCoords].sort(
-            (a, b) => (a.pharmacy.distanceM ?? Infinity) - (b.pharmacy.distanceM ?? Infinity)
-        );
+    //     // Sort by Haversine first to pick the nearest TOP_N
+    //     const sorted = [...withCoords].sort(
+    //         (a, b) => (a.pharmacy.distanceM ?? Infinity) - (b.pharmacy.distanceM ?? Infinity)
+    //     );
 
-        // Check cache for each; only call API for uncached pharmacies
-        const toEnrich = [];
-        sorted.slice(0, TOP_N).forEach(g => {
-            const cacheKey = _distanceCacheKey(g.pharmacy.id);
-            if (cacheKey && _distanceCache.has(cacheKey)) {
-                // Apply cached result immediately
-                const cached = _distanceCache.get(cacheKey);
-                Object.assign(g.pharmacy, cached);
-            } else {
-                toEnrich.push(g);
-            }
-        });
+    //     // Check cache for each; only call API for uncached pharmacies
+    //     const toEnrich = [];
+    //     sorted.slice(0, TOP_N).forEach(g => {
+    //         const cacheKey = _distanceCacheKey(g.pharmacy.id);
+    //         if (cacheKey && _distanceCache.has(cacheKey)) {
+    //             // Apply cached result immediately
+    //             const cached = _distanceCache.get(cacheKey);
+    //             Object.assign(g.pharmacy, cached);
+    //         } else {
+    //             toEnrich.push(g);
+    //         }
+    //     });
 
-        if (!toEnrich.length) return;
+    //     if (!toEnrich.length) return;
 
-        const destinations = toEnrich.map(g => g.pharmacy.coord);
-        const dmResults    = await getDistanceMatrix(destinations);
+    //     const destinations = toEnrich.map(g => g.pharmacy.coord);
+    //     const dmResults    = await getDistanceMatrix(destinations);
 
-        dmResults.forEach((result, i) => {
-            const pharm = toEnrich[i].pharmacy;
-            pharm.distanceM    = result.distanceM;
-            pharm.distanceText = result.distanceText;
-            pharm.durationText = result.durationText;
-            pharm.isApprox     = result.isApprox;
+    //     dmResults.forEach((result, i) => {
+    //         const pharm = toEnrich[i].pharmacy;
+    //         pharm.distanceM    = result.distanceM;
+    //         pharm.distanceText = result.distanceText;
+    //         pharm.durationText = result.durationText;
+    //         pharm.isApprox     = result.isApprox;
 
-            // Cache the result
-            const cacheKey = _distanceCacheKey(pharm.id);
-            if (cacheKey) {
-                _distanceCache.set(cacheKey, {
-                    distanceM:    result.distanceM,
-                    distanceText: result.distanceText,
-                    durationText: result.durationText,
-                    isApprox:     result.isApprox,
-                });
-            }
-        });
-        // Pharmacies beyond TOP_N keep Haversine isApprox: true — no API call
-    }
+    //         // Cache the result
+    //         const cacheKey = _distanceCacheKey(pharm.id);
+    //         if (cacheKey) {
+    //             _distanceCache.set(cacheKey, {
+    //                 distanceM:    result.distanceM,
+    //                 distanceText: result.distanceText,
+    //                 durationText: result.durationText,
+    //                 isApprox:     result.isApprox,
+    //             });
+    //         }
+    //     });
+    //     // Pharmacies beyond TOP_N keep Haversine isApprox: true — no API call
+    // }
 
     /* ==========================================================================
        SECTION 19 — SORT + RENDER RESULTS  (FIX 1: batch alts, no async forEach)
