@@ -626,7 +626,7 @@
       badgeText = 'New · ' + curr.toLocaleString() + ' searches';
     } else if (changePct > 0) {
       badgeCls  = 'trend-badge--up';
-      badgeText = changePct + '%';
+      badgeText = '+' + changePct + '%';
     } else if (changePct < 0) {
       badgeCls  = 'trend-badge--down';
       badgeText = changePct + '%';
