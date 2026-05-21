@@ -623,13 +623,13 @@
     let badgeCls, badgeText;
     if (prev === 0) {
       badgeCls  = 'trend-badge--up';
-      badgeText = '🆕 New · ' + curr.toLocaleString() + ' searches';
+      badgeText = 'New · ' + curr.toLocaleString() + ' searches';
     } else if (changePct > 0) {
       badgeCls  = 'trend-badge--up';
-      badgeText = '🔥 +' + changePct + '%';
+      badgeText = changePct + '%';
     } else if (changePct < 0) {
       badgeCls  = 'trend-badge--down';
-      badgeText = '📉 ' + changePct + '%';
+      badgeText = changePct + '%';
     } else {
       badgeCls  = 'trend-badge--flat';
       badgeText = '→ 0%';
