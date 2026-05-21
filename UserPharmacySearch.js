@@ -793,7 +793,7 @@
         <div class="pharmacy-card">
             <!-- Card Top -->
             <div class="card-top">
-                <div class="card-image card-image--fallback">
+                <div class="card-image${pharmacy.profileImagePath ? '' : ' card-image--fallback'}">
                     ${profileImgHTML}
                     <span class="status-pill">
                         <i class="fa-solid fa-circle" style="font-size:7px;color:var(--green)"></i>
