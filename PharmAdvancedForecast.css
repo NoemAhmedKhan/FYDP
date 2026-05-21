@@ -116,8 +116,8 @@ input, textarea, select { font-family: inherit; }
 .s-logo-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: var(--clr-green);
+  border-radius: 0;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
