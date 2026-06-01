@@ -403,16 +403,6 @@
       renderRestockSuggestions(restockRows);
   }
 
-  // function renderEmptyState(message) {
-  //   const tbody = $('top10Body');
-  //   if (tbody) tbody.innerHTML =
-  //     '<tr><td colspan="6" class="tbl-empty">' + esc(message) + '</td></tr>';
-  //   if ($('statTotalSearches')) $('statTotalSearches').textContent = '0';
-  //   if ($('statTopShare'))      $('statTopShare').textContent      = '—';
-  //   if ($('statTopName'))       $('statTopName').textContent       = 'No data';
-  //   if ($('statMissingStock'))  $('statMissingStock').textContent  = '0';
-  // }
-
   function renderEmptyState(message) {
     // ── Clear stat cards ──────────────────────────────────────
     const tbody = $('top10Body');
