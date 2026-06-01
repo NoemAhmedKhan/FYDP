@@ -125,7 +125,8 @@ button {
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: var(--green-bg);
+  background: transparent;
+  border: 1px solid var(--green);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,10 +135,10 @@ button {
 }
 
 .s-logo-icon img {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
 }
 
 .s-logo-icon .mf-abbr {
