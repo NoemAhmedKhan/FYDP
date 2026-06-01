@@ -93,10 +93,9 @@ header {
     justify-content: center;
 }
 
-.logo-icon img{
+.logo-icon img {
     border: 1px solid var(--color-forest-green);
     border-radius: var(--radius-circle);
-    object-fit: contain;
 }
 
 .logo-text {
