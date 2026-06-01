@@ -102,7 +102,7 @@ ul     { list-style: none; }
 .sidebar__logo-icon {
     width: 40px; height: 40px;
     border-radius: 10px;
-    /* background: var(--green-bg); */
+    background: var(--green-bg);
     border: 1px solid var(--green);
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; flex-shrink: 0;
