@@ -8,6 +8,14 @@
       instead of sequentially → cuts load time roughly in half
    3. Sidebar avatar rendered immediately from session data
       while DB fetch is still in flight
+
+   FIXES (v3.1):
+   - Profile data now fetched from public.profiles (full_name,
+     profile_img) instead of public.users which has an RLS
+     infinite-recursion bug and causes silent fetch failures.
+   - renderSidebarAvatar now targets the correct element ID
+     ('sidebarAvatarInner') matching the HTML.
+   - Avatar rendering logic unified with UserProfile.js v3.0.
    ============================================================ */
 (function () {
     'use strict';
@@ -43,23 +51,44 @@
 
     /* ============================================================
        SIDEBAR AVATAR
+       Mirrors the renderAvatar() logic from UserProfile.js v3.0.
+       Target element: #sidebarAvatarInner (matches the HTML id).
        ============================================================ */
-    function renderSidebarAvatar(url, initials) {
-        const wrap = document.getElementById('sidebarAvatarInner');
-        if (!wrap) return;
-        wrap.innerHTML = '';
-        const img = document.createElement('img');
-        img.alt = 'Avatar';
+    function renderSidebarAvatar(imageUrl, initialsText) {
+        // The HTML uses id="sidebarAvatarInner" on the inner div
+        const container = document.getElementById('sidebarAvatarInner');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const img     = document.createElement('img');
+        img.alt       = 'Avatar';
+        img.className = 'avatar-photo';
         img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;';
-        wrap.appendChild(img);
+
         img.onerror = () => {
-            wrap.innerHTML = '';
-            const sp = document.createElement('span');
-            sp.style.cssText = 'color:white;font-size:13px;font-weight:700;text-transform:uppercase;';
-            sp.textContent = initials || '?';
-            wrap.appendChild(sp);
+            // First failure: try the local fallback image
+            if (!img.src.includes('ProfileAvatar')) {
+                img.src = 'Images/ProfileAvatar.jpg';
+            } else {
+                // Second failure: render initials span instead
+                container.innerHTML = '';
+                const span       = document.createElement('span');
+                span.className   = 'avatar-initials-text';
+                span.textContent = initialsText || '?';
+                container.appendChild(span);
+            }
         };
-        img.src = url || 'Images/ProfileAvatar.jpg';
+
+        img.src = imageUrl || 'Images/ProfileAvatar.jpg';
+        container.appendChild(img);
+    }
+
+    /* ── Derive initials from a full name string ── */
+    function getInitials(fullName) {
+        const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
+        const f = parts[0]?.[0] || '';
+        const l = parts[parts.length - 1]?.[0] || '';
+        return (f + (parts.length > 1 ? l : '')).toUpperCase() || '?';
     }
 
     /* ============================================================
@@ -149,21 +178,27 @@
         const user = session.user;
         const list = document.getElementById('reminderList');
 
-        /* Fire BOTH fetches at the same time — don't wait for one before starting the other */
+        /* Fire BOTH fetches at the same time — don't wait for one before starting the other.
+           NOTE: profile data is fetched from public.profiles (full_name, profile_img),
+           NOT from public.users which has an RLS infinite-recursion bug (see UserProfile.js v3.0).
+        */
         const [profileResult, remindersResult] = await Promise.all([
-            db.from('users').select('first_name,last_name,profile_img').eq('id', user.id).single(),
+            db.from('profiles').select('full_name,profile_img').eq('user_id', user.id).single(),
             db.from('reminders').select('*').eq('user_id', user.id).eq('status', 'due').order('created_at', { ascending: false })
         ]);
 
         /* ── Populate sidebar ── */
-        const p  = profileResult.data;
-        const fn = p?.first_name || '', ln = p?.last_name || '';
-        const fullName = [fn, ln].filter(Boolean).join(' ') || 'User';
-        const initials = ((fn[0] || '') + (ln[0] || '')).toUpperCase() || '?';
+        const p        = profileResult.data;
+        // profiles table stores a single full_name column (not split first/last)
+        const fullName = p?.full_name || 'User';
+        const initials = getInitials(fullName);
+
         const nameEl  = document.getElementById('sidebarUserName');
         const emailEl = document.getElementById('sidebarUserEmail');
         if (nameEl)  nameEl.textContent  = fullName;
         if (emailEl) emailEl.textContent = user.email || '';
+
+        // renderSidebarAvatar handles img load, ProfileAvatar fallback, and initials fallback
         renderSidebarAvatar(p?.profile_img || null, initials);
 
         /* ── Populate reminder cards ── */
