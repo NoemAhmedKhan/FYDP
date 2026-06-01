@@ -85,9 +85,17 @@ header {
     gap: var(--spacing-sm);
 }
 
-.logo-img {
+.logo-icon {
     width: 60px;
     height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-icon img{
+    border: 1px solid var(--color-forest-green);
+    border-radius: var(--radius-circle);
     object-fit: contain;
 }
 
