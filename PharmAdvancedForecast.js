@@ -403,7 +403,18 @@
       renderRestockSuggestions(restockRows);
   }
 
+  // function renderEmptyState(message) {
+  //   const tbody = $('top10Body');
+  //   if (tbody) tbody.innerHTML =
+  //     '<tr><td colspan="6" class="tbl-empty">' + esc(message) + '</td></tr>';
+  //   if ($('statTotalSearches')) $('statTotalSearches').textContent = '0';
+  //   if ($('statTopShare'))      $('statTopShare').textContent      = '—';
+  //   if ($('statTopName'))       $('statTopName').textContent       = 'No data';
+  //   if ($('statMissingStock'))  $('statMissingStock').textContent  = '0';
+  // }
+
   function renderEmptyState(message) {
+    // ── Clear stat cards ──────────────────────────────────────
     const tbody = $('top10Body');
     if (tbody) tbody.innerHTML =
       '<tr><td colspan="6" class="tbl-empty">' + esc(message) + '</td></tr>';
@@ -411,6 +422,26 @@
     if ($('statTopShare'))      $('statTopShare').textContent      = '—';
     if ($('statTopName'))       $('statTopName').textContent       = 'No data';
     if ($('statMissingStock'))  $('statMissingStock').textContent  = '0';
+
+    // ── Clear chart — destroy any live Chart.js instance ─────
+    // Without this, switching from a filter with data to a filter with
+    // no data leaves the previous chart rendered (renderDemandChart is
+    // never called when rows is empty, so its destroy() never runs).
+    if (forecastChart) {
+      forecastChart.destroy();
+      forecastChart = null;
+    }
+
+    // Replace the canvas with an inline empty-state message so the
+    // chart-wrap area does not appear as a blank white box.
+    const chartWrap = $('forecastChart')?.parentElement;
+    if (chartWrap) {
+      chartWrap.innerHTML =
+        '<canvas id="forecastChart" aria-label="Bar chart of top 10 searched products" role="img" style="display:none;"></canvas>' +
+        '<p class="tbl-empty" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;margin:0;">' +
+          esc(message) +
+        '</p>';
+    }
   }
 
   function renderTop10Table(rows) {
