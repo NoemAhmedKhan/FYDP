@@ -69,12 +69,12 @@ input, textarea { font-family: inherit; }
 .s-logo-icon {
   width: 40px; height: 40px;
   border-radius: 10px;
-  background: var(--clr-green-bg);
-  /* border removed intentionally */
+  background: transparent;
+  border: 1px solid var(--clr-green);
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; overflow: hidden;
 }
-.s-logo-icon img        { width: 28px; height: 28px; object-fit: contain; border-radius: 50%; }
+.s-logo-icon img        { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
 .s-logo-icon .mf-abbr  { color: var(--clr-green); font-weight: 700; font-size: 17px; display: none; }
 .s-logo-text            { display: flex; flex-direction: column; line-height: 1.25; }
 .s-brand                { font-size: 16px; font-weight: 700; color: var(--clr-dark); }
