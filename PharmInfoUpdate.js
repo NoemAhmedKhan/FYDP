@@ -360,7 +360,6 @@ async function loadProfile() {
 
     if (pharmErr || !pharmData) {
       showToast('Could not load pharmacy data.', 'error');
-      hideLoader();
       return;
     }
 
@@ -422,15 +421,9 @@ async function loadProfile() {
     }
     buildHoursUI(parsedHours);
 
-    /* ── Reveal UI ── */
-    hideLoader();
-    fadeIn('avatarCard');
-    fadeIn('infoGrid');
-
   } catch (err) {
     console.error('[PharmInfoUpdate] loadProfile error:', err);
     showToast('Unexpected error loading profile: ' + err.message, 'error');
-    hideLoader();
   }
 }
 
@@ -566,19 +559,6 @@ function initLogout() {
     await db.auth.signOut();
     window.location.href = 'SignUp.html';
   });
-}
-
-/* ─────────────────────────────────────────
-   UTILITY HELPERS
-   ───────────────────────────────────────── */
-function hideLoader() {
-  const loader = $('pageLoader');
-  if (loader) loader.classList.add('hidden');
-}
-
-function fadeIn(id) {
-  const el = $(id);
-  if (el) el.style.opacity = '1';
 }
 
 /* ─────────────────────────────────────────
