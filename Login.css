@@ -94,8 +94,11 @@ header {
 }
 
 .logo-icon img {
+    width: 60px;
+    height: 60px;
     border: 1px solid var(--color-forest-green);
     border-radius: var(--radius-circle);
+    object-fit: cover;
 }
 
 .logo-text {
