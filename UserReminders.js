@@ -45,7 +45,7 @@
        SIDEBAR AVATAR
        ============================================================ */
     function renderSidebarAvatar(url, initials) {
-        const wrap = document.getElementById('sidebarAvatarWrap');
+        const wrap = document.getElementById('sidebarAvatarInner');
         if (!wrap) return;
         wrap.innerHTML = '';
         const img = document.createElement('img');
