@@ -132,18 +132,17 @@
         const user = session.user;
         const list = document.getElementById('reminderList');
 
-        /* Parallel fetch — profile, reminders, and server time simultaneously */
-        const [profileResult, remindersResult, markedMonthYear] = await Promise.all([
-            db.from('users').select('first_name,last_name,profile_img').eq('id', user.id).single(),
-            db.from('reminders').select('*').eq('user_id', user.id).eq('status', 'taken').order('created_at', { ascending: false }),
-            fetchServerMonthYear()
-        ]);
+const [profileResult, remindersResult, markedMonthYear] = await Promise.all([
+    db.from('profiles').select('full_name,profile_img').eq('user_id', user.id).single(),
+    db.from('reminders').select('*').eq('user_id', user.id).eq('status', 'taken').order('created_at', { ascending: false }),
+    fetchServerMonthYear()
+]);
 
         /* Sidebar */
-        const p  = profileResult.data;
-        const fn = p?.first_name || '', ln = p?.last_name || '';
-        const fullName = [fn, ln].filter(Boolean).join(' ') || 'User';
-        const initials = ((fn[0] || '') + (ln[0] || '')).toUpperCase() || '?';
+        const p        = profileResult.data;
+        const fullName = p?.full_name || 'User';
+        const parts    = fullName.trim().split(/\s+/).filter(Boolean);
+        const initials = ((parts[0]?.[0] || '') + (parts.length > 1 ? (parts[parts.length-1]?.[0] || '') : '')).toUpperCase() || '?';
         const nameEl  = document.getElementById('sidebarUserName');
         const emailEl = document.getElementById('sidebarUserEmail');
         if (nameEl)  nameEl.textContent  = fullName;
