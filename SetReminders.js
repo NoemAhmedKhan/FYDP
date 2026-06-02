@@ -150,8 +150,7 @@ function buildScrollPicker(row) {
     const initMin = parseInt(parts[1], 10) || 0;
     const initAmpm  = initH24 < 12 ? 'AM' : 'PM';
     const initH12   = initH24 % 12 || 12;
-    /* Round minute to nearest 5 for scroll list */
-    const initMinR  = Math.round(initMin / 5) * 5 % 60;
+    const initMinR  = Math.round(initMin / 15) * 15 % 60;
 
     /* Hide native input — keep in DOM for CSS layout, 0-size */
     nativeInput.style.cssText =
@@ -172,7 +171,7 @@ function buildScrollPicker(row) {
 
     /* Values */
     const HOURS   = Array.from({length:12}, (_,i) => String(i+1).padStart(2,'0'));
-    const MINUTES = Array.from({length:12}, (_,i) => String(i*5).padStart(2,'0'));
+    const MINUTES = Array.from({length:4}, (_,i) => String(i*15).padStart(2,'0'));
     const AMPMS   = ['AM','PM'];
 
     /* ── Build one drum column ── */
