@@ -872,64 +872,146 @@ input, select { font-family: inherit; }
 .times-footer { display: none !important; }
 
 /* ============================
-   CUSTOM AM/PM SCROLL-DRUM PICKER
-   Replaces native <input type="time">
-   3 columns: Hour : Minute  AM/PM
+   CUSTOM TIME PICKER
+   Collapsed: shows selected value as a readable chip.
+   Expanded: dropdown panel with 3 scrollable columns.
    ============================ */
 
 .custom-time-picker {
-    display: flex;
+    position: relative;        /* anchor for the dropdown panel */
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     flex: 0 0 auto;
     background: var(--white-pure);
     border: 1.5px solid var(--gray-lt);
     border-radius: var(--r-md);
-    padding: 4px 6px;
+    padding: 0 12px;
     height: 38px;
-    overflow: hidden;
+    cursor: pointer;
     user-select: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+    white-space: nowrap;
+    min-width: 108px;
 }
 
-/* The colon separator between hour and minute drums */
-.tp-sep {
-    font-size: 16px;
-    font-weight: 700;
+.custom-time-picker:hover {
+    border-color: var(--green-lt);
+}
+
+/* The label shown in the collapsed bar: "8:00 AM" */
+.tp-display {
+    font-size: 14px;
+    font-weight: 600;
     color: var(--dark);
-    line-height: 1;
-    flex-shrink: 0;
-    padding: 0 1px;
+    flex: 1;
+    text-align: center;
+    pointer-events: none;
 }
 
-/* Each scrollable drum column */
+/* Small clock icon on the left */
+.tp-icon {
+    font-size: 13px;
+    color: var(--gray-md);
+    pointer-events: none;
+}
+
+/* Small chevron on the right */
+.tp-chevron {
+    font-size: 10px;
+    color: var(--gray-md);
+    pointer-events: none;
+    transition: transform .18s ease;
+}
+
+.custom-time-picker--open .tp-chevron {
+    transform: rotate(180deg);
+}
+
+.custom-time-picker--open {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(32, 139, 58, .08);
+}
+
+/* ── Dropdown panel ── */
+.tp-panel {
+    display: none;             /* hidden by default */
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 700;
+    background: var(--white-pure);
+    border: 1.5px solid var(--green);
+    border-radius: var(--r-lg);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .16);
+    padding: 10px 8px 12px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 4px;
+    min-width: 180px;
+}
+
+.custom-time-picker--open .tp-panel {
+    display: flex;
+}
+
+/* Column header labels (Hour / Min / AM/PM) */
+.tp-col-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--gray-md);
+    text-align: center;
+    padding-bottom: 6px;
+}
+
+/* Separator colon between hour and minute */
+.tp-sep {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gray-md);
+    padding: 0 2px;
+    align-self: center;
+    margin-top: 16px;         /* offset for the col-label height */
+    flex-shrink: 0;
+}
+
+/* Each drum column wrapper */
 .tp-drum {
     display: flex;
     flex-direction: column;
     align-items: center;
-    position: relative;
+    gap: 0;
+    flex-shrink: 0;
 }
 
+/* Scrollable list inside each drum */
 .tp-drum__list {
     list-style: none;
     margin: 0;
-    padding: 0;
+    padding: 2px 0;
     display: flex;
     flex-direction: column;
-    max-height: 30px;          /* show 1 row at a time inside the picker bar */
-    overflow: hidden;           /* clipped — picker is a fixed-height bar */
-    gap: 0;
-
-    /* On hover expand to show all items as a dropdown */
-    /* Achieved by toggling .tp-drum--open via JS on click */
+    max-height: 196px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-lt) transparent;
+    border-radius: var(--r-sm);
 }
 
-/* Drum items */
+.tp-drum__list::-webkit-scrollbar       { width: 3px; }
+.tp-drum__list::-webkit-scrollbar-track { background: transparent; }
+.tp-drum__list::-webkit-scrollbar-thumb { background: var(--gray-lt); border-radius: var(--r-pill); }
+
+/* Each selectable item */
 .tp-drum__item {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 30px;
+    width: 44px;
+    height: 36px;
     font-size: 14px;
     font-weight: 500;
     color: var(--gray);
@@ -951,57 +1033,17 @@ input, select { font-family: inherit; }
     font-weight: 700;
 }
 
-/* AM/PM drum — slightly wider */
-.tp-drum:last-child .tp-drum__item {
-    width: 40px;
+/* AM/PM column — slightly wider items */
+.tp-drum--ampm .tp-drum__item {
+    width: 46px;
     font-size: 12px;
     letter-spacing: .3px;
 }
 
-/* ── EXPANDED STATE ──
-   When user clicks the picker it expands into a
-   dropdown panel above the time-row showing all options.
-   Implemented by .custom-time-picker--open on the wrapper.
-   ── */
-.custom-time-picker--open {
-    position: absolute;
-    z-index: 600;
-    height: auto;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    padding: 10px 10px;
-    box-shadow: 0 8px 28px rgba(0,0,0,.18);
-    background: var(--white-pure);
-    border-color: var(--green);
-}
-
-.custom-time-picker--open .tp-sep {
-    display: none;
-}
-
-.custom-time-picker--open {
-    flex-direction: row;
-    align-items: flex-start;
-}
-
-.custom-time-picker--open .tp-drum__list {
-    max-height: 220px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--gray-lt) transparent;
-}
-
-.custom-time-picker--open .tp-drum__list::-webkit-scrollbar { width: 4px; }
-.custom-time-picker--open .tp-drum__list::-webkit-scrollbar-thumb {
-    background: var(--gray-lt);
-    border-radius: var(--r-pill);
-}
-
-/* time-row needs relative positioning for the open picker */
+/* time-row still needs relative for the open panel to be anchored */
 .time-row { position: relative; }
 
-/* ── AM/PM inline label in time display (cards) ── */
+/* ── inline helpers (used in card views elsewhere) ── */
 .time-ampm {
     font-size: 13px;
     font-weight: 500;
@@ -1015,4 +1057,3 @@ input, select { font-family: inherit; }
     color: var(--gray-md);
     margin-left: 1px;
 }
-
