@@ -128,60 +128,69 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /* ============================================================
-   C. CUSTOM AM/PM SCROLL-DRUM PICKER
+   C. CUSTOM AM/PM TIME PICKER  (v3 — dropdown panel)
    ─────────────────────────────────────────────────────────────
-   Replaces the native time input in each .time-row with a
-   3-column picker: [ Hour ] : [ Minute ] [ AM|PM ]
-
-   Each column is a scrollable list. Clicking any item selects
-   it (highlighted). A hidden input (.time-input-value) stores
-   the resulting 24h time string for the save function.
-
-   The native <input type="time"> is hidden in place.
+   Collapsed state : a styled chip that shows "8:00 AM".
+   Expanded state  : a dropdown panel with 3 scrollable columns
+                     (Hour 1–12 | Minute 00/15/30/45 | AM/PM).
+   A hidden input  (.time-input-value) stores the 24-h value
+   for the save function.
    ============================================================ */
 function buildScrollPicker(row) {
     const nativeInput = row.querySelector('.time-input');
     if (!nativeInput) return;
 
-    /* Parse initial value */
-    const initVal = nativeInput.value || '08:00';
-    const parts   = initVal.split(':');
-    const initH24 = parseInt(parts[0], 10) || 8;
-    const initMin = parseInt(parts[1], 10) || 0;
-    const initAmpm  = initH24 < 12 ? 'AM' : 'PM';
-    const initH12   = initH24 % 12 || 12;
-    const initMinR  = Math.round(initMin / 15) * 15 % 60;
+    /* ── Parse initial value from native input ── */
+    const initVal  = nativeInput.value || '08:00';
+    const parts    = initVal.split(':');
+    const initH24  = parseInt(parts[0], 10) || 8;
+    const initMin  = parseInt(parts[1], 10) || 0;
+    const initAmpm = initH24 < 12 ? 'AM' : 'PM';
+    const initH12  = initH24 % 12 || 12;
+    const initMinR = Math.round(initMin / 15) * 15 % 60;
 
-    /* Hide native input — keep in DOM for CSS layout, 0-size */
+    /* ── Hide native input (keep in DOM, 0-size) ── */
     nativeInput.style.cssText =
         'position:absolute;opacity:0;pointer-events:none;width:0;height:0;flex:0 0 0;';
 
-    /* Hidden value input — the picker writes 24h here */
+    /* ── Hidden 24-h value input (read by save logic) ── */
     const hiddenVal = document.createElement('input');
     hiddenVal.type      = 'hidden';
     hiddenVal.className = 'time-input-value';
     hiddenVal.value     = initVal;
     row.appendChild(hiddenVal);
 
-    /* Build picker shell */
-    const picker = document.createElement('div');
-    picker.className = 'custom-time-picker';
-    picker.setAttribute('role', 'group');
-    picker.setAttribute('aria-label', 'Time picker');
+    /* ── Data arrays ── */
+    const HOURS   = Array.from({length: 12}, (_, i) => String(i + 1).padStart(2, '0'));
+    const MINUTES = ['00', '15', '30', '45'];
+    const AMPMS   = ['AM', 'PM'];
 
-    /* Values */
-    const HOURS   = Array.from({length:12}, (_,i) => String(i+1).padStart(2,'0'));
-    const MINUTES = Array.from({length:4}, (_,i) => String(i*15).padStart(2,'0'));
-    const AMPMS   = ['AM','PM'];
+    /* ── State ── */
+    let selH12  = String(initH12).padStart(2, '0');
+    let selMin  = String(initMinR).padStart(2, '0');
+    let selAmpm = initAmpm;
+
+    /* ── Sync hidden value + display label ── */
+    function syncValue() {
+        let h24 = parseInt(selH12, 10) % 12;
+        if (selAmpm === 'PM') h24 += 12;
+        hiddenVal.value = `${String(h24).padStart(2, '0')}:${selMin}`;
+        if (displayEl) displayEl.textContent = `${selH12}:${selMin} ${selAmpm}`;
+    }
 
     /* ── Build one drum column ── */
-    function buildDrum(values, selectedVal, ariaLabel) {
-        const wrap = document.createElement('div');
-        wrap.className = 'tp-drum';
-        wrap.setAttribute('aria-label', ariaLabel);
+    function buildDrum(values, selected, ariaLabel, cssExtra) {
+        const wrap  = document.createElement('div');
+        wrap.className = 'tp-drum' + (cssExtra ? ' ' + cssExtra : '');
+
+        const label = document.createElement('div');
+        label.className   = 'tp-col-label';
+        label.textContent = ariaLabel;
 
         const list = document.createElement('ul');
         list.className = 'tp-drum__list';
+        list.setAttribute('role', 'listbox');
+        list.setAttribute('aria-label', ariaLabel);
 
         values.forEach(v => {
             const li = document.createElement('li');
@@ -189,92 +198,122 @@ function buildScrollPicker(row) {
             li.textContent = v;
             li.setAttribute('role', 'option');
 
-            const match = String(selectedVal).padStart(2, '0');
-            if (v === match || v === String(selectedVal)) {
+            if (v === selected) {
                 li.classList.add('tp-drum__item--active');
                 li.setAttribute('aria-selected', 'true');
             }
 
-            li.addEventListener('click', () => {
+            li.addEventListener('click', (e) => {
+                e.stopPropagation();
                 list.querySelectorAll('.tp-drum__item--active').forEach(el => {
                     el.classList.remove('tp-drum__item--active');
                     el.removeAttribute('aria-selected');
                 });
                 li.classList.add('tp-drum__item--active');
                 li.setAttribute('aria-selected', 'true');
+
+                /* Update state */
+                if (cssExtra === 'tp-drum--ampm') selAmpm = v;
+                else if (ariaLabel === 'Hour')    selH12  = v;
+                else                              selMin  = v;
+
                 syncValue();
-                li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             });
 
             list.appendChild(li);
         });
 
+        wrap.appendChild(label);
         wrap.appendChild(list);
         return { wrap, list };
     }
 
-    const hourCol   = buildDrum(HOURS,   String(initH12).padStart(2,'0'),  'Hour');
-    const minCol    = buildDrum(MINUTES, String(initMinR).padStart(2,'0'), 'Minute');
-    const ampmCol   = buildDrum(AMPMS,   initAmpm,                         'AM or PM');
+    const hourCol  = buildDrum(HOURS,   selH12,  'Hour',  '');
+    const minCol   = buildDrum(MINUTES, selMin,  'Min',   '');
+    const ampmCol  = buildDrum(AMPMS,   selAmpm, 'AM/PM', 'tp-drum--ampm');
 
-    /* Separator */
+    /* ── Colon separator ── */
     const sep = document.createElement('span');
     sep.className   = 'tp-sep';
     sep.textContent = ':';
     sep.setAttribute('aria-hidden', 'true');
 
-    picker.appendChild(hourCol.wrap);
-    picker.appendChild(sep);
-    picker.appendChild(minCol.wrap);
-    picker.appendChild(ampmCol.wrap);
+    /* ── Dropdown panel ── */
+    const panel = document.createElement('div');
+    panel.className = 'tp-panel';
+    panel.appendChild(hourCol.wrap);
+    panel.appendChild(sep);
+    panel.appendChild(minCol.wrap);
+    panel.appendChild(ampmCol.wrap);
 
-    /* ── Sync selected → hidden 24h value ── */
-    function syncValue() {
-        const h12Str  = hourCol.list.querySelector('.tp-drum__item--active')?.textContent || '8';
-        const minStr  = minCol.list.querySelector('.tp-drum__item--active')?.textContent  || '00';
-        const ampmStr = ampmCol.list.querySelector('.tp-drum__item--active')?.textContent || 'AM';
-        let h24 = parseInt(h12Str, 10) % 12;
-        if (ampmStr === 'PM') h24 += 12;
-        hiddenVal.value = `${String(h24).padStart(2,'0')}:${minStr}`;
-    }
+    /* ── Collapsed display chip ── */
+    const iconEl    = document.createElement('i');
+    iconEl.className = 'fa-regular fa-clock tp-icon';
 
-    /* Insert picker before the meal select, or append */
+    const displayEl = document.createElement('span');
+    displayEl.className   = 'tp-display';
+    displayEl.textContent = `${selH12}:${selMin} ${selAmpm}`;
+
+    const chevronEl = document.createElement('i');
+    chevronEl.className = 'fa-solid fa-chevron-down tp-chevron';
+
+    /* ── Assemble picker shell ── */
+    const picker = document.createElement('div');
+    picker.className = 'custom-time-picker';
+    picker.setAttribute('role', 'button');
+    picker.setAttribute('aria-haspopup', 'listbox');
+    picker.setAttribute('aria-expanded', 'false');
+    picker.setAttribute('tabindex', '0');
+    picker.setAttribute('aria-label', 'Time picker');
+
+    picker.appendChild(iconEl);
+    picker.appendChild(displayEl);
+    picker.appendChild(chevronEl);
+    picker.appendChild(panel);   /* panel lives INSIDE picker for z-index stacking */
+
+    /* ── Insert picker before meal select, or append ── */
     const mealSelect = row.querySelector('.time-meal-select');
     if (mealSelect) row.insertBefore(picker, mealSelect);
     else            row.appendChild(picker);
 
-    /* ── Click picker to expand/collapse ── */
+    /* ── Toggle open / close ── */
+    function openPicker() {
+        picker.classList.add('custom-time-picker--open');
+        picker.setAttribute('aria-expanded', 'true');
+        /* Scroll active items into view */
+        [hourCol.list, minCol.list, ampmCol.list].forEach(list => {
+            const active = list.querySelector('.tp-drum__item--active');
+            if (active) active.scrollIntoView({ block: 'nearest' });
+        });
+    }
+
+    function closePicker() {
+        picker.classList.remove('custom-time-picker--open');
+        picker.setAttribute('aria-expanded', 'false');
+    }
+
     picker.addEventListener('click', (e) => {
         e.stopPropagation();
         const isOpen = picker.classList.contains('custom-time-picker--open');
-        /* Close all other open pickers first */
+        /* Close any other open pickers first */
         document.querySelectorAll('.custom-time-picker--open').forEach(p => {
             p.classList.remove('custom-time-picker--open');
-            p.querySelectorAll('.tp-drum__list').forEach(l => {
-                l.style.maxHeight = '30px';
-                l.style.overflowY = 'hidden';
-            });
+            p.setAttribute('aria-expanded', 'false');
         });
-        if (!isOpen) {
-            picker.classList.add('custom-time-picker--open');
-            picker.querySelectorAll('.tp-drum__list').forEach(l => {
-                l.style.maxHeight = '220px';
-                l.style.overflowY = 'auto';
-                /* Scroll active item into view */
-                const active = l.querySelector('.tp-drum__item--active');
-                if (active) active.scrollIntoView({ block: 'nearest' });
-            });
+        if (!isOpen) openPicker();
+    });
+
+    /* Keyboard support */
+    picker.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            picker.click();
         }
+        if (e.key === 'Escape') closePicker();
     });
 
     /* Click outside closes picker */
-    document.addEventListener('click', () => {
-        picker.classList.remove('custom-time-picker--open');
-        picker.querySelectorAll('.tp-drum__list').forEach(l => {
-            l.style.maxHeight = '30px';
-            l.style.overflowY = 'hidden';
-        });
-    }, { capture: false });
+    document.addEventListener('click', () => closePicker());
 }
 
 /* ============================================================
