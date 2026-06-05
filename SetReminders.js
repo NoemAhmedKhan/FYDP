@@ -111,15 +111,16 @@ document.addEventListener('DOMContentLoaded', () => {
             else hiddenDatePicker.click();
         });
         hiddenDatePicker.addEventListener('change', () => {
-            const v = hiddenDatePicker.value;
+            const v = hiddenDatePicker.value;   // ISO: "2026-06-05"
             if (!v) return;
             const label = new Date(v + 'T00:00:00')
                 .toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
             const exists = [...dateTagRow.querySelectorAll('.date-tag')]
-                .some(tag => tag.firstChild.textContent.trim() === label);
+                .some(tag => tag.dataset.isoDate === v);
             if (exists) { hiddenDatePicker.value = ''; return; }
             const tag = document.createElement('span');
             tag.className = 'date-tag';
+            tag.dataset.isoDate = v;   // store ISO value on the element
             tag.innerHTML = `${label}<button class="date-tag__remove" onclick="removeDateTag(this)" aria-label="Remove date"><i class="fa-solid fa-xmark"></i></button>`;
             dateTagRow.insertBefore(tag, document.getElementById('dateAddInput'));
             hiddenDatePicker.value = '';
@@ -372,7 +373,7 @@ document.getElementById('saveBtn')?.addEventListener('click', async () => {
         .map(b => b.dataset.day).filter(Boolean);
 
     const activeDates = [...document.querySelectorAll('.date-tag')]
-        .map(t => t.firstChild.textContent.trim());
+        .map(t => t.dataset.isoDate).filter(Boolean);
 
     const notifications = [...document.querySelectorAll('.notif-card')]
         .filter(c => c.querySelector('.hidden-check')?.checked)
