@@ -130,9 +130,6 @@
                 </div>
                 <div class="reminder-card__actions">
                     <button class="btn-remove">Remove</button>
-                    <button class="btn-taken">
-                        <i class="fa-solid fa-circle-check"></i> Taken
-                    </button>
                 </div>
             </div>`;
         return el;
@@ -155,32 +152,6 @@
     }
 
     function bindButtons(list, usingInstances) {
-        /* ── Taken ── */
-        list.querySelectorAll('.btn-taken').forEach(btn => {
-            btn.addEventListener('click', async function () {
-                const card       = this.closest('.reminder-card');
-                const instanceId = card.dataset.instanceId;
-                const reminderId = card.dataset.reminderId;
-
-                if (usingInstances) {
-                    // New architecture: mark the instance taken
-                    const { error } = await db
-                        .from('reminder_instances')
-                        .update({ status: 'taken' })
-                        .eq('id', instanceId);
-                    if (error) { console.error('[Taken] instance update failed:', error); return; }
-                } else {
-                    // Fallback (no instance yet): mark reminders row taken
-                    const { error } = await db
-                        .from('reminders')
-                        .update({ status: 'taken' })
-                        .eq('id', reminderId);
-                    if (error) { console.error('[Taken] reminders update failed:', error); return; }
-                }
-                animateOut(card);
-            });
-        });
-
         /* ── Remove ── */
         list.querySelectorAll('.btn-remove').forEach(btn => {
             btn.addEventListener('click', async function () {
