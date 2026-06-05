@@ -467,19 +467,6 @@ ul     { list-style: none; }
     transition: var(--t);
 }
 .btn-remove:hover { background: var(--red-bg); }
-.btn-taken {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    padding: 9px 22px;
-    background: var(--green);
-    color: white;
-    border-radius: var(--r-md);
-    font-size: 14px;
-    font-weight: var(--fw-m);
-    transition: var(--t);
-}
-.btn-taken:hover { background: var(--green-light); }
 
 /* Hidden state */
 .reminder-card--hidden { display: none; }
@@ -545,8 +532,7 @@ ul     { list-style: none; }
     }
     .detail-cell__time { font-size: 20px; }
     .reminder-card__actions { justify-content: stretch; }
-    .btn-remove,
-    .btn-taken { flex: 1; justify-content: center; }
+    .btn-remove { flex: 1; justify-content: center; }
 }
 
 /* =============================================
