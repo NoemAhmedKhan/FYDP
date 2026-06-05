@@ -28,7 +28,7 @@
     document.addEventListener('keydown', e => e.key === 'Escape' && sidebar.classList.remove('sidebar--open'));
 
     document.getElementById('setReminderBtn')?.addEventListener('click', () => {
-        window.location.href = 'SetRemindersDaily.html';
+        window.location.href = 'SetReminders.html';
     });
 
     document.querySelector('.search-bar__input')?.addEventListener('input', function () {
