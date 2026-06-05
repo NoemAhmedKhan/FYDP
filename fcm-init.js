@@ -29,7 +29,7 @@ let _fcmInitStarted = false;   // module-level guard — prevents double-run on 
     appId:             "1:327673518581:web:0a1aaae95d87cd4b6fe8bc"
   };
 
-  const FCM_VAPID_KEY = "aPTek0pFhJ6EymLF0KeBv0iYq-7tY2Ogh2DJE1-Pi68";
+  const FCM_VAPID_KEY = "BPEK7Vmpfp1DzzikKb4q5UVm80Q0KSg_k74MboQQE87I86RUR4gAeSzPddvs2nws7PMHcMvaNw8ia24AxrDTc9c";
 
   const SUPABASE_URL = 'https://ktzsshlllyjuzphprzso.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt0enNzaGxsbHlqdXpwaHByenNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0MTg4ODksImV4cCI6MjA4Nzk5NDg4OX0.WMoLBWXf0kJ9ebPO6jkIpMY7sFvcL3DRR-KEpY769ic';
