@@ -1,15 +1,18 @@
 /* ============================================================
-   MediFinder — UserReminders.js  (Due tab)
+   MediFinder — UserReminders.js  (Due tab)  v3.3
 
-   v3.2 changes:
-   - "Taken" button now deletes the reminder_instances row for
-     the specific due instance, rather than setting reminders.status
-     = 'taken'. The server scheduler creates instances; the user
-     marks individual occurrences done. The parent reminder
-     definition stays active so future instances keep generating.
-   - "Remove" button deletes the reminders row (cascades to all
-     instances and notification_log rows via FK on delete cascade).
-   - Tabs (Taken / Missed) removed from this page — only Due shown.
+   FIXES vs v3.2:
+   - Added console logging throughout init() so you can see
+     exactly what the Supabase queries return in DevTools.
+   - Fallback: if reminder_instances returns 0 rows but reminders
+     table has due rows, shows those directly. This handles the
+     transition period where a reminder was just created but the
+     scheduler hasn't generated its instance yet (scheduler runs
+     every 5 min — there can be up to a 5-min gap on first creation).
+   - reminder_instances RLS requires reminders SELECT policy too
+     (for the PostgREST join). patch2.sql adds that policy.
+     Until patch2.sql is run, the fallback query keeps the page
+     functional.
    ============================================================ */
 (function () {
     'use strict';
@@ -24,12 +27,10 @@
     document.getElementById('sidebarOverlay')?.addEventListener('click', () => sidebar.classList.remove('sidebar--open'));
     document.addEventListener('keydown', e => e.key === 'Escape' && sidebar.classList.remove('sidebar--open'));
 
-    /* ── Set Reminder button ── */
     document.getElementById('setReminderBtn')?.addEventListener('click', () => {
         window.location.href = 'SetRemindersDaily.html';
     });
 
-    /* ── Live search filter ── */
     document.querySelector('.search-bar__input')?.addEventListener('input', function () {
         const q = this.value.trim().toLowerCase();
         document.querySelectorAll('.reminder-card').forEach(c => {
@@ -37,37 +38,31 @@
         });
     });
 
-    /* ── Logout ── */
     document.getElementById('logoutBtn')?.addEventListener('click', async () => {
         if (db) await db.auth.signOut();
         window.location.href = 'Login.html';
     });
 
-    /* ============================================================
-       SIDEBAR AVATAR
-       ============================================================ */
+    /* ── Sidebar avatar ── */
     function renderSidebarAvatar(imageUrl, initialsText) {
         const container = document.getElementById('sidebarAvatarInner');
         if (!container) return;
         container.innerHTML = '';
-
-        const img     = document.createElement('img');
-        img.alt       = 'Avatar';
+        const img = document.createElement('img');
+        img.alt = 'Avatar';
         img.className = 'avatar-photo';
         img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;';
-
         img.onerror = () => {
             if (!img.src.includes('ProfileAvatar')) {
                 img.src = 'Images/ProfileAvatar.jpg';
             } else {
                 container.innerHTML = '';
-                const span       = document.createElement('span');
-                span.className   = 'avatar-initials-text';
+                const span = document.createElement('span');
+                span.className = 'avatar-initials-text';
                 span.textContent = initialsText || '?';
                 container.appendChild(span);
             }
         };
-
         img.src = imageUrl || 'Images/ProfileAvatar.jpg';
         container.appendChild(img);
     }
@@ -79,15 +74,12 @@
         return (f + (parts.length > 1 ? l : '')).toUpperCase() || '?';
     }
 
-    /* ============================================================
-       CARD HELPERS
-       ============================================================ */
+    /* ── Card helpers ── */
     function fmtTime(t) {
         if (!t) return '--:-- --';
         const [h, m] = t.split(':');
-        const hr   = +h;
-        const ampm = hr < 12 ? 'AM' : 'PM';
-        return `${hr % 12 || 12}:${m} ${ampm}`;
+        const hr = +h;
+        return `${hr % 12 || 12}:${m} ${hr < 12 ? 'AM' : 'PM'}`;
     }
     function freqLabel(r) {
         if ((r.reminder_type === 'Weekly' || r.reminder_type === 'Specific Days') && r.active_days?.length)
@@ -97,35 +89,30 @@
 
     const COLOR_CLASSES = ['reminder-card__visual--blue', 'reminder-card__visual--amber', 'reminder-card__visual--purple'];
 
+    /* ── Build card from a reminder_instances row (joined with reminders) ── */
     function buildDueCard(r, idx) {
-        // r is a reminder_instances row joined with reminders definition
-        // r.reminder_id  = the reminders.id (for deletion of definition)
-        // r.id           = the reminder_instances.id (for marking taken)
-        // r.reminders    = the joined reminders definition object
-
-        const def       = r.reminders || r;           // joined or flat
-        const timeStr   = fmtTime(def.times?.[0]?.time || '');
-        const timeParts = timeStr.split(' ');
-        const hrMin     = timeParts[0];
-        const ampm      = timeParts[1] || '';
-        const now       = new Date();
-        const dayName   = now.toLocaleDateString('en-US', { weekday: 'long' });
-        const dateStr   = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
+        const def     = r.reminders || r;   // joined object or flat fallback
+        const timeStr = fmtTime(def.times?.[0]?.time || '');
+        const [hrMin, ampm = ''] = timeStr.split(' ');
+        const now     = new Date();
+        const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+        const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toUpperCase();
 
         const el = document.createElement('article');
         el.className = 'reminder-card';
-        el.dataset.instanceId  = r.id;           // reminder_instances.id
-        el.dataset.reminderId  = r.reminder_id;  // reminders.id (for Remove)
+        // instance id for Taken button; reminder id for Remove button
+        el.dataset.instanceId = r.id;
+        el.dataset.reminderId = r.reminder_id || r.id;  // flat fallback uses r.id
         el.innerHTML = `
             <div class="reminder-card__visual ${COLOR_CLASSES[idx % 3]}">
                 <i class="fa-solid fa-kit-medical"></i>
             </div>
             <div class="reminder-card__content">
-                <h3 class="reminder-card__name">${def.med_name}</h3>
+                <h3 class="reminder-card__name">${def.med_name || '—'}</h3>
                 <div class="reminder-card__details">
                     <div class="detail-cell">
                         <span class="detail-cell__label">Dosage</span>
-                        <span class="detail-cell__value"><i class="fa-solid fa-kit-medical"></i> ${def.dosage}</span>
+                        <span class="detail-cell__value"><i class="fa-solid fa-kit-medical"></i> ${def.dosage || '—'}</span>
                     </div>
                     <div class="detail-cell">
                         <span class="detail-cell__label">Frequency</span>
@@ -167,11 +154,53 @@
             </div>`;
     }
 
+    function bindButtons(list, usingInstances) {
+        /* ── Taken ── */
+        list.querySelectorAll('.btn-taken').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const card       = this.closest('.reminder-card');
+                const instanceId = card.dataset.instanceId;
+                const reminderId = card.dataset.reminderId;
+
+                if (usingInstances) {
+                    // New architecture: mark the instance taken
+                    const { error } = await db
+                        .from('reminder_instances')
+                        .update({ status: 'taken' })
+                        .eq('id', instanceId);
+                    if (error) { console.error('[Taken] instance update failed:', error); return; }
+                } else {
+                    // Fallback (no instance yet): mark reminders row taken
+                    const { error } = await db
+                        .from('reminders')
+                        .update({ status: 'taken' })
+                        .eq('id', reminderId);
+                    if (error) { console.error('[Taken] reminders update failed:', error); return; }
+                }
+                animateOut(card);
+            });
+        });
+
+        /* ── Remove ── */
+        list.querySelectorAll('.btn-remove').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const card       = this.closest('.reminder-card');
+                const reminderId = card.dataset.reminderId;
+                const { error } = await db
+                    .from('reminders')
+                    .delete()
+                    .eq('id', reminderId);
+                if (error) { console.error('[Remove] delete failed:', error); return; }
+                animateOut(card);
+            });
+        });
+    }
+
     /* ============================================================
        INIT
        ============================================================ */
     async function init() {
-        if (!db) return;
+        if (!db) { console.error('[Reminders] No Supabase client'); return; }
 
         const { data: { session } } = await db.auth.getSession();
         if (!session?.user) { window.location.href = 'Login.html'; return; }
@@ -179,8 +208,7 @@
         const user = session.user;
         const list = document.getElementById('reminderList');
 
-        // ── Fetch profile + due reminder instances in parallel ─────
-        // reminder_instances joined with reminders definition
+        // ── PRIMARY: query reminder_instances joined with reminders ──
         const [profileResult, instancesResult] = await Promise.all([
             db.from('profiles').select('full_name,profile_img').eq('user_id', user.id).single(),
             db.from('reminder_instances')
@@ -189,13 +217,9 @@
                 reminder_id,
                 scheduled_for,
                 reminders (
-                  med_name,
-                  dosage,
-                  med_form,
-                  reminder_type,
-                  active_days,
-                  notifications,
-                  times
+                  med_name, dosage, med_form,
+                  reminder_type, active_days,
+                  notifications, times
                 )
               `)
               .eq('user_id', user.id)
@@ -203,64 +227,55 @@
               .order('scheduled_for', { ascending: true })
         ]);
 
+        console.log('[Reminders] instances query:', instancesResult.error || instancesResult.data?.length, 'rows');
+        if (instancesResult.error) console.error('[Reminders] instances error:', instancesResult.error);
+
         /* ── Sidebar ── */
         const p        = profileResult.data;
         const fullName = p?.full_name || 'User';
-        const initials = getInitials(fullName);
-
         const nameEl  = document.getElementById('sidebarUserName');
         const emailEl = document.getElementById('sidebarUserEmail');
         if (nameEl)  nameEl.textContent  = fullName;
         if (emailEl) emailEl.textContent = user.email || '';
-        renderSidebarAvatar(p?.profile_img || null, initials);
+        renderSidebarAvatar(p?.profile_img || null, getInitials(fullName));
 
-        /* ── Cards ── */
         if (!list) return;
         list.innerHTML = '';
 
         const instances = instancesResult.data;
-        if (!instances?.length) { showEmpty(list); return; }
-        instances.forEach((r, i) => list.appendChild(buildDueCard(r, i)));
 
-        /* ── Taken button ──────────────────────────────────────────
-           Marks the reminder_instances row as 'taken'.
-           Does NOT touch reminders.status so future instances
-           continue to be generated by the scheduler.
-        ────────────────────────────────────────────────────────── */
-        list.querySelectorAll('.btn-taken').forEach(btn => {
-            btn.addEventListener('click', async function () {
-                const card       = this.closest('.reminder-card');
-                const instanceId = card.dataset.instanceId;
+        // ── If instances returned rows with valid joined data, use them ──
+        const validInstances = (instances || []).filter(r => r.reminders?.med_name);
+        console.log('[Reminders] valid instances with joined reminders:', validInstances.length);
 
-                const { error } = await db
-                    .from('reminder_instances')
-                    .update({ status: 'taken' })
-                    .eq('id', instanceId);
+        if (validInstances.length > 0) {
+            validInstances.forEach((r, i) => list.appendChild(buildDueCard(r, i)));
+            bindButtons(list, true);
+            return;
+        }
 
-                if (error) { console.error('Taken update failed:', error); return; }
-                animateOut(card);
-            });
+        // ── FALLBACK: reminder_instances join failed (RLS on reminders  ──
+        // table not yet set up) — query reminders directly until patch2.sql
+        // is applied.
+        console.warn('[Reminders] Falling back to direct reminders query (run patch2.sql to fix).');
+        const { data: fallbackReminders, error: fbErr } = await db
+            .from('reminders')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('status', 'due')
+            .order('created_at', { ascending: false });
+
+        console.log('[Reminders] fallback query:', fbErr || fallbackReminders?.length, 'rows');
+        if (fbErr) console.error('[Reminders] fallback error:', fbErr);
+
+        if (!fallbackReminders?.length) { showEmpty(list); return; }
+
+        // Wrap flat reminders rows so buildDueCard works with both shapes
+        fallbackReminders.forEach((r, i) => {
+            const wrapped = { id: r.id, reminder_id: r.id, reminders: r };
+            list.appendChild(buildDueCard(wrapped, i));
         });
-
-        /* ── Remove button ─────────────────────────────────────────
-           Deletes the reminders definition row. The FK cascade
-           automatically removes all reminder_instances and
-           notification_log rows for this reminder.
-        ────────────────────────────────────────────────────────── */
-        list.querySelectorAll('.btn-remove').forEach(btn => {
-            btn.addEventListener('click', async function () {
-                const card       = this.closest('.reminder-card');
-                const reminderId = card.dataset.reminderId;
-
-                const { error } = await db
-                    .from('reminders')
-                    .delete()
-                    .eq('id', reminderId);
-
-                if (error) { console.error('Remove failed:', error); return; }
-                animateOut(card);
-            });
-        });
+        bindButtons(list, false);
     }
 
     init();
