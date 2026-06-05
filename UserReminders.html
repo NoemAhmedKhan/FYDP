@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MediFinder - Set Reminders</title>
+    <title>MediFinder - My Reminders</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -53,10 +53,6 @@
             <!-- Sidebar user — JS populates name, email, avatar -->
             <div class="sidebar__user">
                 <div class="user-avatar">
-                    <!--
-                        Empty — JS renders img or initials span inside this.
-                        ID must be 'sidebarAvatarInner' to match renderSidebarAvatar().
-                    -->
                     <div class="sidebar-avatar-inner" id="sidebarAvatarInner"></div>
                 </div>
                 <div class="user-meta">
@@ -98,17 +94,14 @@
             </div>
         </header>
 
+        <!-- ── REMOVED: tab strip (Taken / Missed tabs no longer shown) ── -->
         <section class="reminders-section">
             <div class="reminders-section__header">
                 <div class="reminders-section__title-group">
                     <h2 class="reminders-section__title">Today's Reminders</h2>
                     <p class="reminders-section__subtitle">Manage your medication schedule</p>
                 </div>
-                <div class="tabs" role="tablist">
-                    <a href="UserReminders.html"       class="tab tab--active" role="tab">Due</a>
-                    <a href="UserRemindersTaken.html"   class="tab"            role="tab">Taken</a>
-                    <a href="UserRemindersMissed.html"  class="tab"            role="tab">Missed</a>
-                </div>
+                <!-- Tabs removed — only Due view is shown -->
             </div>
         </section>
 
@@ -123,8 +116,8 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-<script src="fcm-init.js"></script>
+    <script src="supabase.js"></script>
+    <script src="fcm-init.js"></script>
     <script src="UserReminders.js"></script>
 </body>
 </html>
