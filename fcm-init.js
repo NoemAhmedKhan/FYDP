@@ -74,7 +74,14 @@ let _fcmInitStarted = false;   // module-level guard — prevents double-run on 
       { scope: '/FYDP/' }
     );
     // Wait for SW to be active before calling getToken
-    await navigator.serviceWorker.ready;
+    await swReg.update();
+if (swReg.installing) {
+    await new Promise(resolve => {
+        swReg.installing.addEventListener('statechange', function() {
+            if (this.state === 'activated') resolve();
+        });
+    });
+}
     console.log('[FCM] SW registered, scope:', swReg.scope);
 
     // ── Step 5: Request notification permission ───────────────────
