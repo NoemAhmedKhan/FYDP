@@ -1,21 +1,15 @@
 /* ============================================================
    MediFinder — UserReminders.js  (Due tab)
 
-   PERFORMANCE OPTIMISATIONS vs previous version:
-   1. getSession() instead of getUser() — reads localStorage,
-      no network round-trip → instant auth check
-   2. User info + reminders fetched in PARALLEL with Promise.all
-      instead of sequentially → cuts load time roughly in half
-   3. Sidebar avatar rendered immediately from session data
-      while DB fetch is still in flight
-
-   FIXES (v3.1):
-   - Profile data now fetched from public.profiles (full_name,
-     profile_img) instead of public.users which has an RLS
-     infinite-recursion bug and causes silent fetch failures.
-   - renderSidebarAvatar now targets the correct element ID
-     ('sidebarAvatarInner') matching the HTML.
-   - Avatar rendering logic unified with UserProfile.js v3.0.
+   v3.2 changes:
+   - "Taken" button now deletes the reminder_instances row for
+     the specific due instance, rather than setting reminders.status
+     = 'taken'. The server scheduler creates instances; the user
+     marks individual occurrences done. The parent reminder
+     definition stays active so future instances keep generating.
+   - "Remove" button deletes the reminders row (cascades to all
+     instances and notification_log rows via FK on delete cascade).
+   - Tabs (Taken / Missed) removed from this page — only Due shown.
    ============================================================ */
 (function () {
     'use strict';
@@ -51,11 +45,8 @@
 
     /* ============================================================
        SIDEBAR AVATAR
-       Mirrors the renderAvatar() logic from UserProfile.js v3.0.
-       Target element: #sidebarAvatarInner (matches the HTML id).
        ============================================================ */
     function renderSidebarAvatar(imageUrl, initialsText) {
-        // The HTML uses id="sidebarAvatarInner" on the inner div
         const container = document.getElementById('sidebarAvatarInner');
         if (!container) return;
         container.innerHTML = '';
@@ -66,11 +57,9 @@
         img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;';
 
         img.onerror = () => {
-            // First failure: try the local fallback image
             if (!img.src.includes('ProfileAvatar')) {
                 img.src = 'Images/ProfileAvatar.jpg';
             } else {
-                // Second failure: render initials span instead
                 container.innerHTML = '';
                 const span       = document.createElement('span');
                 span.className   = 'avatar-initials-text';
@@ -83,7 +72,6 @@
         container.appendChild(img);
     }
 
-    /* ── Derive initials from a full name string ── */
     function getInitials(fullName) {
         const parts = (fullName || '').trim().split(/\s+/).filter(Boolean);
         const f = parts[0]?.[0] || '';
@@ -110,7 +98,13 @@
     const COLOR_CLASSES = ['reminder-card__visual--blue', 'reminder-card__visual--amber', 'reminder-card__visual--purple'];
 
     function buildDueCard(r, idx) {
-        const timeStr   = fmtTime(r.times?.[0]?.time || '');
+        // r is a reminder_instances row joined with reminders definition
+        // r.reminder_id  = the reminders.id (for deletion of definition)
+        // r.id           = the reminder_instances.id (for marking taken)
+        // r.reminders    = the joined reminders definition object
+
+        const def       = r.reminders || r;           // joined or flat
+        const timeStr   = fmtTime(def.times?.[0]?.time || '');
         const timeParts = timeStr.split(' ');
         const hrMin     = timeParts[0];
         const ampm      = timeParts[1] || '';
@@ -120,25 +114,26 @@
 
         const el = document.createElement('article');
         el.className = 'reminder-card';
-        el.dataset.id = r.id;
+        el.dataset.instanceId  = r.id;           // reminder_instances.id
+        el.dataset.reminderId  = r.reminder_id;  // reminders.id (for Remove)
         el.innerHTML = `
             <div class="reminder-card__visual ${COLOR_CLASSES[idx % 3]}">
                 <i class="fa-solid fa-kit-medical"></i>
             </div>
             <div class="reminder-card__content">
-                <h3 class="reminder-card__name">${r.med_name}</h3>
+                <h3 class="reminder-card__name">${def.med_name}</h3>
                 <div class="reminder-card__details">
                     <div class="detail-cell">
                         <span class="detail-cell__label">Dosage</span>
-                        <span class="detail-cell__value"><i class="fa-solid fa-kit-medical"></i> ${r.dosage}</span>
+                        <span class="detail-cell__value"><i class="fa-solid fa-kit-medical"></i> ${def.dosage}</span>
                     </div>
                     <div class="detail-cell">
                         <span class="detail-cell__label">Frequency</span>
-                        <span class="detail-cell__value"><i class="fa-regular fa-clock"></i> ${freqLabel(r)}</span>
+                        <span class="detail-cell__value"><i class="fa-regular fa-clock"></i> ${freqLabel(def)}</span>
                     </div>
                     <div class="detail-cell">
                         <span class="detail-cell__label">Notification</span>
-                        <span class="detail-cell__value"><i class="fa-solid fa-bell"></i> ${(r.notifications || []).join(', ') || '—'}</span>
+                        <span class="detail-cell__value"><i class="fa-solid fa-bell"></i> ${(def.notifications || []).join(', ') || '—'}</span>
                     </div>
                     <div class="detail-cell detail-cell--time">
                         <span class="detail-cell__day">${dayName}</span>
@@ -147,13 +142,20 @@
                     </div>
                 </div>
                 <div class="reminder-card__actions">
-                    <button class="btn-remove" data-id="${r.id}">Remove</button>
-                    <button class="btn-taken" data-id="${r.id}">
+                    <button class="btn-remove">Remove</button>
+                    <button class="btn-taken">
                         <i class="fa-solid fa-circle-check"></i> Taken
                     </button>
                 </div>
             </div>`;
         return el;
+    }
+
+    function animateOut(card) {
+        card.style.transition = 'opacity .3s ease, transform .3s ease';
+        card.style.opacity    = '0';
+        card.style.transform  = 'translateY(-8px)';
+        setTimeout(() => card.remove(), 320);
     }
 
     function showEmpty(list) {
@@ -166,30 +168,43 @@
     }
 
     /* ============================================================
-       INIT — parallel fetch for speed
+       INIT
        ============================================================ */
     async function init() {
         if (!db) return;
 
-        /* getSession reads localStorage — instant, no network */
         const { data: { session } } = await db.auth.getSession();
         if (!session?.user) { window.location.href = 'Login.html'; return; }
 
         const user = session.user;
         const list = document.getElementById('reminderList');
 
-        /* Fire BOTH fetches at the same time — don't wait for one before starting the other.
-           NOTE: profile data is fetched from public.profiles (full_name, profile_img),
-           NOT from public.users which has an RLS infinite-recursion bug (see UserProfile.js v3.0).
-        */
-        const [profileResult, remindersResult] = await Promise.all([
+        // ── Fetch profile + due reminder instances in parallel ─────
+        // reminder_instances joined with reminders definition
+        const [profileResult, instancesResult] = await Promise.all([
             db.from('profiles').select('full_name,profile_img').eq('user_id', user.id).single(),
-            db.from('reminders').select('*').eq('user_id', user.id).eq('status', 'due').order('created_at', { ascending: false })
+            db.from('reminder_instances')
+              .select(`
+                id,
+                reminder_id,
+                scheduled_for,
+                reminders (
+                  med_name,
+                  dosage,
+                  med_form,
+                  reminder_type,
+                  active_days,
+                  notifications,
+                  times
+                )
+              `)
+              .eq('user_id', user.id)
+              .eq('status', 'due')
+              .order('scheduled_for', { ascending: true })
         ]);
 
-        /* ── Populate sidebar ── */
+        /* ── Sidebar ── */
         const p        = profileResult.data;
-        // profiles table stores a single full_name column (not split first/last)
         const fullName = p?.full_name || 'User';
         const initials = getInitials(fullName);
 
@@ -197,38 +212,53 @@
         const emailEl = document.getElementById('sidebarUserEmail');
         if (nameEl)  nameEl.textContent  = fullName;
         if (emailEl) emailEl.textContent = user.email || '';
-
-        // renderSidebarAvatar handles img load, ProfileAvatar fallback, and initials fallback
         renderSidebarAvatar(p?.profile_img || null, initials);
 
-        /* ── Populate reminder cards ── */
+        /* ── Cards ── */
         if (!list) return;
         list.innerHTML = '';
-        const reminders = remindersResult.data;
-        if (!reminders?.length) { showEmpty(list); return; }
-        reminders.forEach((r, i) => list.appendChild(buildDueCard(r, i)));
 
-        /* ── Taken button ── */
+        const instances = instancesResult.data;
+        if (!instances?.length) { showEmpty(list); return; }
+        instances.forEach((r, i) => list.appendChild(buildDueCard(r, i)));
+
+        /* ── Taken button ──────────────────────────────────────────
+           Marks the reminder_instances row as 'taken'.
+           Does NOT touch reminders.status so future instances
+           continue to be generated by the scheduler.
+        ────────────────────────────────────────────────────────── */
         list.querySelectorAll('.btn-taken').forEach(btn => {
             btn.addEventListener('click', async function () {
-                const id   = this.dataset.id;
-                const card = this.closest('.reminder-card');
-                const { error } = await db.from('reminders').update({ status: 'taken' }).eq('id', id);
-                if (error) { console.error(error); return; }
-                card.style.cssText += ';transition:opacity .3s ease,transform .3s ease;opacity:0;transform:translateY(-8px)';
-                setTimeout(() => card.remove(), 320);
+                const card       = this.closest('.reminder-card');
+                const instanceId = card.dataset.instanceId;
+
+                const { error } = await db
+                    .from('reminder_instances')
+                    .update({ status: 'taken' })
+                    .eq('id', instanceId);
+
+                if (error) { console.error('Taken update failed:', error); return; }
+                animateOut(card);
             });
         });
 
-        /* ── Remove button ── */
+        /* ── Remove button ─────────────────────────────────────────
+           Deletes the reminders definition row. The FK cascade
+           automatically removes all reminder_instances and
+           notification_log rows for this reminder.
+        ────────────────────────────────────────────────────────── */
         list.querySelectorAll('.btn-remove').forEach(btn => {
             btn.addEventListener('click', async function () {
-                const id   = this.dataset.id;
-                const card = this.closest('.reminder-card');
-                const { error } = await db.from('reminders').delete().eq('id', id);
-                if (error) { console.error(error); return; }
-                card.style.cssText += ';transition:opacity .3s ease,transform .3s ease;opacity:0;transform:translateY(-8px)';
-                setTimeout(() => card.remove(), 320);
+                const card       = this.closest('.reminder-card');
+                const reminderId = card.dataset.reminderId;
+
+                const { error } = await db
+                    .from('reminders')
+                    .delete()
+                    .eq('id', reminderId);
+
+                if (error) { console.error('Remove failed:', error); return; }
+                animateOut(card);
             });
         });
     }
