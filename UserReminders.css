@@ -305,44 +305,6 @@ ul     { list-style: none; }
     color: var(--gray-mid);
 }
 
-/* ── Tabs ──
-   Base .tab is shared across all three pages.
-   .tab--active       = green  (Due page default)
-   .tab--green        = green  (Taken page — explicit modifier)
-   .tab--red          = red    (Missed page — explicit modifier)
-   Using <a> tags on all pages for consistent navigation.
-   ────────────────────────────────────────────── */
-.tabs {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.tab {
-    padding: 8px 22px;
-    border-radius: var(--r-pill);
-    font-size: 14px;
-    font-weight: var(--fw-m);
-    color: var(--gray);
-    background: transparent;
-    transition: var(--t);
-    cursor: pointer;
-    /* Reset <a> defaults */
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-}
-.tab:hover                { background: var(--gray-xlight); color: var(--dark); }
-
-/* Green active (Due page + Taken page) */
-.tab--active,
-.tab--green.tab--active   { background: var(--green); color: white; }
-.tab--active:hover,
-.tab--green.tab--active:hover { background: var(--green-light); }
-
-/* Red active (Missed page) */
-.tab--red.tab--active     { background: var(--red); color: white; }
-.tab--red.tab--active:hover { background: #dc2626; }
-
 /* =============================================
    REMINDER CARDS LIST
    ============================================= */
