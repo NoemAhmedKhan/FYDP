@@ -1,7 +1,6 @@
 /* ========================================
-   MEDIFINDER – SET REMINDERS (ALL VARIANTS)
-   Shared stylesheet: Daily, Weekly,
-   As Needed, Specific Days
+   MEDIFINDER – SET REMINDERS
+   Unified stylesheet: single frequency model
    ======================================== */
 
 /* === CSS VARIABLES === */
@@ -350,42 +349,6 @@ input, select { font-family: inherit; }
     pointer-events: none;
 }
 
-/* ============================
-   FREQUENCY TOGGLE
-   ============================ */
-
-.toggle-group {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.toggle-btn {
-    height: 38px;
-    padding: 0 18px;
-    border: 1.5px solid var(--gray-lt);
-    border-radius: var(--r-md);
-    font-family: var(--font);
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--gray);
-    background: var(--white-pure);
-    cursor: pointer;
-    transition: var(--t);
-}
-
-.toggle-btn:hover {
-    border-color: var(--green-lt);
-    color: var(--green);
-    background: var(--green-bg);
-}
-
-.toggle-btn--active {
-    background: var(--green-bg);
-    border-color: var(--green);
-    color: var(--green);
-    font-weight: 700;
-}
 
 /* ============================
    REMINDER TIMES — SCROLLABLE
@@ -848,8 +811,6 @@ input, select { font-family: inherit; }
     .field-row--three { grid-template-columns: 1fr; }
     .field-row--three .field-group:last-child { grid-column: auto; }
 
-    .toggle-btn { flex: 1 1 calc(50% - 4px); text-align: center; }
-
     .day-btns  { gap: 6px; }
     .day-btn   { width: 38px; height: 38px; font-size: 12px; }
 
@@ -860,16 +821,6 @@ input, select { font-family: inherit; }
     .time-input       { flex: 1 1 110px; }
     .time-meal-select { flex: 1 1 140px; }
 }
-
-@media (max-width: 360px) {
-    .toggle-btn { flex: 1 1 100%; }
-}
-
-/* ============================
-   HIDE TIMES FOOTER
-   (Add Another Time removed)
-   ============================ */
-.times-footer { display: none !important; }
 
 /* ============================
    CUSTOM TIME PICKER
