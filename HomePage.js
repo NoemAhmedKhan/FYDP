@@ -152,36 +152,6 @@ document.querySelectorAll('.feature-card, .step').forEach(el => {
 });
 
 // ============================
-// SEARCH BOX FUNCTIONALITY
-// ============================
-
-const searchInput = document.querySelector('.search-box__input');
-const searchBtn = document.querySelector('.search-box__btn');
-
-if (searchBtn && searchInput) {
-    searchBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const searchTerm = searchInput.value.trim();
-        
-        if (searchTerm) {
-            console.log('Searching for:', searchTerm);
-            // Add your search functionality here
-            // For now, just log to console
-            alert(`Searching for: ${searchTerm}\n\nThis is a demo. Connect to your backend API here.`);
-        } else {
-            alert('Please enter a medicine name or brand to search.');
-        }
-    });
-
-    // Search on Enter key
-    searchInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            searchBtn.click();
-        }
-    });
-}
-
-// ============================
 // PERFORMANCE OPTIMIZATION
 // ============================
 
