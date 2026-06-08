@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - Privacy Policy</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --green: #208B3A;
+            --green-light: #52B167;
+            --green-bg: #f0fdf4;
+            --green-border: #bbf7d0;
+            --dark: #1a1a1a;
+            --gray: #666666;
+            --light-gray: #e5e5e5;
+            --white: #F8FAF8;
+            --bg: #fafafa;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.07);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+            --radius: 10px;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--white);
+            color: var(--dark);
+            line-height: 1.7;
+        }
+
+        /* ── Header ── */
+        header {
+            background: var(--white);
+            border-bottom: 1px solid var(--light-gray);
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border: 1px solid var(--green);
+            border-radius: 50%;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            background: transparent;
+            border: 1px solid var(--light-gray);
+            border-radius: 6px;
+            color: var(--gray);
+            font-size: 14px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-back:hover {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        /* ── Hero Banner ── */
+        .page-hero {
+            background: linear-gradient(135deg, #1a6b2e 0%, var(--green) 50%, var(--green-light) 100%);
+            color: white;
+            padding: 52px 32px 44px;
+            text-align: center;
+        }
+
+        .page-hero .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 5px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        .page-hero h1 {
+            font-size: clamp(28px, 5vw, 40px);
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .page-hero p {
+            font-size: 15px;
+            opacity: 0.88;
+            max-width: 520px;
+            margin: 0 auto 20px;
+        }
+
+        .page-hero .meta {
+            font-size: 13px;
+            opacity: 0.75;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* ── Layout ── */
+        .page-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 0;
+            max-width: 1160px;
+            margin: 40px auto;
+            padding: 0 24px;
+            align-items: start;
+        }
+
+        /* ── Sidebar TOC ── */
+        .toc {
+            position: sticky;
+            top: 88px;
+            background: white;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--radius);
+            padding: 22px 0;
+            box-shadow: var(--shadow-sm);
+            margin-right: 32px;
+        }
+
+        .toc-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray);
+            padding: 0 20px 14px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .toc ul {
+            list-style: none;
+            padding: 12px 0 0;
+        }
+
+        .toc ul li a {
+            display: block;
+            padding: 8px 20px;
+            font-size: 13.5px;
+            color: var(--gray);
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            line-height: 1.4;
+        }
+
+        .toc ul li a:hover,
+        .toc ul li a.active {
+            color: var(--green);
+            background: var(--green-bg);
+            border-left-color: var(--green);
+        }
+
+        /* ── Main Content ── */
+        .content {
+            min-width: 0;
+        }
+
+        .section {
+            background: white;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--radius);
+            padding: 36px 40px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            scroll-margin-top: 100px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .section-icon {
+            width: 42px;
+            height: 42px;
+            background: var(--green-bg);
+            border: 1px solid var(--green-border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--green);
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .section-header h2 {
+            font-size: 19px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 3px;
+        }
+
+        .section-header p.sub {
+            font-size: 13px;
+            color: var(--gray);
+        }
+
+        .section p {
+            font-size: 15px;
+            color: #444;
+            margin-bottom: 14px;
+            line-height: 1.75;
+        }
+
+        .section p:last-child {
+            margin-bottom: 0;
+        }
+
+        .section h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 22px 0 10px;
+        }
+
+        .section ul, .section ol {
+            padding-left: 0;
+            list-style: none;
+            margin-bottom: 14px;
+        }
+
+        .section ul li, .section ol li {
+            font-size: 15px;
+            color: #444;
+            padding: 6px 0 6px 26px;
+            position: relative;
+            line-height: 1.65;
+        }
+
+        .section ul li::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 14px;
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+        }
+
+        .section ol {
+            counter-reset: list-counter;
+        }
+
+        .section ol li {
+            counter-increment: list-counter;
+        }
+
+        .section ol li::before {
+            content: counter(list-counter) ".";
+            position: absolute;
+            left: 4px;
+            font-weight: 600;
+            color: var(--green);
+            font-size: 14px;
+        }
+
+        /* Highlight blocks */
+        .highlight-box {
+            background: var(--green-bg);
+            border: 1px solid var(--green-border);
+            border-left: 4px solid var(--green);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 18px 0;
+            font-size: 14.5px;
+            color: #2d5a38;
+            line-height: 1.7;
+        }
+
+        .notice-box {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-left: 4px solid #d97706;
+            border-radius: 8px;
+            padding: 20px 22px;
+            margin: 18px 0 0;
+            line-height: 1.7;
+        }
+
+        .notice-box__header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            color: #92400e;
+            margin-bottom: 14px;
+        }
+
+        .notice-box__header i {
+            font-size: 17px;
+            color: #d97706;
+            flex-shrink: 0;
+        }
+
+        .notice-box p {
+            font-size: 14.5px;
+            color: #78350f;
+            margin-bottom: 10px;
+        }
+
+        .notice-box ul {
+            margin-bottom: 0;
+        }
+
+        .notice-box ul li {
+            font-size: 14.5px;
+            color: #78350f;
+            padding: 5px 0 5px 24px;
+        }
+
+        .notice-box ul li::before {
+            background: #d97706;
+            top: 13px;
+        }
+
+        .warning-box {
+            background: #fff8f0;
+            border: 1px solid #fcd9a8;
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 18px 0;
+            font-size: 14.5px;
+            color: #7a4d00;
+            line-height: 1.7;
+        }
+
+        .highlight-box i, .warning-box i {
+            margin-right: 8px;
+        }
+
+        /* Data table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            font-size: 14px;
+        }
+
+        .data-table thead tr {
+            background: var(--green-bg);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 11px 16px;
+            font-weight: 600;
+            color: var(--dark);
+            border-bottom: 2px solid var(--green-border);
+            font-size: 13px;
+        }
+
+        .data-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--light-gray);
+            color: #444;
+            vertical-align: top;
+            line-height: 1.6;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover td {
+            background: #f9fafb;
+        }
+
+        /* Rights grid */
+        .rights-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 16px;
+        }
+
+        .right-item {
+            background: var(--bg);
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
+            padding: 16px 18px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .right-item i {
+            color: var(--green);
+            font-size: 16px;
+            margin-top: 3px;
+            flex-shrink: 0;
+        }
+
+        .right-item h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .right-item p {
+            font-size: 13px;
+            color: var(--gray);
+            margin-bottom: 0;
+        }
+
+        /* Contact card */
+        .contact-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--green-bg);
+            border: 1px solid var(--green-border);
+            border-radius: 8px;
+            padding: 18px 22px;
+            margin-top: 14px;
+        }
+
+        .contact-card i {
+            color: var(--green);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .contact-card p {
+            margin-bottom: 0;
+            font-size: 14px;
+        }
+
+        .contact-card a {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .contact-card a:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--bg);
+            border-top: 1px solid var(--light-gray);
+            padding: 28px 32px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        footer p {
+            font-size: 13px;
+            color: var(--gray);
+        }
+
+        footer a {
+            color: var(--green);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .page-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .toc {
+                position: static;
+                margin-right: 0;
+                margin-bottom: 24px;
+            }
+
+            .rights-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .section {
+                padding: 24px 20px;
+            }
+
+            header {
+                padding: 12px 16px;
+            }
+
+            .page-layout {
+                padding: 0 16px;
+            }
+
+            .data-table {
+                font-size: 13px;
+            }
+
+            .data-table th, .data-table td {
+                padding: 8px 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <a href="index.html" class="logo">
+            <div class="logo-icon">
+                <img src="Images/Logo.png" alt="MediFinder Logo">
+            </div>
+            <span class="logo-text">MediFinder</span>
+        </a>
+        <a href="javascript:history.back()" class="btn-back">
+            <i class="fa-solid fa-arrow-left"></i> Go Back
+        </a>
+    </header>
+
+    <!-- Hero -->
+    <div class="page-hero">
+        <div class="badge">
+            <i class="fa-solid fa-shield-halved"></i>
+            Legal Document
+        </div>
+        <h1>Privacy Policy</h1>
+        <p>We are committed to protecting your privacy and being transparent about how we use your data.</p>
+        <div class="meta">
+            <i class="fa-regular fa-calendar"></i>
+            Last updated: June 2026
+        </div>
+    </div>
+
+    <!-- Layout -->
+    <div class="page-layout">
+
+        <!-- Sidebar TOC -->
+        <nav class="toc" aria-label="Table of Contents">
+            <div class="toc-title">Contents</div>
+            <ul>
+                <li><a href="#introduction">1. Introduction</a></li>
+                <li><a href="#info-we-collect">2. Information We Collect</a></li>
+                <li><a href="#user-info">3. User Information</a></li>
+                <li><a href="#pharmacist-info">4. Pharmacist Information</a></li>
+                <li><a href="#documents">5. Uploaded Documents</a></li>
+                <li><a href="#location">6. Location Data</a></li>
+                <li><a href="#search-analytics">7. Search History & Analytics</a></li>
+                <li><a href="#notifications">8. Notifications</a></li>
+                <li><a href="#storage">9. Data Storage & Protection</a></li>
+                <li><a href="#third-party">10. Third-Party Services</a></li>
+                <li><a href="#retention">11. Data Retention</a></li>
+                <li><a href="#rights">12. Your Rights</a></li>
+                <li><a href="#contact">13. Contact</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content">
+
+            <!-- 1. Introduction -->
+            <section class="section" id="introduction">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-lock"></i></div>
+                    <div>
+                        <h2>1. Introduction</h2>
+                        <p class="sub">Our commitment to your privacy</p>
+                    </div>
+                </div>
+                <p>MediFinder ("we", "us", or "our") is committed to protecting the privacy of all individuals who use our platform. This Privacy Policy explains what information we collect, why we collect it, how we use and store it, and what rights you have over your data.</p>
+                <p>This policy applies to all users of MediFinder — including registered patients/users and registered pharmacists — when using our web platform or any related services.</p>
+                <div class="highlight-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    By using MediFinder, you agree to the collection and use of your information as described in this Privacy Policy. If you do not agree, please discontinue use of the platform.
+                </div>
+            </section>
+
+            <!-- 2. Info We Collect -->
+            <section class="section" id="info-we-collect">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-database"></i></div>
+                    <div>
+                        <h2>2. Information We Collect</h2>
+                        <p class="sub">An overview of the types of data we gather</p>
+                    </div>
+                </div>
+                <p>We collect different types of information depending on who you are and how you use the platform:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Applies To</th>
+                            <th>Examples</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Account Information</strong></td>
+                            <td>Users &amp; Pharmacists</td>
+                            <td>Name, email, password, phone number</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Location Data</strong></td>
+                            <td>Users &amp; Pharmacists</td>
+                            <td>GPS coordinates, city, address</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Search &amp; Activity</strong></td>
+                            <td>Users</td>
+                            <td>Medicines searched, pharmacies viewed</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Business Information</strong></td>
+                            <td>Pharmacists</td>
+                            <td>CNIC, drug license, registration number</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Uploaded Documents</strong></td>
+                            <td>Pharmacists</td>
+                            <td>CNIC document, registration files, drug license copy</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Inventory &amp; Sales</strong></td>
+                            <td>Pharmacists</td>
+                            <td>Stock records, billing data, transaction history</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p>We collect only the information necessary to provide and improve our services. We do not sell your personal data to third parties.</p>
+            </section>
+
+            <!-- 3. User Info -->
+            <section class="section" id="user-info">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-user"></i></div>
+                    <div>
+                        <h2>3. User Information</h2>
+                        <p class="sub">Data collected from patients and registered users</p>
+                    </div>
+                </div>
+                <p>When you create a user account on MediFinder, we collect the following personal information:</p>
+                <ul>
+                    <li><strong>Full Name</strong> — to identify your account.</li>
+                    <li><strong>Email Address</strong> — for login, verification, and notifications.</li>
+                    <li><strong>Password</strong> — stored securely in hashed/encrypted form via Supabase Auth.</li>
+                    <li><strong>Phone Number</strong> — for account communication and support.</li>
+                    <li><strong>City</strong> — to show relevant nearby pharmacies.</li>
+                    <li><strong>Address</strong> — optional, to improve location-based search accuracy.</li>
+                    <li><strong>GPS Coordinates</strong> — collected with your permission to find the nearest pharmacies.</li>
+                </ul>
+                <p>This information is used solely to provide you with our core services — including medicine search, pharmacy discovery, and medication reminders.</p>
+            </section>
+
+            <!-- 4. Pharmacist Info -->
+            <section class="section" id="pharmacist-info">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-store"></i></div>
+                    <div>
+                        <h2>4. Pharmacist Information</h2>
+                        <p class="sub">Data collected during pharmacy registration</p>
+                    </div>
+                </div>
+                <p>When a pharmacy registers on MediFinder, we collect the following business and personal information:</p>
+                <h3>Personal &amp; Business Details</h3>
+                <ul>
+                    <li>Pharmacy Name and Owner/Manager Name</li>
+                    <li>Phone Number and Email Address</li>
+                    <li>CNIC Number</li>
+                    <li>Drug License Number</li>
+                    <li>Pharmacy Registration Number</li>
+                    <li>Pharmacy Type and Operating Hours</li>
+                    <li>Delivery Availability Status</li>
+                </ul>
+                <h3>Location Information</h3>
+                <ul>
+                    <li>Province, City, Street Address, and Nearby Landmark</li>
+                    <li>GPS Coordinates — to display your pharmacy on patient maps</li>
+                </ul>
+                <h3>Operational Data</h3>
+                <ul>
+                    <li>Inventory records and product information</li>
+                    <li>Billing records and transaction history</li>
+                    <li>Sales data and demand forecasting information</li>
+                </ul>
+                <p>This information is used to verify your pharmacy, display it in patient searches, and power the pharmacy management dashboard.</p>
+
+                <div class="notice-box">
+                    <div class="notice-box__header">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <strong>How Your Inventory Data Is Used in User Search</strong>
+                    </div>
+                    <p>This is an important data usage that all registered pharmacists must be aware of:</p>
+                    <ul>
+                        <li>Your pharmacy's <strong>live inventory data</strong> — including medicine names, availability status, and stock levels — is the data that directly powers the medicine search results that users see on MediFinder.</li>
+                        <li>When a user searches for a specific medicine, MediFinder queries your registered inventory in real time and displays your pharmacy in the results <strong>if that medicine is marked as available in your stock</strong>.</li>
+                        <li>Your <strong>pharmacy name, distance from the user, operating hours, and medicine availability</strong> are shown to users in search results.</li>
+                        <li>If your inventory is outdated or incorrect, users may be misled about what is actually available at your pharmacy.</li>
+                    </ul>
+                    <p style="margin-bottom: 0; margin-top: 10px;">By maintaining your inventory on MediFinder, you <strong>consent to this data being actively used to serve real-time search results to users</strong>. Keeping your inventory accurate is both your responsibility and essential to the platform's core function.</p>
+                </div>
+            </section>
+
+            <!-- 5. Documents -->
+            <section class="section" id="documents">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-file-shield"></i></div>
+                    <div>
+                        <h2>5. Uploaded Documents</h2>
+                        <p class="sub">How we handle sensitive verification files</p>
+                    </div>
+                </div>
+                <p>During pharmacy registration, you may be required to upload the following documents for verification purposes:</p>
+                <ul>
+                    <li>CNIC (National Identity Card) document</li>
+                    <li>Pharmacy Registration Certificate</li>
+                    <li>Drug License Document</li>
+                </ul>
+                <div class="highlight-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    These documents are stored securely using Supabase Storage and are accessed only by MediFinder administrators for the purpose of verifying your pharmacy registration.
+                </div>
+                <p>Uploaded documents are:</p>
+                <ul>
+                    <li>Not shared with users or other pharmacies under any circumstance.</li>
+                    <li>Stored with access controls that restrict viewing to authorized administrators only.</li>
+                    <li>Retained for as long as your pharmacy account is active, and for a reasonable period afterward as required for legal and compliance purposes.</li>
+                </ul>
+            </section>
+
+            <!-- 6. Location -->
+            <section class="section" id="location">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-location-dot"></i></div>
+                    <div>
+                        <h2>6. Location Data Usage</h2>
+                        <p class="sub">How and why we use your location</p>
+                    </div>
+                </div>
+                <p>Location data is a core part of how MediFinder works. We use your location to help you find pharmacies near you and to display accurate distance information.</p>
+                <h3>For Users</h3>
+                <ul>
+                    <li>Your GPS coordinates are collected with your explicit permission when you click "Detect My Location" during signup or search.</li>
+                    <li>Location data is used to calculate distances to nearby pharmacies and sort search results by proximity.</li>
+                    <li>We do not track your location continuously or in the background.</li>
+                </ul>
+                <h3>For Pharmacies</h3>
+                <ul>
+                    <li>Your pharmacy's GPS coordinates are used to display your location on the patient-facing map.</li>
+                    <li>Location data is used to match your pharmacy with user searches in your geographic area.</li>
+                </ul>
+                <div class="warning-box">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Location access is requested through your browser and is optional. However, some features — such as "Find Nearest Pharmacy" — require location access to function properly.
+                </div>
+            </section>
+
+            <!-- 7. Search & Analytics -->
+            <section class="section" id="search-analytics">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-chart-line"></i></div>
+                    <div>
+                        <h2>7. Search History &amp; Analytics</h2>
+                        <p class="sub">How we use search behavior data</p>
+                    </div>
+                </div>
+                <p>MediFinder collects and analyzes aggregated search and usage data to improve the platform's performance and provide valuable insights to pharmacies.</p>
+                <h3>What we collect</h3>
+                <ul>
+                    <li>Medicines and pharmaceutical products you search for.</li>
+                    <li>Pharmacies you view or interact with.</li>
+                    <li>Search patterns and frequency of specific medicine queries.</li>
+                </ul>
+                <h3>How we use it</h3>
+                <ul>
+                    <li><strong>Improve search relevance</strong> — to surface more accurate and helpful results.</li>
+                    <li><strong>Demand forecasting</strong> — aggregated search trends help pharmacies understand which medicines are in high demand in their area.</li>
+                    <li><strong>Restocking suggestions</strong> — pharmacies receive data-driven suggestions about which medicines to stock.</li>
+                    <li><strong>Platform optimization</strong> — to identify and fix performance issues and improve the overall user experience.</li>
+                </ul>
+                <div class="highlight-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    Analytics and demand forecasting data shared with pharmacies is always aggregated and anonymized. Individual user search histories are never shared directly with any pharmacy or third party.
+                </div>
+
+                <h3>Pharmacy Inventory &amp; User-Facing Search Results</h3>
+                <div class="notice-box">
+                    <div class="notice-box__header">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                        <strong>How Pharmacy Stock Data Connects to User Searches</strong>
+                    </div>
+                    <p>This section explains the direct relationship between a pharmacy's inventory and what users see when they search:</p>
+                    <ul>
+                        <li>When a user searches for a medicine, MediFinder queries the <strong>live inventory records of registered pharmacies</strong> in real time to determine availability.</li>
+                        <li>Pharmacies whose stock includes the searched medicine will appear in the user's <strong>search results</strong>, along with their name, location, distance, and availability status.</li>
+                        <li>A pharmacy's <strong>stock data is therefore the foundation of the user-facing availability feature</strong> — this is the primary way pharmacy inventory data is used on this platform.</li>
+                        <li>Aggregated, anonymized search demand data (e.g. which medicines are searched most in a city) is also made available to pharmacies as <strong>demand forecasting insights</strong> on their dashboard — this data never identifies individual users.</li>
+                    </ul>
+                    <p style="margin-bottom: 0; margin-top: 10px;">Pharmacists registering on MediFinder consent to their inventory being used in this way. This data usage is fundamental to the platform's purpose of connecting patients with nearby medicine availability.</p>
+                </div>
+            </section>
+
+            <!-- 8. Notifications -->
+            <section class="section" id="notifications">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-bell"></i></div>
+                    <div>
+                        <h2>8. Notifications and Communications</h2>
+                        <p class="sub">How and when we contact you</p>
+                    </div>
+                </div>
+                <p>MediFinder may send you communications for the following purposes:</p>
+                <h3>For Users</h3>
+                <ul>
+                    <li><strong>Email Notifications</strong> — account verification, password resets, and important platform updates.</li>
+                    <li><strong>Medication Reminders</strong> — if you set up dosage or refill reminders, we will send alerts based on your configured schedule.</li>
+                    <li><strong>Push Notifications</strong> — in-app or browser notifications for reminders and relevant updates (requires your permission).</li>
+                </ul>
+                <h3>For Pharmacies</h3>
+                <ul>
+                    <li><strong>Registration Updates</strong> — emails regarding the status of your pharmacy application (approved, rejected, or pending review).</li>
+                    <li><strong>Stock Alerts</strong> — notifications when medicines in your inventory are running low or approaching expiry.</li>
+                    <li><strong>Platform Announcements</strong> — updates about new features, policy changes, or important platform notices.</li>
+                </ul>
+                <p>You may manage your notification preferences from your account settings. You can opt out of non-essential communications at any time.</p>
+            </section>
+
+            <!-- 9. Storage & Protection -->
+            <section class="section" id="storage">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div>
+                        <h2>9. How Data Is Stored and Protected</h2>
+                        <p class="sub">Our security practices and infrastructure</p>
+                    </div>
+                </div>
+                <p>We take the security of your data seriously. MediFinder uses the following practices to protect your information:</p>
+                <ul>
+                    <li><strong>Encryption</strong> — all data is transmitted over HTTPS using TLS encryption. Passwords are never stored in plain text.</li>
+                    <li><strong>Access Controls</strong> — database access is restricted to authorized team members and governed by role-based permissions.</li>
+                    <li><strong>Secure Authentication</strong> — user and pharmacy authentication is handled through Supabase Auth, which includes protections against common attack vectors.</li>
+                    <li><strong>File Storage Security</strong> — uploaded documents are stored in Supabase Storage with access restricted to authorized administrators only.</li>
+                    <li><strong>Row-Level Security</strong> — Supabase's row-level security policies ensure that users and pharmacies can only access their own data.</li>
+                </ul>
+                <div class="warning-box">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    While we implement strong security measures, no system is completely immune to threats. We encourage you to use a strong, unique password and to keep your login credentials confidential.
+                </div>
+            </section>
+
+            <!-- 10. Third Party -->
+            <section class="section" id="third-party">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
+                    <div>
+                        <h2>10. Third-Party Services</h2>
+                        <p class="sub">External services we use to power MediFinder</p>
+                    </div>
+                </div>
+                <p>MediFinder uses <strong>Supabase</strong> as its primary backend infrastructure provider. Supabase provides the following services for our platform:</p>
+                <ul>
+                    <li><strong>Authentication</strong> — user and pharmacy login, password management, and session handling.</li>
+                    <li><strong>Database</strong> — structured storage for all user, pharmacy, inventory, and transaction data.</li>
+                    <li><strong>File Storage</strong> — secure storage for uploaded documents such as CNIC and license files.</li>
+                    <li><strong>Security Controls</strong> — including row-level security, access policies, and encryption.</li>
+                    <li><strong>Backend Services</strong> — API and real-time data operations.</li>
+                </ul>
+                <div class="highlight-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    Supabase processes data on our behalf and is bound by a Data Processing Agreement. Your data is not sold or shared by Supabase with any other parties. For more details, refer to <a href="https://supabase.com/privacy" target="_blank" style="color: var(--green); font-weight: 500;">Supabase's Privacy Policy</a>.
+                </div>
+                <p>We do not currently use any advertising networks, and your data is not shared with advertising partners.</p>
+            </section>
+
+            <!-- 11. Retention -->
+            <section class="section" id="retention">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                    <div>
+                        <h2>11. Data Retention</h2>
+                        <p class="sub">How long we keep your information</p>
+                    </div>
+                </div>
+                <p>We retain your data only for as long as it is necessary to provide our services or comply with legal obligations:</p>
+                <ul>
+                    <li><strong>Active Accounts</strong> — your data is retained for as long as your account remains active.</li>
+                    <li><strong>Deleted Accounts</strong> — when you delete your account, your personal information is removed from our active databases within a reasonable time. Some anonymized or aggregated data may be retained for analytics purposes.</li>
+                    <li><strong>Pharmacy Documents</strong> — verification documents are retained while your pharmacy account is active and for a reasonable period thereafter for legal and compliance purposes.</li>
+                    <li><strong>Transaction and Billing Records</strong> — may be retained for longer periods as required by applicable financial regulations.</li>
+                    <li><strong>Search History</strong> — aggregated and anonymized search data may be retained indefinitely for platform improvement and analytics purposes.</li>
+                </ul>
+                <p>If you would like to request deletion of your data, please contact us using the details in the Contact section below.</p>
+            </section>
+
+            <!-- 12. Rights -->
+            <section class="section" id="rights">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <div>
+                        <h2>12. Your Rights</h2>
+                        <p class="sub">What you can request regarding your personal data</p>
+                    </div>
+                </div>
+                <p>You have the following rights with respect to your personal data held by MediFinder:</p>
+                <div class="rights-grid">
+                    <div class="right-item">
+                        <i class="fa-solid fa-eye"></i>
+                        <div>
+                            <h4>Right to Access</h4>
+                            <p>You can request a copy of the personal data we hold about you.</p>
+                        </div>
+                    </div>
+                    <div class="right-item">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                        <div>
+                            <h4>Right to Correction</h4>
+                            <p>You can update or correct your information from your account settings at any time.</p>
+                        </div>
+                    </div>
+                    <div class="right-item">
+                        <i class="fa-solid fa-trash"></i>
+                        <div>
+                            <h4>Right to Deletion</h4>
+                            <p>You can request that we delete your personal data, subject to legal retention requirements.</p>
+                        </div>
+                    </div>
+                    <div class="right-item">
+                        <i class="fa-solid fa-download"></i>
+                        <div>
+                            <h4>Right to Portability</h4>
+                            <p>You can request a copy of your data in a standard format for transfer to another service.</p>
+                        </div>
+                    </div>
+                    <div class="right-item">
+                        <i class="fa-solid fa-hand"></i>
+                        <div>
+                            <h4>Right to Object</h4>
+                            <p>You can opt out of non-essential data processing such as analytics notifications.</p>
+                        </div>
+                    </div>
+                    <div class="right-item">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                        <div>
+                            <h4>Right to Withdraw Consent</h4>
+                            <p>You may withdraw consent for optional data collection, such as location tracking, at any time.</p>
+                        </div>
+                    </div>
+                </div>
+                <p style="margin-top: 18px;">To exercise any of these rights, please contact us at the details provided below. We will respond to your request within a reasonable timeframe.</p>
+            </section>
+
+            <!-- 13. Contact -->
+            <section class="section" id="contact">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-envelope"></i></div>
+                    <div>
+                        <h2>13. Contact Information</h2>
+                        <p class="sub">Reach out to us about privacy concerns</p>
+                    </div>
+                </div>
+                <p>If you have any questions, concerns, or requests related to this Privacy Policy or your personal data, please contact us:</p>
+                <div class="contact-card">
+                    <i class="fa-solid fa-envelope"></i>
+                    <p>Email us at <a href="mailto:supportmedifinder@gmail.com">supportmedifinder@gmail.com</a> — we typically respond within 1–2 business days.</p>
+                </div>
+                <div class="contact-card">
+                    <i class="fa-solid fa-phone"></i>
+                    <p>Call us at <a href="tel:+923452971536">+92 345 2971536</a> during business hours.</p>
+                </div>
+                <div class="contact-card">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <p>MediFinder — Karachi, Sindh, Pakistan</p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 MediFinder. All rights reserved. &nbsp;|&nbsp; <a href="TermsOfService.html">Terms of Service</a> &nbsp;|&nbsp; <a href="PrivacyPolicy.html">Privacy Policy</a></p>
+    </footer>
+
+    <script>
+        // Highlight active TOC item on scroll
+        const sections = document.querySelectorAll('.section');
+        const tocLinks = document.querySelectorAll('.toc ul li a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(link => link.classList.remove('active'));
+                    const id = entry.target.getAttribute('id');
+                    const active = document.querySelector(`.toc a[href="#${id}"]`);
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -70% 0px' });
+
+        sections.forEach(s => observer.observe(s));
+    </script>
+
+</body>
+</html>

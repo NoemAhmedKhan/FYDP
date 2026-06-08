@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediFinder - Terms of Service</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --green: #208B3A;
+            --green-light: #52B167;
+            --green-bg: #f0fdf4;
+            --green-border: #bbf7d0;
+            --dark: #1a1a1a;
+            --gray: #666666;
+            --light-gray: #e5e5e5;
+            --white: #F8FAF8;
+            --bg: #fafafa;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.07);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+            --radius: 10px;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--white);
+            color: var(--dark);
+            line-height: 1.7;
+        }
+
+        /* ── Header ── */
+        header {
+            background: var(--white);
+            border-bottom: 1px solid var(--light-gray);
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border: 1px solid var(--green);
+            border-radius: 50%;
+        }
+
+        .logo-text {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 18px;
+            background: transparent;
+            border: 1px solid var(--light-gray);
+            border-radius: 6px;
+            color: var(--gray);
+            font-size: 14px;
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-back:hover {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        /* ── Hero Banner ── */
+        .page-hero {
+            background: linear-gradient(135deg, var(--green) 0%, var(--green-light) 100%);
+            color: white;
+            padding: 52px 32px 44px;
+            text-align: center;
+        }
+
+        .page-hero .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 20px;
+            padding: 5px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+        }
+
+        .page-hero h1 {
+            font-size: clamp(28px, 5vw, 40px);
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .page-hero p {
+            font-size: 15px;
+            opacity: 0.88;
+            max-width: 520px;
+            margin: 0 auto 20px;
+        }
+
+        .page-hero .meta {
+            font-size: 13px;
+            opacity: 0.75;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        /* ── Layout ── */
+        .page-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            gap: 0;
+            max-width: 1160px;
+            margin: 40px auto;
+            padding: 0 24px;
+            align-items: start;
+        }
+
+        /* ── Sidebar TOC ── */
+        .toc {
+            position: sticky;
+            top: 88px;
+            background: white;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--radius);
+            padding: 22px 0;
+            box-shadow: var(--shadow-sm);
+            margin-right: 32px;
+        }
+
+        .toc-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--gray);
+            padding: 0 20px 14px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .toc ul {
+            list-style: none;
+            padding: 12px 0 0;
+        }
+
+        .toc ul li a {
+            display: block;
+            padding: 8px 20px;
+            font-size: 13.5px;
+            color: var(--gray);
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            line-height: 1.4;
+        }
+
+        .toc ul li a:hover,
+        .toc ul li a.active {
+            color: var(--green);
+            background: var(--green-bg);
+            border-left-color: var(--green);
+        }
+
+        /* ── Main Content ── */
+        .content {
+            min-width: 0;
+        }
+
+        .section {
+            background: white;
+            border: 1px solid var(--light-gray);
+            border-radius: var(--radius);
+            padding: 36px 40px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            scroll-margin-top: 100px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .section-icon {
+            width: 42px;
+            height: 42px;
+            background: var(--green-bg);
+            border: 1px solid var(--green-border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--green);
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .section-header h2 {
+            font-size: 19px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 3px;
+        }
+
+        .section-header p.sub {
+            font-size: 13px;
+            color: var(--gray);
+        }
+
+        .section p {
+            font-size: 15px;
+            color: #444;
+            margin-bottom: 14px;
+            line-height: 1.75;
+        }
+
+        .section p:last-child {
+            margin-bottom: 0;
+        }
+
+        .section h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--dark);
+            margin: 22px 0 10px;
+        }
+
+        .section ul, .section ol {
+            padding-left: 0;
+            list-style: none;
+            margin-bottom: 14px;
+        }
+
+        .section ul li, .section ol li {
+            font-size: 15px;
+            color: #444;
+            padding: 6px 0 6px 26px;
+            position: relative;
+            line-height: 1.65;
+        }
+
+        .section ul li::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 14px;
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+        }
+
+        .section ol {
+            counter-reset: list-counter;
+        }
+
+        .section ol li {
+            counter-increment: list-counter;
+        }
+
+        .section ol li::before {
+            content: counter(list-counter) ".";
+            position: absolute;
+            left: 4px;
+            font-weight: 600;
+            color: var(--green);
+            font-size: 14px;
+        }
+
+        /* Highlight blocks */
+        .highlight-box {
+            background: var(--green-bg);
+            border: 1px solid var(--green-border);
+            border-left: 4px solid var(--green);
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 18px 0;
+            font-size: 14.5px;
+            color: #2d5a38;
+            line-height: 1.7;
+        }
+
+        .notice-box {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-left: 4px solid #d97706;
+            border-radius: 8px;
+            padding: 20px 22px;
+            margin: 0 0 22px;
+            line-height: 1.7;
+        }
+
+        .notice-box__header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            color: #92400e;
+            margin-bottom: 14px;
+        }
+
+        .notice-box__header i {
+            font-size: 17px;
+            color: #d97706;
+            flex-shrink: 0;
+        }
+
+        .notice-box p {
+            font-size: 14.5px;
+            color: #78350f;
+            margin-bottom: 10px;
+        }
+
+        .notice-box ul {
+            margin-bottom: 0;
+        }
+
+        .notice-box ul li {
+            font-size: 14.5px;
+            color: #78350f;
+            padding: 5px 0 5px 24px;
+        }
+
+        .notice-box ul li::before {
+            background: #d97706;
+            top: 13px;
+        }
+
+        .warning-box {
+            background: #fff8f0;
+            border: 1px solid #fcd9a8;
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 18px 0;
+            font-size: 14.5px;
+            color: #7a4d00;
+            line-height: 1.7;
+        }
+
+        .highlight-box i, .warning-box i {
+            margin-right: 8px;
+        }
+
+        /* Role cards */
+        .role-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 18px;
+        }
+
+        .role-card {
+            background: var(--bg);
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .role-card h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--green);
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+        .role-card ul {
+            margin-bottom: 0;
+        }
+
+        .role-card ul li {
+            font-size: 13.5px;
+            padding: 4px 0 4px 22px;
+        }
+
+        .role-card ul li::before {
+            top: 12px;
+            width: 5px;
+            height: 5px;
+        }
+
+        /* Contact card */
+        .contact-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--green-bg);
+            border: 1px solid var(--green-border);
+            border-radius: 8px;
+            padding: 18px 22px;
+            margin-top: 14px;
+        }
+
+        .contact-card i {
+            color: var(--green);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .contact-card p {
+            margin-bottom: 0;
+            font-size: 14px;
+        }
+
+        .contact-card a {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .contact-card a:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        footer {
+            background: var(--bg);
+            border-top: 1px solid var(--light-gray);
+            padding: 28px 32px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        footer p {
+            font-size: 13px;
+            color: var(--gray);
+        }
+
+        footer a {
+            color: var(--green);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .page-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .toc {
+                position: static;
+                margin-right: 0;
+                margin-bottom: 24px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .section {
+                padding: 24px 20px;
+            }
+
+            .role-cards {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                padding: 12px 16px;
+            }
+
+            .page-layout {
+                padding: 0 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <a href="index.html" class="logo">
+            <div class="logo-icon">
+                <img src="Images/Logo.png" alt="MediFinder Logo">
+            </div>
+            <span class="logo-text">MediFinder</span>
+        </a>
+        <a href="javascript:history.back()" class="btn-back">
+            <i class="fa-solid fa-arrow-left"></i> Go Back
+        </a>
+    </header>
+
+    <!-- Hero -->
+    <div class="page-hero">
+        <div class="badge">
+            <i class="fa-solid fa-file-contract"></i>
+            Legal Document
+        </div>
+        <h1>Terms of Service</h1>
+        <p>Please read these terms carefully before using the MediFinder platform.</p>
+        <div class="meta">
+            <i class="fa-regular fa-calendar"></i>
+            Last updated: June 2026
+        </div>
+    </div>
+
+    <!-- Layout -->
+    <div class="page-layout">
+
+        <!-- Sidebar TOC -->
+        <nav class="toc" aria-label="Table of Contents">
+            <div class="toc-title">Contents</div>
+            <ul>
+                <li><a href="#acceptance">1. Acceptance of Terms</a></li>
+                <li><a href="#accounts">2. User Accounts</a></li>
+                <li><a href="#user-responsibilities">3. User Responsibilities</a></li>
+                <li><a href="#pharmacist-responsibilities">4. Pharmacist Responsibilities</a></li>
+                <li><a href="#verification">5. Pharmacy Verification</a></li>
+                <li><a href="#inventory">6. Inventory Accuracy</a></li>
+                <li><a href="#acceptable-use">7. Acceptable Use</a></li>
+                <li><a href="#intellectual-property">8. Intellectual Property</a></li>
+                <li><a href="#availability">9. Service Availability</a></li>
+                <li><a href="#medicine-disclaimer">10. Medicine Disclaimer</a></li>
+                <li><a href="#liability">11. Limitation of Liability</a></li>
+                <li><a href="#termination">12. Termination</a></li>
+                <li><a href="#changes">13. Changes to Terms</a></li>
+                <li><a href="#contact">14. Contact</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content">
+
+            <!-- 1. Acceptance -->
+            <section class="section" id="acceptance">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-handshake"></i></div>
+                    <div>
+                        <h2>1. Acceptance of Terms</h2>
+                        <p class="sub">Your agreement to use MediFinder</p>
+                    </div>
+                </div>
+                <p>Welcome to MediFinder. By accessing or using our platform — whether as a patient, registered user, or pharmacist — you agree to be bound by these Terms of Service.</p>
+                <p>If you do not agree with any part of these terms, please do not use MediFinder. Continued use of the platform after any updates to these terms will be considered your acceptance of the revised terms.</p>
+                <div class="highlight-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    These terms apply to all users of MediFinder, including individual patients, registered account holders, and registered pharmacy owners or managers.
+                </div>
+            </section>
+
+            <!-- 2. User Accounts -->
+            <section class="section" id="accounts">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-user-circle"></i></div>
+                    <div>
+                        <h2>2. User Accounts</h2>
+                        <p class="sub">Account creation and security</p>
+                    </div>
+                </div>
+                <p>To access certain features of MediFinder, you must create an account. When registering, you agree to:</p>
+                <ul>
+                    <li>Provide accurate, complete, and up-to-date information during registration.</li>
+                    <li>Keep your login credentials (email and password) secure and confidential.</li>
+                    <li>Notify us immediately if you suspect any unauthorized access to your account.</li>
+                    <li>Not share your account with others or allow anyone else to access it on your behalf.</li>
+                </ul>
+                <p>You are fully responsible for all activity that occurs under your account. MediFinder will not be held liable for any loss or damage resulting from unauthorized account use.</p>
+            </section>
+
+            <!-- 3. User Responsibilities -->
+            <section class="section" id="user-responsibilities">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-user-check"></i></div>
+                    <div>
+                        <h2>3. User Responsibilities</h2>
+                        <p class="sub">What we expect from patients and registered users</p>
+                    </div>
+                </div>
+                <p>As a registered user (patient) on MediFinder, you agree to:</p>
+                <ul>
+                    <li>Provide truthful and accurate personal information, including your name, contact details, and location.</li>
+                    <li>Use the platform only for its intended purpose — searching for medicine availability and locating nearby pharmacies.</li>
+                    <li>Not misuse or manipulate the search or notification features of the platform.</li>
+                    <li>Not attempt to access, extract, or scrape data from the platform using automated tools.</li>
+                    <li>Not use the platform for any unlawful, harmful, or deceptive activity.</li>
+                    <li>Understand that MediFinder provides information only — it does not prescribe, recommend, or endorse any specific medication.</li>
+                    <li>Always consult a qualified healthcare professional before making any medication decisions.</li>
+                </ul>
+                <div class="warning-box">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    MediFinder is an information platform. It does not replace professional medical advice. Always consult your doctor or pharmacist before taking any medication.
+                </div>
+            </section>
+
+            <!-- 4. Pharmacist Responsibilities -->
+            <section class="section" id="pharmacist-responsibilities">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-hospital-user"></i></div>
+                    <div>
+                        <h2>4. Pharmacist Responsibilities</h2>
+                        <p class="sub">Obligations for registered pharmacy owners and managers</p>
+                    </div>
+                </div>
+                <div class="notice-box">
+                    <div class="notice-box__header">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        <strong>Important Notice: Your Stock Data Powers User Search</strong>
+                    </div>
+                    <p>By registering your pharmacy and maintaining your inventory on MediFinder, you acknowledge and explicitly agree that:</p>
+                    <ul>
+                        <li>Your live inventory data — including medicine names, availability status, and stock levels — will be <strong>displayed directly to users</strong> who search for medicines on the platform.</li>
+                        <li>When a user searches for a medicine, MediFinder queries your registered inventory in real time to show whether that medicine is available at your pharmacy.</li>
+                        <li>Your pharmacy's name, location, distance, and medicine availability will appear in <strong>patient-facing search results</strong>.</li>
+                        <li>Aggregated and anonymized trends from your inventory and sales data may be used to generate <strong>demand forecasting insights</strong> visible on your dashboard.</li>
+                    </ul>
+                    <p style="margin-bottom:0; margin-top: 10px;"><strong>This is the core function your pharmacy data serves on MediFinder.</strong> If you do not agree to this use of your inventory data, please do not register your pharmacy on the platform.</p>
+                </div>
+                <p>As a registered pharmacist or pharmacy owner on MediFinder, you agree to:</p>
+                <ul>
+                    <li>Provide accurate and truthful information about your pharmacy, including its name, location, operating hours, and contact details.</li>
+                    <li>Submit only genuine and valid registration documents, including your CNIC, Drug License, and Pharmacy Registration certificate.</li>
+                    <li>Maintain up-to-date inventory records to ensure medicine availability information is accurate for users.</li>
+                    <li>Not list medicines that are unavailable, expired, or not legally authorized for sale.</li>
+                    <li>Comply with all applicable local laws and regulations governing the operation of pharmacies in Pakistan.</li>
+                    <li>Promptly update your inventory whenever stock levels change, medicines arrive, or items go out of stock.</li>
+                    <li>Not misuse the platform's analytics or demand forecasting features for anti-competitive or unlawful purposes.</li>
+                    <li>Keep your account credentials secure and not share access with unauthorized individuals.</li>
+                </ul>
+            </section>
+
+            <!-- 5. Verification -->
+            <section class="section" id="verification">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div>
+                        <h2>5. Pharmacy Verification Process</h2>
+                        <p class="sub">How pharmacies are reviewed and approved</p>
+                    </div>
+                </div>
+                <p>All pharmacies that apply to join the MediFinder network go through a manual verification process before being approved and listed on the platform.</p>
+                <h3>Verification Steps</h3>
+                <ol>
+                    <li>Pharmacy submits registration form with required business and personal information.</li>
+                    <li>Required documents are uploaded, including CNIC, Drug License, and Pharmacy Registration.</li>
+                    <li>MediFinder administrators review the submitted information and documents.</li>
+                    <li>Approval or rejection is communicated to the applicant via email.</li>
+                    <li>Approved pharmacies gain access to the full pharmacy dashboard and management tools.</li>
+                </ol>
+                <div class="highlight-box">
+                    <i class="fa-solid fa-circle-info"></i>
+                    MediFinder reserves the right to reject any pharmacy application that contains incomplete, inaccurate, or fraudulent information, or that does not meet our verification standards.
+                </div>
+                <p>Submitting false or forged documents is a serious violation of these terms and may result in permanent account termination and reporting to relevant authorities.</p>
+            </section>
+
+            <!-- 6. Inventory Accuracy -->
+            <section class="section" id="inventory">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
+                    <div>
+                        <h2>6. Inventory Accuracy Responsibility</h2>
+                        <p class="sub">Who is responsible for stock information</p>
+                    </div>
+                </div>
+                <p>The accuracy of medicine availability information displayed on MediFinder is the sole responsibility of registered pharmacies.</p>
+                <ul>
+                    <li>Pharmacists are required to keep their inventory updated in real time or as frequently as possible.</li>
+                    <li>MediFinder does not independently verify or confirm the availability of any medicine listed by pharmacies.</li>
+                    <li>Users may find that a medicine shown as available is no longer in stock when they arrive at or contact the pharmacy.</li>
+                    <li>MediFinder will not be liable for any inconvenience, loss, or harm caused by outdated or incorrect inventory information.</li>
+                </ul>
+                <div class="warning-box">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Always confirm medicine availability directly with the pharmacy before making a trip or purchase decision.
+                </div>
+            </section>
+
+            <!-- 7. Acceptable Use -->
+            <section class="section" id="acceptable-use">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                    <div>
+                        <h2>7. Acceptable Use Policy</h2>
+                        <p class="sub">Prohibited actions on the platform</p>
+                    </div>
+                </div>
+                <p>You agree not to use MediFinder for any of the following:</p>
+                <ul>
+                    <li>Violating any applicable law, regulation, or the rights of others.</li>
+                    <li>Uploading or submitting false, misleading, fraudulent, or harmful content or information.</li>
+                    <li>Attempting to hack, reverse-engineer, or disrupt the platform's systems or infrastructure.</li>
+                    <li>Scraping or collecting data from the platform without our written permission.</li>
+                    <li>Using the platform to harass, threaten, or harm other users or pharmacy staff.</li>
+                    <li>Creating multiple accounts to bypass suspensions or verification requirements.</li>
+                    <li>Distributing spam, malware, or any unsolicited communications through the platform.</li>
+                    <li>Using the platform in a way that imposes an unreasonable load on our servers or systems.</li>
+                </ul>
+                <p>Violations of the acceptable use policy may result in immediate account suspension or termination without prior notice.</p>
+            </section>
+
+            <!-- 8. Intellectual Property -->
+            <section class="section" id="intellectual-property">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-copyright"></i></div>
+                    <div>
+                        <h2>8. Intellectual Property</h2>
+                        <p class="sub">Ownership of platform content and branding</p>
+                    </div>
+                </div>
+                <p>All content, branding, features, and technology on the MediFinder platform — including the logo, design, software, text, and graphics — are the intellectual property of MediFinder and are protected by applicable copyright and trademark laws.</p>
+                <ul>
+                    <li>You may not copy, reproduce, distribute, or create derivative works based on our platform content without explicit written permission.</li>
+                    <li>Pharmacy and user content uploaded to MediFinder remains the property of the respective owner, but by submitting it you grant MediFinder a non-exclusive license to use it for platform operations.</li>
+                    <li>MediFinder's name, logo, and branding may not be used without prior written consent.</li>
+                </ul>
+            </section>
+
+            <!-- 9. Service Availability -->
+            <section class="section" id="availability">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-server"></i></div>
+                    <div>
+                        <h2>9. Service Availability Disclaimer</h2>
+                        <p class="sub">Uptime and platform access</p>
+                    </div>
+                </div>
+                <p>MediFinder strives to keep the platform available and functioning at all times, but we cannot guarantee uninterrupted access.</p>
+                <ul>
+                    <li>The platform may experience downtime due to maintenance, technical issues, or circumstances beyond our control.</li>
+                    <li>We are not responsible for any loss or inconvenience caused by temporary unavailability of the service.</li>
+                    <li>Features and functionality may change, be updated, or be removed at any time as part of ongoing platform development.</li>
+                    <li>We will make reasonable efforts to notify users of planned maintenance or significant changes.</li>
+                </ul>
+            </section>
+
+            <!-- 10. Medicine Disclaimer -->
+            <section class="section" id="medicine-disclaimer">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-pills"></i></div>
+                    <div>
+                        <h2>10. Medicine Availability Disclaimer</h2>
+                        <p class="sub">Important notice about medicine information</p>
+                    </div>
+                </div>
+                <div class="warning-box">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    MediFinder is a medicine discovery and pharmacy locator platform. It does not sell, dispense, or deliver medicines directly.
+                </div>
+                <p>Medicine availability information on MediFinder is provided by registered pharmacies and may not always reflect real-time stock levels. MediFinder:</p>
+                <ul>
+                    <li>Does not guarantee that any medicine listed as available will be in stock when you visit a pharmacy.</li>
+                    <li>Does not provide medical advice, diagnoses, or treatment recommendations.</li>
+                    <li>Does not endorse any specific medicine, brand, or pharmacy.</li>
+                    <li>Is not responsible for the quality, safety, or authenticity of medicines sold by pharmacies listed on the platform.</li>
+                </ul>
+                <p>Always consult a licensed pharmacist or doctor before purchasing or taking any medication.</p>
+            </section>
+
+            <!-- 11. Liability -->
+            <section class="section" id="liability">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-gavel"></i></div>
+                    <div>
+                        <h2>11. Limitation of Liability</h2>
+                        <p class="sub">The extent of our legal responsibility</p>
+                    </div>
+                </div>
+                <p>To the fullest extent permitted by law, MediFinder and its team shall not be liable for:</p>
+                <ul>
+                    <li>Any direct, indirect, incidental, or consequential damages arising from your use of the platform.</li>
+                    <li>Any harm caused by reliance on medicine availability information provided by pharmacies.</li>
+                    <li>Any loss of data, revenue, or business resulting from platform downtime or technical issues.</li>
+                    <li>Damages resulting from unauthorized access to your account due to your failure to maintain password security.</li>
+                    <li>The actions, content, or conduct of pharmacies or users registered on the platform.</li>
+                </ul>
+                <p>MediFinder provides the platform on an "as is" and "as available" basis, without warranties of any kind, whether express or implied.</p>
+            </section>
+
+            <!-- 12. Termination -->
+            <section class="section" id="termination">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-ban"></i></div>
+                    <div>
+                        <h2>12. Account Suspension and Termination</h2>
+                        <p class="sub">When and how accounts can be suspended or closed</p>
+                    </div>
+                </div>
+                <p>MediFinder reserves the right to suspend or permanently terminate any account that:</p>
+                <ul>
+                    <li>Violates any section of these Terms of Service.</li>
+                    <li>Submits false, fraudulent, or misleading information during registration or verification.</li>
+                    <li>Is found to be engaging in harmful, abusive, or illegal activity.</li>
+                    <li>Has been inactive for an extended period as determined by our platform policies.</li>
+                </ul>
+                <div class="role-cards">
+                    <div class="role-card">
+                        <h4><i class="fa-solid fa-user"></i> For Users</h4>
+                        <ul>
+                            <li>You may delete your account at any time from your account settings.</li>
+                            <li>Upon deletion, your personal data will be handled per our Privacy Policy.</li>
+                            <li>Certain records may be retained for legal or operational purposes.</li>
+                        </ul>
+                    </div>
+                    <div class="role-card">
+                        <h4><i class="fa-solid fa-store"></i> For Pharmacies</h4>
+                        <ul>
+                            <li>Pharmacy accounts may be suspended pending re-verification if documents expire.</li>
+                            <li>Terminated pharmacy profiles will be removed from search results.</li>
+                            <li>Transaction and billing records may be retained as required by law.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 13. Changes -->
+            <section class="section" id="changes">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-rotate"></i></div>
+                    <div>
+                        <h2>13. Changes to Terms</h2>
+                        <p class="sub">How we update these terms</p>
+                    </div>
+                </div>
+                <p>MediFinder may update or revise these Terms of Service at any time. When we do, we will update the "Last updated" date at the top of this page.</p>
+                <p>For significant changes, we will attempt to notify users via email or an in-app notification. However, it is your responsibility to review these terms periodically.</p>
+                <p>Continued use of the platform after changes are published constitutes your acceptance of the updated terms.</p>
+            </section>
+
+            <!-- 14. Contact -->
+            <section class="section" id="contact">
+                <div class="section-header">
+                    <div class="section-icon"><i class="fa-solid fa-envelope"></i></div>
+                    <div>
+                        <h2>14. Contact Information</h2>
+                        <p class="sub">Get in touch with us</p>
+                    </div>
+                </div>
+                <p>If you have any questions, concerns, or feedback about these Terms of Service, please reach out to us:</p>
+                <div class="contact-card">
+                    <i class="fa-solid fa-envelope"></i>
+                    <p>Email us at <a href="mailto:supportmedifinder@gmail.com">supportmedifinder@gmail.com</a> — we typically respond within 1–2 business days.</p>
+                </div>
+                <div class="contact-card">
+                    <i class="fa-solid fa-phone"></i>
+                    <p>Call us at <a href="tel:+923452971536">+92 345 2971536</a> during business hours.</p>
+                </div>
+                <div class="contact-card">
+                    <i class="fa-solid fa-location-dot"></i>
+                    <p>MediFinder — Karachi, Sindh, Pakistan</p>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 MediFinder. All rights reserved. &nbsp;|&nbsp; <a href="TermsOfService.html">Terms of Service</a> &nbsp;|&nbsp; <a href="PrivacyPolicy.html">Privacy Policy</a></p>
+    </footer>
+
+    <script>
+        // Highlight active TOC item on scroll
+        const sections = document.querySelectorAll('.section');
+        const tocLinks = document.querySelectorAll('.toc ul li a');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    tocLinks.forEach(link => link.classList.remove('active'));
+                    const id = entry.target.getAttribute('id');
+                    const active = document.querySelector(`.toc a[href="#${id}"]`);
+                    if (active) active.classList.add('active');
+                }
+            });
+        }, { rootMargin: '-20% 0px -70% 0px' });
+
+        sections.forEach(s => observer.observe(s));
+    </script>
+
+</body>
+</html>
