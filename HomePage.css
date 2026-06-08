@@ -309,11 +309,13 @@ button {
 .hero__subtitle {
     color: var(--color-gray);
     font-size: 18px;
-    margin-bottom: 30px;
+    margin-bottom: 12px;
 }
 
 .hero__search-image {
     max-width: 450px;
+    overflow: hidden;
+    margin-top: 0;
 }
 
 .hero__search-image img {
@@ -321,6 +323,7 @@ button {
     height: auto;
     display: block;
     border-radius: var(--radius-md);
+    margin-top: -30px; /* trims the blank top padding inside the image */
 }
 
 .hero__image {
