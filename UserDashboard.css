@@ -290,12 +290,14 @@ ul     { list-style: none; }
 
 /* Smaller value text for long medicine names */
 .stat-card__value--sm {
-    font-size: 28px;
-    line-height: 1.2;
+    font-size: 22px;
+   font-weight: var(--fw-b);  
+   line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    color: var(--green);
 }
 
 /* Small uppercase label inside stat card body */
@@ -304,7 +306,7 @@ ul     { list-style: none; }
     font-weight: var(--fw-m);
     text-transform: uppercase;
     letter-spacing: .5px;
-    color: var(--gray-mid);
+    color: var(--green);
     margin-top: 4px;
 }
 
