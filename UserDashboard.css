@@ -261,17 +261,30 @@ ul     { list-style: none; }
 }
 .stat-card:hover { box-shadow: var(--shadow-md); }
 
-/* NEW badge — top-right corner */
-.stat-card__badge {
-    position: absolute;
-    top: 16px; right: 16px;
-    background: var(--green);
-    color: white;
-    font-size: 10px;
-    font-weight: var(--fw-b);
+/* Green icon square (for Search Analytics card) */
+.stat-card__icon--green {
+    background: var(--green-bg);
+    color: var(--green);
+}
+
+/* Smaller value text for long medicine names */
+.stat-card__value--sm {
+    font-size: 22px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Small uppercase label inside stat card body */
+.stat-card__sublabel--label {
+    font-size: 11px;
+    font-weight: var(--fw-m);
+    text-transform: uppercase;
     letter-spacing: .5px;
-    padding: 3px 10px;
-    border-radius: var(--r-pill);
+    color: var(--gray-mid);
+    margin-top: 4px;
 }
 
 /* Coloured icon squares */
