@@ -56,69 +56,15 @@ input, textarea, select { font-family:inherit; }
   overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
 
-/* ─── 3. SIDEBAR ─── */
-.sidebar { width:var(--sidebar-w); flex-shrink:0; position:relative; z-index:200; }
-.s-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:190; }
-.s-inner {
-  width:var(--sidebar-w); height:100vh; position:fixed; top:0; left:0;
-  background:var(--clr-white-pure); border-right:1px solid var(--clr-gray-lt);
-  display:flex; flex-direction:column; padding:24px 14px 20px;
-  overflow-y:auto; transition:transform .3s ease;
-}
-.s-logo { display:flex; align-items:center; gap:10px; padding:0 6px; margin-bottom:32px; }
-.s-logo-icon {
-  width:40px; height:40px; border-radius:10px; background:var(--clr-green);
-  display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;
-}
-.s-logo-icon img { width:28px; height:28px; object-fit:contain; border-radius:50%; }
-.mf-abbr { color:var(--clr-white-pure); font-weight:700; font-size:17px; display:none; }
-.s-logo-text { display:flex; flex-direction:column; line-height:1.25; }
-.s-brand  { font-size:16px; font-weight:700; color:var(--clr-dark); }
-.s-portal { font-size:11px; color:var(--clr-gray); }
-.s-nav { display:flex; flex-direction:column; gap:2px; flex:1; }
-.nav-a {
-  display:flex; align-items:center; gap:12px; padding:11px 12px;
-  border-radius:var(--radius-md); font-size:14px; font-weight:500;
-  color:var(--clr-gray); transition:var(--transition);
-}
-.nav-a:hover, .nav-a.active { background:var(--clr-green-bg); color:var(--clr-green); }
-.nav-a i { width:18px; text-align:center; font-size:14px; flex-shrink:0; }
-.s-user {
-  display:flex; align-items:center; gap:10px; padding:10px; margin-top:auto;
-  border-radius:var(--radius-md); border:1px solid var(--clr-gray-lt);
-}
-.s-avatar-wrap {
-  width:38px; height:38px; border-radius:50%;
-  background:linear-gradient(135deg,#208B3A,#52B167);
-  flex-shrink:0; overflow:hidden;
-}
-.s-avatar-inner { width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
-.s-avatar-inner img { width:100%; height:100%; object-fit:cover; border-radius:50%; display:block; }
-.s-avatar-inner .s-avatar-initials-text { color:white; font-size:13px; font-weight:700; text-transform:uppercase; }
-.s-umeta { flex:1; min-width:0; display:flex; flex-direction:column; line-height:1.3; }
-.s-uname  { font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.s-uemail { font-size:10px; color:var(--clr-gray); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.s-logout-btn {
-  color:var(--clr-gray); font-size:14px; padding:4px;
-  border-radius:var(--radius-sm); transition:var(--transition); flex-shrink:0;
-}
-.s-logout-btn:hover { color:var(--clr-red); }
-
 /* ─── 4. MAIN LAYOUT ─── */
 .main {
-  flex:1; min-width:0; padding:32px 40px 60px;
+  width:100%; min-width:0; padding:32px 40px 60px;
   display:flex; flex-direction:column; gap:22px;
 }
 
 /* ─── 5. TOPBAR ─── */
 .topbar {
   display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-}
-.topbar-ham {
-  display:none; width:40px; height:40px;
-  border-radius:var(--radius-md); border:1px solid var(--clr-gray-lt);
-  background:var(--clr-white-pure); align-items:center; justify-content:center;
-  font-size:16px; flex-shrink:0;
 }
 .topbar-left { display:flex; align-items:center; gap:12px; flex:1; min-width:0; }
 .back-btn {
@@ -134,7 +80,7 @@ input, textarea, select { font-family:inherit; }
 /* ─── 6. BILL LAYOUT ─── */
 .bill-layout {
   display:grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 380px;
   gap:22px;
   align-items:start;
 }
@@ -330,14 +276,32 @@ input, textarea, select { font-family:inherit; }
 .summary-value { font-size:14px; font-weight:600; }
 .summary-value--red   { color:var(--clr-red); }
 .summary-value--amber { color:var(--clr-amber); }
-.summary-row--discount,
-.summary-row--gst { display:none; }   /* shown only when >0 */
-.summary-row--discount.visible,
-.summary-row--gst.visible { display:flex; }
+.summary-row--discount { display:none; }   /* shown only when >0 */
+.summary-row--discount.visible { display:flex; }
+.summary-row--billdiscamt { display:none; }
+.summary-row--billdiscamt.visible { display:flex; }
 .summary-divider { border-top:1.5px solid var(--clr-gray-lt); margin:4px 0; }
 .summary-row--grand { }
 .summary-grand-label  { font-size:16px; font-weight:700; }
 .summary-grand-amount { font-size:22px; font-weight:700; color:var(--clr-green); }
+
+/* DISC % input row */
+.summary-row--billdisc { align-items:center; }
+.bill-disc-input-wrap {
+  display:flex; align-items:center; gap:4px;
+  border:1.5px solid var(--clr-gray-lt); border-radius:var(--radius-md);
+  padding:5px 10px; background:var(--clr-white-pure); transition:border-color .18s;
+}
+.bill-disc-input-wrap:focus-within { border-color:var(--clr-green); }
+.bill-disc-input {
+  width:60px; border:none; outline:none; font-size:14px; font-weight:600;
+  color:var(--clr-dark); background:transparent; text-align:right;
+  font-family:inherit;
+}
+.bill-disc-input::-webkit-inner-spin-button,
+.bill-disc-input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+.bill-disc-input[type=number] { -moz-appearance:textfield; }
+.bill-disc-symbol { font-size:14px; font-weight:600; color:var(--clr-gray); }
 
 /* ─── 12. PAYMENT ─── */
 .method-grid {
@@ -404,13 +368,7 @@ input, textarea, select { font-family:inherit; }
 }
 
 @media (max-width:768px) {
-  body { display:block; }
-  .sidebar { width:0; position:fixed; top:0; left:0; z-index:200; }
-  .s-inner { transform:translateX(-100%); }
-  .sidebar.open .s-inner   { transform:translateX(0); }
-  .sidebar.open .s-overlay { display:block; }
   .main { width:100%; padding:20px 16px 48px; gap:16px; }
-  .topbar-ham { display:flex; }
   .form-grid-2 { grid-template-columns:1fr; }
   .method-grid { grid-template-columns:1fr 1fr; }
 }
@@ -422,8 +380,8 @@ input, textarea, select { font-family:inherit; }
 }
 
 @media print {
-  .sidebar, .topbar, .back-btn, .toast, .btn-confirm, .confirm-hint,
+  .topbar, .back-btn, .toast, .btn-confirm, .confirm-hint,
   .prod-search-wrap, .remove-btn { display:none !important; }
-  body { display:block; background:white; }
+  body { background:white; }
   .main { padding:0; }
 }
