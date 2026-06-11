@@ -20,25 +20,25 @@
   --red: #ef4444;
   --amber: #f59e0b;
   --blue: #3b82f6;
-  
+
   /* Typography */
   --font: 'Roboto', sans-serif;
-  
+
   /* Radius */
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 16px;
   --r-xl: 20px;
   --r-pill: 999px;
-  
+
   /* Shadows */
   --sh-sm: 0 1px 4px rgba(0, 0, 0, .07);
   --sh-md: 0 4px 14px rgba(0, 0, 0, .10);
   --sh-lg: 0 8px 28px rgba(0, 0, 0, .14);
-  
+
   /* Transition */
   --t: all .22s ease;
-  
+
   /* Sidebar Width */
   --sw: 240px;
 }
@@ -301,7 +301,8 @@ button {
   color: var(--dark);
 }
 
-.topbar-title p {
+/* TASK 2/5/6: topbar-welcome is the <p> inside topbar-title */
+.topbar-title .topbar-welcome {
   font-size: 13px;
   color: var(--gray);
   margin-top: 4px;
@@ -342,6 +343,8 @@ button {
   gap: 20px;
 }
 
+/* TASK 1: Right col now has only one card (demand forecast).
+   Keep flex-column so it stays tidy. */
 .right-col {
   display: flex;
   flex-direction: column;
@@ -383,25 +386,10 @@ button {
   margin-bottom: 4px;
 }
 
-.si-green {
-  background: var(--green-bg);
-  color: var(--green);
-}
-
-.si-amber {
-  background: #fffbeb;
-  color: var(--amber);
-}
-
-.si-red {
-  background: #fef2f2;
-  color: var(--red);
-}
-
-.si-blue {
-  background: #eff6ff;
-  color: var(--blue);
-}
+.si-green { background: var(--green-bg); color: var(--green); }
+.si-amber { background: #fffbeb;         color: var(--amber); }
+.si-red   { background: #fef2f2;         color: var(--red);   }
+.si-blue  { background: #eff6ff;         color: var(--blue);  }
 
 .stat-label {
   font-size: 12px;
@@ -416,21 +404,8 @@ button {
   line-height: 1;
 }
 
-.stat-val.amber {
-  color: var(--amber);
-}
-
-.stat-val.red {
-  color: var(--red);
-}
-
-.stat-trend {
-  font-size: 12px;
-  color: var(--green);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
+.stat-val.amber { color: var(--amber); }
+.stat-val.red   { color: var(--red);   }
 
 .stat-sub {
   font-size: 12px;
@@ -469,10 +444,12 @@ button {
 .chart-tabs {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .ctab {
-  padding: 7px 16px;
+  padding: 7px 14px;
   border-radius: var(--r-pill);
   font-size: 13px;
   font-weight: 500;
@@ -498,7 +475,35 @@ button {
   height: 256px;
 }
 
-/* === AI INSIGHTS === */
+/* TASK 6: Chart loading overlay */
+.chart-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--gray-md);
+  background: var(--white-pure);
+  border-radius: var(--r-md);
+}
+
+.chart-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--gray-lt);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* === AI INSIGHTS / DEMAND CARD === */
 .ai-card {
   background: var(--green);
   border-radius: var(--r-xl);
@@ -615,92 +620,10 @@ button {
   background: rgba(255, 255, 255, .3);
 }
 
-/* === SMART PRICING === */
-.sp-card {
-  background: var(--white-pure);
-  border-radius: var(--r-xl);
-  border: 1px solid var(--gray-lt);
-  box-shadow: var(--sh-sm);
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.sp-head {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-
-.sp-head i {
-  color: var(--green);
-  font-size: 16px;
-}
-
-.sp-head h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--dark);
-}
-
-.sp-bundle {
-  background: var(--gray-xlt);
-  border-radius: var(--r-lg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sp-rec-lbl {
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: .6px;
-  color: var(--gray-md);
-}
-
-.sp-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--dark);
-}
-
-.sp-price {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.sp-new {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--green);
-}
-
-.sp-old {
-  font-size: 13px;
-  color: var(--gray-md);
-  text-decoration: line-through;
-}
-
-.btn-create-bundle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 13px;
-  background: var(--green);
-  color: white;
-  border-radius: var(--r-md);
-  font-size: 14px;
-  font-weight: 700;
-  transition: var(--t);
-}
-
-.btn-create-bundle:hover {
-  background: var(--green-lt);
-}
+/* =====================================================
+   TASK 1: Smart Pricing (.sp-card and all .sp-*)
+   styles removed — card no longer exists in the HTML.
+   ===================================================== */
 
 /* === RESPONSIVE === */
 @media (max-width: 1200px) {
@@ -718,10 +641,10 @@ button {
     grid-template-columns: 1fr;
   }
 
+  /* TASK 1: right-col is now a single card so no grid needed at this breakpoint */
   .right-col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
   }
 }
 
@@ -773,8 +696,14 @@ button {
     grid-template-columns: 1fr 1fr;
   }
 
-  .right-col {
-    grid-template-columns: 1fr;
+  /* TASK 6: chart tabs wrap gracefully on small screens */
+  .chart-tabs {
+    gap: 6px;
+  }
+
+  .ctab {
+    padding: 6px 10px;
+    font-size: 12px;
   }
 }
 
