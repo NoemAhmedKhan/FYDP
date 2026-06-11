@@ -134,7 +134,7 @@ input, textarea, select { font-family: inherit; }
 }
 
 .s-logo-icon .mf-abbr {
-  color: var(--green);
+  color: var(--clr-green);
   font-weight: 700;
   font-size: 17px;
   display: none;
@@ -223,17 +223,17 @@ input, textarea, select { font-family: inherit; }
 }
 
 .s-uname  { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.s-uemail { font-size: 10px; color: var(--gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.s-uemail { font-size: 10px; color: var(--clr-gray); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .s-logout-btn {
-  color: var(--gray);
+  color: var(--clr-gray);
   font-size: 14px;
   padding: 4px;
-  border-radius: var(--r-sm);
-  transition: var(--t);
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
   flex-shrink: 0;
 }
-.s-logout-btn:hover { color: var(--red); }
+.s-logout-btn:hover { color: var(--clr-red); }
 
 /* ─── 4. MAIN LAYOUT & TOPBAR ─── */
 .main {
@@ -270,49 +270,7 @@ input, textarea, select { font-family: inherit; }
 .topbar-title p  { font-size: 13px; color: var(--clr-gray); margin-top: 4px; }
 .topbar-actions  { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
-/* ─── 5. BUTTONS ─── */
-.btn-primary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  padding: 12px 22px;
-  background: var(--clr-green);
-  color: var(--clr-white-pure);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-  transition: var(--transition);
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  background: var(--clr-green-lt);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-}
-
-.btn-secondary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  padding: 11px 20px;
-  background: var(--clr-white-pure);
-  color: var(--clr-dark);
-  border: 1px solid var(--clr-gray-lt);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  transition: var(--transition);
-  cursor: pointer;
-}
-
-.btn-secondary:hover { border-color: var(--clr-green); color: var(--clr-green); }
-
-/* ─── 6. CARD ─── */
+/* ─── 5. CARD ─── */
 .card {
   background: var(--clr-white-pure);
   border-radius: var(--radius-xl);
@@ -331,7 +289,7 @@ input, textarea, select { font-family: inherit; }
 .card-title    { font-size: 17px; font-weight: 700; color: var(--clr-dark); }
 .card-subtitle { font-size: 12px; color: var(--clr-gray-md); margin-top: 3px; }
 
-/* ─── 7. STAT CARDS ─── */
+/* ─── 6. STAT CARDS ─── */
 .stat-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -386,13 +344,14 @@ input, textarea, select { font-family: inherit; }
 
 .stat-trend       { font-size: 12px; color: var(--clr-green); display: flex; align-items: center; gap: 4px; }
 .stat-trend--down { color: var(--clr-red); }
+.stat-trend--neutral { color: var(--clr-gray-md); }
 
 .stat-sub        { font-size: 12px; color: var(--clr-gray-md); }
-.stat-sub--red   { color: var(--clr-red);   font-weight: 500; cursor: pointer; }
+.stat-sub--red   { color: var(--clr-red);   font-weight: 500; }
 .stat-sub--green { color: var(--clr-green); }
 .stat-sub--amber { color: var(--clr-amber); font-weight: 600; }
 
-/* ─── 8. TABLE ─── */
+/* ─── 7. TABLE ─── */
 .tbl-wrap { overflow-x: auto; }
 
 table { width: 100%; border-collapse: collapse; }
@@ -423,7 +382,54 @@ tbody td {
   vertical-align: middle;
 }
 
-/* ─── 9. CHART CARD ─── */
+.td-rank {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--clr-gray-md);
+  width: 36px;
+}
+
+.td-rank-top {
+  color: var(--clr-amber);
+}
+
+.td-category { color: var(--clr-gray); font-size: 13px; }
+
+.td-contribution {
+  font-size: 13px;
+}
+
+.contrib-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.contrib-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: var(--clr-gray-lt);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.contrib-bar-fill {
+  height: 100%;
+  background: var(--clr-green);
+  border-radius: var(--radius-pill);
+  transition: width .4s ease;
+}
+
+.contrib-pct {
+  font-size: 12px;
+  color: var(--clr-gray);
+  white-space: nowrap;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ─── 8. CHART CARD ─── */
 .chart-card {
   background: var(--clr-white-pure);
   border-radius: var(--radius-xl);
@@ -443,9 +449,20 @@ tbody td {
 .chart-wrap {
   position: relative;
   height: 256px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.chart-tabs { display: flex; gap: 8px; }
+.chart-loading {
+  color: var(--clr-gray-md);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chart-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
 .ctab {
   padding: 7px 16px;
@@ -462,25 +479,40 @@ tbody td {
 .ctab:hover  { border-color: var(--clr-green); color: var(--clr-green); }
 .ctab.active { background: var(--clr-green); color: var(--clr-white-pure); border-color: var(--clr-green); }
 
-/* ─── 10. PAGE: SALES INSIGHTS ─── */
-.growth-pos { color: var(--clr-green); font-weight: 700; font-size: 13px; }
-.growth-neg { color: var(--clr-red);   font-weight: 700; font-size: 13px; }
-.td-category { color: var(--clr-gray); }
-
-.view-all {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--clr-green);
-  cursor: pointer;
-  transition: var(--transition);
-  background: none;
-  border: none;
+/* ─── 9. LOADING / SKELETON STATES ─── */
+.kpi-skeleton {
+  display: inline-block;
+  color: var(--clr-gray-md);
+  font-size: 14px;
+  font-weight: 400;
 }
 
-.view-all:hover { opacity: .75; }
+.tbl-loading {
+  text-align: center;
+  color: var(--clr-gray-md);
+  font-size: 14px;
+  padding: 32px 14px !important;
+}
+
+.tbl-empty {
+  text-align: center;
+  color: var(--clr-gray-md);
+  font-size: 14px;
+  padding: 32px 14px !important;
+}
+
+/* ─── 10. GROWTH BADGES ─── */
+.growth-pos { color: var(--clr-green); font-weight: 700; font-size: 13px; }
+.growth-neg { color: var(--clr-red);   font-weight: 700; font-size: 13px; }
+.growth-neu { color: var(--clr-gray);  font-weight: 700; font-size: 13px; }
 
 /* ─── 11. RESPONSIVE ─── */
+@media (max-width: 1100px) {
+  .stat-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 900px) {
+  .stat-grid-3 { grid-template-columns: 1fr 1fr; }
   .stat-grid-4 { grid-template-columns: 1fr 1fr; }
 }
 
@@ -502,12 +534,13 @@ tbody td {
   .main { width: 100%; padding: 20px 16px 48px; gap: 16px; }
   .topbar-ham { display: flex; }
   .topbar     { flex-wrap: wrap; }
-  .topbar-actions { flex-wrap: wrap; width: 100%; }
-  .btn-primary, .btn-secondary { width: 100%; }
+  .chart-tabs { gap: 6px; }
+  .ctab { padding: 6px 12px; font-size: 12px; }
 }
 
 @media (max-width: 480px) {
   .main { padding: 16px 12px 40px; }
   .topbar-title h1 { font-size: 22px; }
   .stat-grid-4 { grid-template-columns: 1fr; }
+  .stat-grid-3 { grid-template-columns: 1fr; }
 }
