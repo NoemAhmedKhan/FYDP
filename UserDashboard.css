@@ -269,7 +269,7 @@ ul     { list-style: none; }
 
 /* Smaller value text for long medicine names */
 .stat-card__value--sm {
-    font-size: 22px;
+    font-size: 15px;
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
