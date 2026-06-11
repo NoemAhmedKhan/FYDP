@@ -290,14 +290,13 @@ ul     { list-style: none; }
 
 /* Smaller value text for long medicine names */
 .stat-card__value--sm {
-    font-size: 22px;
+    font-size: 20px;
    font-weight: var(--fw-b);  
    line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
-    word-wrap: break-word;
     color: var(--green);
 }
 
