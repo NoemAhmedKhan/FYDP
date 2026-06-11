@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
   <script src="https://kit.fontawesome.com/9dec450bb1.js" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  
+
   <link rel="stylesheet" href="PharmDashboard.css" />
 </head>
 <body>
@@ -76,7 +76,8 @@
     </button>
     <div class="topbar-title">
       <h1>Operational Overview</h1>
-      <p>Welcome back, Arsalan Ahmed.</p>
+      <!-- TASK 2/5/6: class changed to topbar-welcome so v3.0 JS can target it -->
+      <p class="topbar-welcome">Welcome back.</p>
     </div>
     <a href="PharmBilling.html" class="btn-generate">
       <i class="fa-solid fa-file-invoice"></i> Generate New Bill
@@ -87,45 +88,51 @@
   <div class="dash-grid">
     <!-- LEFT COL -->
     <div class="left-col">
+
       <!-- Stat Cards -->
       <div class="stat-grid">
+
+        <!-- TASK 2: Total Products — real data via statTotalProducts, no trend arrow -->
         <div class="stat-card">
           <div class="stat-icon si-green">
             <i class="fa-solid fa-kit-medical"></i>
           </div>
-          <p class="stat-label">Total Medicine Count</p>
-          <p class="stat-val">2,482</p>
-          <p class="stat-trend">
-            <i class="fa-solid fa-arrow-up"></i> 12% increase
-          </p>
+          <p class="stat-label">Total Products</p>
+          <p class="stat-val" id="statTotalProducts">—</p>
         </div>
+
+        <!-- TASK 3: Low Stock Alerts — real count via statLowStock -->
         <div class="stat-card">
           <div class="stat-icon si-amber">
             <i class="fa-solid fa-triangle-exclamation"></i>
           </div>
           <p class="stat-label">Low Stock Alerts</p>
-          <p class="stat-val amber">18</p>
+          <p class="stat-val amber" id="statLowStock">—</p>
           <p class="stat-sub">Requires reordering</p>
         </div>
+
+        <!-- TASK 4: Items Expiring Soon — real count via statExpiringSoon -->
         <div class="stat-card">
           <div class="stat-icon si-red">
             <i class="fa-regular fa-calendar-xmark"></i>
           </div>
           <p class="stat-label">Items Expiring Soon</p>
-          <p class="stat-val red">42</p>
+          <p class="stat-val red" id="statExpiringSoon">—</p>
           <p class="stat-sub">Within 30 days</p>
         </div>
+
+        <!-- TASK 5: Total Sales — real sum via statTotalSales, no transaction count -->
         <div class="stat-card">
           <div class="stat-icon si-green">
             <i class="fa-solid fa-sack-dollar"></i>
           </div>
-          <p class="stat-label">Today's Sales</p>
-          <p class="stat-val">PKR 4,120</p>
-          <p class="stat-sub">82 Transactions</p>
+          <p class="stat-label">Total Sales</p>
+          <p class="stat-val" id="statTotalSales">—</p>
         </div>
+
       </div>
 
-      <!-- Sales Chart -->
+      <!-- TASK 6: Sales History Chart — 4 period tabs, loading overlay, real data -->
       <div class="chart-card">
         <div class="chart-head">
           <div>
@@ -133,19 +140,29 @@
             <p class="chart-sub">Revenue performance trends (PKR)</p>
           </div>
           <div class="chart-tabs">
-            <button class="ctab" data-period="6m">6 Months</button>
-            <button class="ctab active" data-period="1y">1 Year</button>
+            <button class="ctab" data-period="1m" aria-pressed="false">1 Month</button>
+            <button class="ctab" data-period="3m" aria-pressed="false">3 Months</button>
+            <button class="ctab" data-period="6m" aria-pressed="false">6 Months</button>
+            <button class="ctab active" data-period="1y" aria-pressed="true">1 Year</button>
           </div>
         </div>
         <div class="chart-wrap">
-          <canvas id="salesChart"></canvas>
+          <!-- Loading state shown while data is fetching -->
+          <div class="chart-loading" id="chartLoading">
+            <span class="chart-spinner"></span>
+            <span>Loading chart…</span>
+          </div>
+          <canvas id="salesChart" style="display:none;"></canvas>
         </div>
       </div>
-    </div>
 
+    </div><!-- /left-col -->
+
+    <!-- TASK 1: Smart Pricing card REMOVED. Right col now only has demand forecast. -->
     <!-- RIGHT COL -->
     <div class="right-col">
-      <!-- Demand forecast preview -->
+
+      <!-- Top Searched Medicines — unchanged, already working -->
       <div class="ai-card" id="demandForecastCard">
         <div class="ai-head">
           <i class="fa-solid fa-magnifying-glass-chart"></i>
@@ -158,24 +175,9 @@
         <a href="PharmAdvancedForecast.html" class="btn-demand-more">View full forecast</a>
       </div>
 
-      <!-- Smart Pricing -->
-      <div class="sp-card">
-        <div class="sp-head">
-          <i class="fa-solid fa-tag"></i>
-          <h3>Smart Pricing</h3>
-        </div>
-        <div class="sp-bundle">
-          <span class="sp-rec-lbl">Recommended Bundle</span>
-          <p class="sp-name">Flu Kit (5 items)</p>
-          <div class="sp-price">
-            <span class="sp-new">PKR 4,500</span>
-            <span class="sp-old">5,200</span>
-          </div>
-        </div>
-        <a href="PharmSmartBundle.html" class="btn-create-bundle">Create Bundle</a>
-      </div>
-    </div>
-  </div>
+    </div><!-- /right-col -->
+
+  </div><!-- /dash-grid -->
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
