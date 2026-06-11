@@ -1,22 +1,19 @@
 /* =============================================
-   MediFinder — UserDashboard.js  v3.0
+   MediFinder — UserDashboard.js  v4.0
    ─────────────────────────────────────────────
-   CHANGES IN v3.0 (reverts v2.0 JSONB approach):
-   • loadRecentSearches() queries multi-row table:
-     SELECT product_name, category, searched_at
-     ORDER BY searched_at DESC LIMIT 3.
-     Uses the composite index (user_id, searched_at
-     DESC) for fast indexed reads.
-   • Reads row.product_name / row.category /
-     row.searched_at directly — no JSONB unpacking.
+   CHANGES IN v4.0:
+   • loadRecentSearches() now also drives the
+     Search Analytics card (most frequent +
+     last search) — reuses the same 3-row fetch.
+   • loadTotalReminders() added — COUNT of all
+     reminders rows for the user.
+   • loadUpcomingReminders() added — queries
+     reminder_instances JOIN reminders for the
+     next 3 due instances (scheduled_for >= now).
    ============================================= */
 
 /* =============================================
    1. AUTH GUARD + USER PROFILE LOADER
-   ─────────────────────────────────────────────
-   No session → redirect to Login.html.
-   Session OK → load name / email / avatar
-   and fetch recent searches.
    ============================================= */
 async function initDashboard() {
 
@@ -29,7 +26,6 @@ async function initDashboard() {
     }
 
     try {
-        // profiles table stores full_name and profile_img (users table only has id/email/role)
         const { data: profile, error: profileError } = await supabaseClient
             .from('profiles')
             .select('full_name, profile_img')
@@ -42,39 +38,39 @@ async function initDashboard() {
         const firstName = fullName.split(' ')[0] || 'User';
         const email     = session.user.email;
 
-        /* ── Welcome message ── */
         const welcomeEl = document.querySelector('.topbar__welcome h1');
         if (welcomeEl) welcomeEl.textContent = `Welcome back, ${firstName}!`;
 
-        /* ── Sidebar text ── */
         const userNameEl  = document.querySelector('.user-name');
         const userEmailEl = document.querySelector('.user-email');
         if (userNameEl)  userNameEl.textContent  = fullName || 'User';
         if (userEmailEl) userEmailEl.textContent = email    || '';
 
-        /* ── Sidebar avatar ── */
         renderSidebarAvatar(profile.profile_img || null);
 
     } catch (err) {
         console.error('Profile load error:', err.message);
     }
 
-    /* ── Load recent searches panel (parallel, non-blocking) ── */
-    loadRecentSearches(session.user.id);
+    // CHANGED v4.0: Run all three data loaders in parallel.
+    // loadRecentSearches already existed; the other two are new.
+    await Promise.all([
+        loadRecentSearches(session.user.id),
+        loadTotalReminders(session.user.id),
+        loadUpcomingReminders(session.user.id),
+    ]);
 }
 
 /* =============================================
-   2. RECENT SEARCHES LOADER
+   2. RECENT SEARCHES + SEARCH ANALYTICS LOADER
    ─────────────────────────────────────────────
-   Fetches the 3 most-recent rows from
-   user_search_history using the composite index
-   on (user_id, searched_at DESC).
-
-   Each rendered item:
-     • Medicine name  (product_name)
-     • Category       (category, fallback "Medicine")
-     • Relative time  ("2 hours ago", "Yesterday"…)
-     • Clickable      → UserPharmacySearch.html?q=name
+   CHANGED v4.0: After rendering the recent
+   searches list, also populates:
+     • #mostSearchedValue  (most frequent name
+       computed client-side from the same 3 rows,
+       same logic as UserHistory.js)
+     • #lastSearchValue    (rows[0].product_name)
+   No extra DB round-trip needed.
    ============================================= */
 async function loadRecentSearches(userId) {
     const listEl = document.getElementById('recentSearchList');
@@ -91,6 +87,9 @@ async function loadRecentSearches(userId) {
         if (error) throw error;
 
         const rows = data || [];
+
+        // CHANGED v4.0: Populate Search Analytics card from the same rows.
+        renderSearchAnalytics(rows);
 
         if (rows.length === 0) {
             listEl.innerHTML = `
@@ -152,10 +151,199 @@ async function loadRecentSearches(userId) {
 }
 
 /* =============================================
-   3. SIDEBAR AVATAR RENDERER
+   3. SEARCH ANALYTICS RENDERER  (NEW — v4.0)
    ─────────────────────────────────────────────
-   Shows Supabase profile photo if available,
-   else falls back to Images/ProfileAvatar.jpg.
+   Populates the Search Analytics stat card.
+   rows are newest-first (same array passed in
+   from loadRecentSearches).
+
+   Most Frequent: frequency-count across the 3
+   rows (same algorithm as UserHistory.js
+   renderMostFrequent, so behaviour is identical).
+   Last Search: rows[0] is the newest row.
+   ============================================= */
+function renderSearchAnalytics(rows) {
+    const mostEl = document.getElementById('mostSearchedValue');
+    const lastEl = document.getElementById('lastSearchValue');
+
+    if (rows.length === 0) {
+        if (mostEl) mostEl.textContent = 'No searches yet';
+        if (lastEl) lastEl.textContent = '—';
+        return;
+    }
+
+    // Most frequent — frequency map, then pick winner
+    const freq = {};
+    rows.forEach(r => {
+        const key = (r.product_name || '').trim().toLowerCase();
+        if (!key) return;
+        if (!freq[key]) freq[key] = { name: r.product_name, count: 0 };
+        freq[key].count++;
+    });
+    const top = Object.values(freq).sort((a, b) => b.count - a.count)[0];
+    if (mostEl) mostEl.textContent = top ? top.name : '—';
+
+    // Last search — rows are newest-first so index 0 is the most recent
+    if (lastEl) lastEl.textContent = rows[0].product_name || '—';
+}
+
+/* =============================================
+   4. TOTAL REMINDERS LOADER  (NEW — v4.0)
+   ─────────────────────────────────────────────
+   Counts ALL reminders rows for this user
+   (all statuses — represents "total reminders
+   created"). Uses the reminders table directly.
+   The partial index idx_reminders_user_active
+   covers only status='due'; a full count across
+   all statuses is a simple table scan filtered
+   by user_id which is acceptable for this card.
+   ============================================= */
+async function loadTotalReminders(userId) {
+    const countEl = document.getElementById('totalRemindersCount');
+    if (!countEl) return;
+
+    try {
+        const { count, error } = await supabaseClient
+            .from('reminders')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId);
+
+        if (error) throw error;
+
+        countEl.textContent = count ?? 0;
+
+    } catch (err) {
+        console.warn('Total reminders load error:', err.message);
+        if (countEl) countEl.textContent = '—';
+    }
+}
+
+/* =============================================
+   5. UPCOMING REMINDERS LOADER  (NEW — v4.0)
+   ─────────────────────────────────────────────
+   Queries reminder_instances for this user:
+     status = 'due'
+     scheduled_for >= now()
+     ORDER BY scheduled_for ASC
+     LIMIT 3
+
+   Joins to the reminders table (via the FK
+   reminder_instances.reminder_id → reminders.id)
+   using Supabase's embedded select syntax to
+   get med_name and dosage.
+
+   Times are formatted as "08:30 AM" in
+   Asia/Karachi timezone (consistent with the
+   send-reminder-notification edge function).
+
+   Tag logic:
+     scheduled_for within the next 2 hours → UPCOMING (green)
+     otherwise                             → LATER    (gray)
+
+   Icon: fa-kit-medical on every item, matching
+   the original hardcoded design.
+   ============================================= */
+async function loadUpcomingReminders(userId) {
+    const listEl = document.getElementById('upcomingReminderList');
+    if (!listEl) return;
+
+    try {
+        const now = new Date().toISOString();
+
+        const { data, error } = await supabaseClient
+            .from('reminder_instances')
+            .select(`
+                id,
+                scheduled_for,
+                reminders (
+                    med_name,
+                    dosage,
+                    med_form
+                )
+            `)
+            .eq('user_id', userId)
+            .eq('status', 'due')
+            .gte('scheduled_for', now)
+            .order('scheduled_for', { ascending: true })
+            .limit(3);
+
+        if (error) throw error;
+
+        const rows = data || [];
+
+        if (rows.length === 0) {
+            listEl.innerHTML = `
+                <li class="reminder-item">
+                    <div class="reminder-item__icon">
+                        <i class="fa-solid fa-kit-medical"></i>
+                    </div>
+                    <div class="reminder-item__info">
+                        <span class="reminder-item__name" style="color:var(--gray-mid)">No upcoming reminders</span>
+                        <span class="reminder-item__dose">Your scheduled reminders will appear here</span>
+                    </div>
+                </li>`;
+            return;
+        }
+
+        const twoHoursFromNow = Date.now() + 2 * 60 * 60 * 1000;
+
+        listEl.innerHTML = rows.map(row => {
+            const reminder = row.reminders || {};
+            const name     = reminder.med_name || '—';
+            const dosage   = reminder.dosage   || '';
+            const medForm  = reminder.med_form  || '';
+
+            // Format time in PKT (Asia/Karachi) — same timezone used by the edge function
+            const scheduledDate = new Date(row.scheduled_for);
+            const timeLabel = scheduledDate.toLocaleTimeString('en-US', {
+                hour:   '2-digit',
+                minute: '2-digit',
+                hour12: true,
+                timeZone: 'Asia/Karachi',
+            });
+
+            // Dose line: "500mg · Tablet" or just "500mg" if no form
+            const doseLine = [dosage, medForm].filter(Boolean).join(' · ');
+
+            // Tag: UPCOMING if within next 2 hours, otherwise LATER
+            const isUpcoming = scheduledDate.getTime() <= twoHoursFromNow;
+            const tagClass   = isUpcoming ? 'reminder-item__tag--upcoming' : 'reminder-item__tag--later';
+            const clockClass = isUpcoming ? 'reminder-item__clock--upcoming' : 'reminder-item__clock--later';
+            const tagText    = isUpcoming ? 'UPCOMING' : 'LATER';
+
+            return `
+            <li class="reminder-item">
+                <div class="reminder-item__icon">
+                    <i class="fa-solid fa-kit-medical"></i>
+                </div>
+                <div class="reminder-item__info">
+                    <span class="reminder-item__name">${escapeHtml(name)}</span>
+                    <span class="reminder-item__dose">${escapeHtml(doseLine)}</span>
+                </div>
+                <div class="reminder-item__time">
+                    <span class="reminder-item__clock ${clockClass}">${timeLabel}</span>
+                    <span class="reminder-item__tag ${tagClass}">${tagText}</span>
+                </div>
+            </li>`;
+        }).join('');
+
+    } catch (err) {
+        console.warn('Upcoming reminders load error:', err.message);
+        if (listEl) {
+            listEl.innerHTML = `
+                <li class="reminder-item">
+                    <div class="reminder-item__info">
+                        <span class="reminder-item__name" style="color:var(--gray-mid)">
+                            Could not load reminders
+                        </span>
+                    </div>
+                </li>`;
+        }
+    }
+}
+
+/* =============================================
+   6. SIDEBAR AVATAR RENDERER  (unchanged)
    ============================================= */
 function renderSidebarAvatar(profileImgUrl) {
     const avatarEl = document.querySelector('.user-avatar');
@@ -181,10 +369,8 @@ function renderSidebarAvatar(profileImgUrl) {
 }
 
 /* =============================================
-   4. UTILITY HELPERS
+   7. UTILITY HELPERS  (unchanged)
    ============================================= */
-
-/* Human-readable relative time ("2 hours ago", "Yesterday", "3 days ago") */
 function formatTimeAgo(isoString) {
     if (!isoString) return '';
     const diff = Date.now() - new Date(isoString).getTime();
@@ -201,7 +387,6 @@ function formatTimeAgo(isoString) {
     return new Date(isoString).toLocaleDateString('en-PK', { day:'numeric', month:'short' });
 }
 
-/* Prevent XSS when injecting user-controlled data into innerHTML */
 function escapeHtml(str) {
     return String(str)
         .replace(/&/g,  '&amp;')
@@ -212,7 +397,7 @@ function escapeHtml(str) {
 }
 
 /* =============================================
-   5. LOGOUT
+   8. LOGOUT  (unchanged)
    ============================================= */
 const logoutBtn = document.querySelector('.user-logout');
 if (logoutBtn) {
@@ -224,7 +409,7 @@ if (logoutBtn) {
 }
 
 /* =============================================
-   6. SIDEBAR TOGGLE (Mobile hamburger)
+   9. SIDEBAR TOGGLE  (unchanged)
    ============================================= */
 (function () {
     'use strict';
@@ -241,5 +426,6 @@ if (logoutBtn) {
     sidebarOverlay && sidebarOverlay.addEventListener('click', closeSidebar);
     document.addEventListener('keydown', e => e.key === 'Escape' && closeSidebar());
 })();
+
 /* ── Run on page load ── */
 initDashboard();
