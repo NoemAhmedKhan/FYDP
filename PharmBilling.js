@@ -1,14 +1,14 @@
 // ============================================================
-//  PharmBilling.js  v1
+//  PharmBilling.js  v2
 //  Generate New Bill — fully dynamic, Supabase-powered
 //
 //  Features implemented:
 //    • Auto bill-ID via generate_bill_id() RPC
 //    • Live date/time display
-//    • Phone validation: 03XXXXXXXXXX or +92XXXXXXXXXX
+//    • Phone validation: +92XXXXXXXXXX
 //    • Inventory-aware product search (pharmacy_inventory_view)
 //    • Per-row quantity guard (≤ total_available_units)
-//    • Real-time subtotal / discount / GST / grand-total calc
+//    • Real-time subtotal / per-item discount / bill-level DISC% / grand-total calc
 //    • Payment method panels: Cash / JazzCash / EasyPaisa / Card
 //    • Cash change-return calculation
 //    • Confirm & Generate Invoice → save_bill RPC (atomic)
@@ -27,7 +27,6 @@
   );
 
   /* ── Config ────────────────────────────────────────────────── */
-  const GST_RATE     = 0.17;   // 17 %
   const SEARCH_DELAY = 280;    // ms debounce
   const MAX_RESULTS  = 12;     // dropdown cap
 
@@ -81,49 +80,9 @@
   }
 
   /* ══════════════════════════════════════════════════════════════
-     SIDEBAR / AVATAR
-  ══════════════════════════════════════════════════════════════ */
-  function renderSidebarAvatar(imageUrl, ini) {
-    const c = $('sidebarAvatarInner');
-    if (!c) return;
-    c.innerHTML = '';
-    if (imageUrl) {
-      const img = document.createElement('img');
-      img.alt = 'Avatar';
-      img.onerror = () => {
-        c.innerHTML = '';
-        const span = document.createElement('span');
-        span.className = 's-avatar-initials-text';
-        span.textContent = ini || '?';
-        c.appendChild(span);
-      };
-      img.src = imageUrl;
-      c.appendChild(img);
-    } else {
-      const span = document.createElement('span');
-      span.className = 's-avatar-initials-text';
-      span.textContent = ini || '?';
-      c.appendChild(span);
-    }
-  }
-
-  function initSidebar() {
-    const hamBtn   = $('hamBtn');
-    const sidebar  = $('sidebar');
-    const sOverlay = $('sOverlay');
-    if (hamBtn)   hamBtn.addEventListener('click', () => sidebar?.classList.toggle('open'));
-    if (sOverlay) sOverlay.addEventListener('click', () => sidebar?.classList.remove('open'));
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') sidebar?.classList.remove('open');
-    });
-  }
-
-  /* ══════════════════════════════════════════════════════════════
      INIT
   ══════════════════════════════════════════════════════════════ */
   async function init() {
-    initSidebar();
-
     /* Auth check */
     const { data: { session } } = await sb.auth.getSession();
     if (!session) { window.location.href = 'Login.html'; return; }
@@ -151,13 +110,7 @@
       phone_no:      phProfile?.phone_no     || ''
     };
 
-    /* Sidebar */
-    const nameEl  = $('sidebarName');
-    const emailEl = $('sidebarEmail');
-    if (nameEl)  nameEl.textContent  = pharmacistName;
-    if (emailEl) emailEl.textContent = session.user.email || '';
-    renderSidebarAvatar(profile?.profile_img || null, initials(pharmacistName));
-
+    /* Logout button (topbar or wherever it exists in the page) */
     const logoutBtn = $('logoutBtn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () =>
@@ -178,6 +131,7 @@
     initProductSearch();
     initPaymentMethods();
     initCashCalculation();
+    initBillDiscount();
     initConfirmButton();
   }
 
@@ -464,7 +418,6 @@
         <td>
           <p class="pr-name">${esc(invRow.product_name)}</p>
           <p class="pr-sub">${esc(invRow.generic_name)} · ${esc(invRow.strength)} · ${esc(invRow.dosage_form)}</p>
-          <p class="pr-stock">Max: ${totalAvail} unit${totalAvail !== 1 ? 's' : ''}</p>
         </td>
         <td>
           <input type="number"
@@ -531,43 +484,46 @@
      CALCULATIONS
   ══════════════════════════════════════════════════════════════ */
   function recalcTotals() {
-    let subtotal = 0, totalDiscount = 0;
+    let subtotal = 0, itemDiscount = 0;
 
     cartItems.forEach(({ invRow, qty }) => {
-      const orig      = Number(invRow.original_price);
-      const disc      = invRow.discounted_price != null ? Number(invRow.discounted_price) : orig;
-      subtotal      += orig  * qty;
-      totalDiscount += (orig - disc) * qty;
+      const orig = Number(invRow.original_price);
+      const disc = invRow.discounted_price != null ? Number(invRow.discounted_price) : orig;
+      subtotal     += orig * qty;
+      itemDiscount += (orig - disc) * qty;
     });
 
-    const discountedSub = subtotal - totalDiscount;
-    const gstAmount     = discountedSub * GST_RATE;
-    const grandTotal    = discountedSub + gstAmount;
+    /* Bill-level DISC% (manual input) */
+    const billDiscPct    = Math.min(100, Math.max(0, parseFloat($('billDiscPct')?.value) || 0));
+    const afterItemDisc  = subtotal - itemDiscount;
+    const billDiscAmt    = afterItemDisc * (billDiscPct / 100);
+    const totalDiscount  = itemDiscount + billDiscAmt;
+    const grandTotal     = afterItemDisc - billDiscAmt;
 
     /* Update DOM */
     setText('sumSubtotal', 'PKR ' + fmtNum(subtotal, 2));
     setText('sumGrand',    'PKR ' + fmtNum(grandTotal, 2));
 
     const discRow = $('sumDiscountRow');
-    if (totalDiscount > 0) {
-      setText('sumDiscount', '−PKR ' + fmtNum(totalDiscount, 2));
+    if (itemDiscount > 0) {
+      setText('sumDiscount', '−PKR ' + fmtNum(itemDiscount, 2));
       discRow?.classList.add('visible');
     } else {
       setText('sumDiscount', '−PKR 0.00');
       discRow?.classList.remove('visible');
     }
 
-    const gstRow = $('sumGstRow');
-    if (gstAmount > 0) {
-      setText('sumGst', '+PKR ' + fmtNum(gstAmount, 2));
-      gstRow?.classList.add('visible');
+    const billDiscAmtRow = $('sumBillDiscAmtRow');
+    if (billDiscAmt > 0) {
+      setText('sumBillDiscAmt', '−PKR ' + fmtNum(billDiscAmt, 2));
+      billDiscAmtRow?.classList.add('visible');
     } else {
-      setText('sumGst', '+PKR 0.00');
-      gstRow?.classList.remove('visible');
+      setText('sumBillDiscAmt', '−PKR 0.00');
+      billDiscAmtRow?.classList.remove('visible');
     }
 
     /* Store on window for confirm handler */
-    window._billCalc = { subtotal, totalDiscount, gstAmount, grandTotal };
+    window._billCalc = { subtotal, totalDiscount, gstAmount: 0, grandTotal };
 
     /* Update cash-return if cash method */
     if (paymentMethod === 'cash') calcCashReturn();
@@ -601,6 +557,20 @@
     $('panelCash').hidden   = method !== 'cash';
     $('panelOnline').hidden = !['jazzcash', 'easypaisa'].includes(method);
     $('panelCard').hidden   = method !== 'card';
+  }
+
+  /* ── Bill-level DISC% ────────────────────────────────────────── */
+  function initBillDiscount() {
+    const input = $('billDiscPct');
+    if (!input) return;
+    input.addEventListener('input', () => {
+      /* Clamp: no negatives, max 100 */
+      let v = parseFloat(input.value);
+      if (isNaN(v) || v < 0) { input.value = ''; }
+      else if (v > 100)       { input.value = 100; }
+      recalcTotals();
+      updateConfirmButton();
+    });
   }
 
   /* ── Cash return ─────────────────────────────────────────────── */
@@ -894,8 +864,6 @@
     addRow('Subtotal', 'PKR ' + fmtNum(calc.subtotal, 2));
     if (calc.totalDiscount > 0)
       addRow('Total Discount', '−PKR ' + fmtNum(calc.totalDiscount, 2), [239, 68, 68]);
-    if (calc.gstAmount > 0)
-      addRow('GST (17%)', '+PKR ' + fmtNum(calc.gstAmount, 2), [245, 158, 11]);
 
     y += 2;
     doc.setDrawColor(...GREEN); doc.setLineWidth(0.5);
