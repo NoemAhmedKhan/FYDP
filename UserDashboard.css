@@ -261,32 +261,6 @@ ul     { list-style: none; }
 }
 .stat-card:hover { box-shadow: var(--shadow-md); }
 
-/* Green icon square (for Search Analytics card) */
-.stat-card__icon--green {
-    background: var(--green-bg);
-    color: var(--green);
-}
-
-/* Smaller value text for long medicine names */
-.stat-card__value--sm {
-    font-size: 15px;
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-}
-
-/* Small uppercase label inside stat card body */
-.stat-card__sublabel--label {
-    font-size: 11px;
-    font-weight: var(--fw-m);
-    text-transform: uppercase;
-    letter-spacing: .5px;
-    color: var(--gray-mid);
-    margin-top: 4px;
-}
-
 /* Coloured icon squares */
 .stat-card__icon {
     width: 52px; height: 52px;
@@ -307,6 +281,32 @@ ul     { list-style: none; }
 .stat-card__label    { font-size: 14px; font-weight: var(--fw-m); color: var(--dark); }
 .stat-card__value    { font-size: 34px; font-weight: var(--fw-b); color: var(--green); line-height: 1; }
 .stat-card__sublabel { font-size: 13px; color: var(--gray); }
+
+/* Green icon square (for Search Analytics card) */
+.stat-card__icon--green {
+    background: var(--green-bg);
+    color: var(--green);
+}
+
+/* Smaller value text for long medicine names */
+.stat-card__value--sm {
+    font-size: 28px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Small uppercase label inside stat card body */
+.stat-card__sublabel--label {
+    font-size: 11px;
+    font-weight: var(--fw-m);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--gray-mid);
+    margin-top: 4px;
+}
 
 /* =============================================
    PANELS ROW  (bottom row — 2 equal columns)
