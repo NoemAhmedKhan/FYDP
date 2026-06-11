@@ -13,7 +13,7 @@
 </head>
 <body>
 
-<!-- SIDEBAR-->
+<!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <div class="s-overlay" id="sOverlay"></div>
   <div class="s-inner">
@@ -28,12 +28,12 @@
       </div>
     </div>
     <nav class="s-nav">
-      <a href="PharmDashboard.html" class="nav-a"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a>
-      <a href="PharmInfoUpdate.html" class="nav-a"><i class="fa-solid fa-gear"></i><span>Information Update</span></a>
+      <a href="PharmDashboard.html"       class="nav-a"><i class="fa-solid fa-table-cells-large"></i><span>Dashboard</span></a>
+      <a href="PharmInfoUpdate.html"      class="nav-a"><i class="fa-solid fa-gear"></i><span>Information Update</span></a>
       <a href="PharmStockManagement.html" class="nav-a"><i class="fa-solid fa-boxes-stacked"></i><span>Stock Management</span></a>
-      <a href="PharmBillingHistory.html" class="nav-a"><i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span></a>
-      <a href="PharmStockAlerts.html" class="nav-a"><i class="fa-solid fa-bell"></i><span>Stock Alerts</span></a>
-      <a href="PharmSalesInsights.html" class="nav-a active"><i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span></a>
+      <a href="PharmBillingHistory.html"  class="nav-a"><i class="fa-solid fa-file-invoice-dollar"></i><span>Billing &amp; Transaction History</span></a>
+      <a href="PharmStockAlerts.html"     class="nav-a"><i class="fa-solid fa-bell"></i><span>Stock Alerts</span></a>
+      <a href="PharmSalesInsights.html"   class="nav-a active"><i class="fa-solid fa-chart-bar"></i><span>Sales Insights</span></a>
       <a href="PharmAdvancedForecast.html" class="nav-a"><i class="fa-solid fa-arrow-trend-up"></i><span>Advanced Forecasting</span></a>
     </nav>
     <div class="s-user">
@@ -41,7 +41,7 @@
         <div class="s-avatar-inner" id="sidebarAvatarInner"></div>
       </div>
       <div class="s-umeta">
-        <span class="s-uname" id="sidebarName">Loading…</span>
+        <span class="s-uname"  id="sidebarName">Loading…</span>
         <span class="s-uemail" id="sidebarEmail"></span>
       </div>
       <button class="s-logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
@@ -60,36 +60,67 @@
     </button>
     <div class="topbar-title">
       <h1>Sales Insights</h1>
-      <p>Welcome back, Arsalan Ahmed.</p>
+      <p id="welcomeMsg">Welcome back.</p>
     </div>
   </header>
 
-  <!-- Stat Cards -->
+  <!-- KPI Cards — Row 1 -->
   <div class="stat-grid-4" role="list" aria-label="Sales metrics">
+
     <article class="stat-card" role="listitem">
       <div class="stat-icon si-green" aria-hidden="true"><i class="fa-solid fa-money-bill-trend-up"></i></div>
-      <p class="stat-label">Gross Revenue</p>
-      <p class="stat-val stat-val--large">PKR 142,482</p>
-      <p class="stat-trend"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> 12%</p>
+      <p class="stat-label">Gross Revenue (This Month)</p>
+      <p class="stat-val stat-val--large" id="kpiGrossRevenue"><span class="kpi-skeleton">—</span></p>
+      <p class="stat-trend" id="kpiRevenueTrend"><span class="kpi-skeleton">—</span></p>
     </article>
-    <article class="stat-card" role="listitem">
-      <div class="stat-icon si-blue" aria-hidden="true"><i class="fa-solid fa-credit-card"></i></div>
-      <p class="stat-label">Net Profit</p>
-      <p class="stat-val stat-val--large">PKR 38,120</p>
-      <p class="stat-trend"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> 8.4%</p>
-    </article>
-    <article class="stat-card" role="listitem">
-      <div class="stat-icon si-purple" aria-hidden="true"><i class="fa-solid fa-basket-shopping"></i></div>
-      <p class="stat-label">Avg Order Value</p>
-      <p class="stat-val stat-val--large">PKR 1,240</p>
-      <p class="stat-trend stat-trend--down"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i> 2.1%</p>
-    </article>
+
     <article class="stat-card" role="listitem">
       <div class="stat-icon si-orange" aria-hidden="true"><i class="fa-solid fa-cash-register"></i></div>
-      <p class="stat-label">Total Sales</p>
-      <p class="stat-val">4,120</p>
-      <p class="stat-trend"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i> 15%</p>
+      <p class="stat-label">Total Orders (This Month)</p>
+      <p class="stat-val" id="kpiTotalOrders"><span class="kpi-skeleton">—</span></p>
+      <p class="stat-trend" id="kpiOrdersTrend"><span class="kpi-skeleton">—</span></p>
     </article>
+
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-purple" aria-hidden="true"><i class="fa-solid fa-basket-shopping"></i></div>
+      <p class="stat-label">Avg Order Value (This Month)</p>
+      <p class="stat-val stat-val--large" id="kpiAvgOrder"><span class="kpi-skeleton">—</span></p>
+      <p class="stat-trend" id="kpiAvgOrderTrend"><span class="kpi-skeleton">—</span></p>
+    </article>
+
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-red" aria-hidden="true"><i class="fa-solid fa-tags"></i></div>
+      <p class="stat-label">Total Discounts Given (This Month)</p>
+      <p class="stat-val stat-val--large" id="kpiDiscounts"><span class="kpi-skeleton">—</span></p>
+      <p class="stat-trend" id="kpiDiscountsTrend"><span class="kpi-skeleton">—</span></p>
+    </article>
+
+  </div>
+
+  <!-- KPI Cards — Row 2 -->
+  <div class="stat-grid-3" role="list" aria-label="Additional sales metrics">
+
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-blue" aria-hidden="true"><i class="fa-solid fa-boxes-stacked"></i></div>
+      <p class="stat-label">Total Units Sold (This Month)</p>
+      <p class="stat-val" id="kpiUnitsSold"><span class="kpi-skeleton">—</span></p>
+      <p class="stat-trend" id="kpiUnitsTrend"><span class="kpi-skeleton">—</span></p>
+    </article>
+
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-amber" aria-hidden="true"><i class="fa-solid fa-wallet"></i></div>
+      <p class="stat-label">Top Payment Method</p>
+      <p class="stat-val stat-val--large" id="kpiTopPayment"><span class="kpi-skeleton">—</span></p>
+      <p class="stat-sub" id="kpiTopPaymentSub"></p>
+    </article>
+
+    <article class="stat-card" role="listitem">
+      <div class="stat-icon si-green" aria-hidden="true"><i class="fa-solid fa-arrow-trend-up"></i></div>
+      <p class="stat-label">Revenue Growth (vs Last Month)</p>
+      <p class="stat-val stat-val--large" id="kpiRevenueGrowth"><span class="kpi-skeleton">—</span></p>
+      <p class="stat-sub" id="kpiRevenueGrowthSub"></p>
+    </article>
+
   </div>
 
   <!-- Revenue Chart -->
@@ -100,38 +131,52 @@
         <p class="card-subtitle">Revenue performance trends (PKR)</p>
       </div>
       <div class="chart-tabs" role="group" aria-label="Chart period">
-        <button class="ctab" data-period="6m" aria-pressed="false">6 Months</button>
-        <button class="ctab active" data-period="1y" aria-pressed="true">1 Year</button>
+        <button class="ctab"        data-period="1m"  aria-pressed="false">1 Month</button>
+        <button class="ctab"        data-period="3m"  aria-pressed="false">3 Months</button>
+        <button class="ctab"        data-period="6m"  aria-pressed="false">6 Months</button>
+        <button class="ctab active" data-period="1y"  aria-pressed="true" >1 Year</button>
       </div>
     </div>
-    <div class="chart-wrap">
-      <canvas id="revenueChart" aria-label="Revenue history chart" role="img"></canvas>
+    <div class="chart-wrap" id="chartWrap">
+      <div class="chart-loading" id="chartLoading">
+        <i class="fa-solid fa-spinner fa-spin"></i> Loading chart…
+      </div>
+      <canvas id="revenueChart" aria-label="Revenue history chart" role="img" style="display:none;"></canvas>
     </div>
   </section>
 
   <!-- Top Selling Products -->
   <section class="card" aria-labelledby="topProductsHeading">
     <div class="card-header">
-      <h2 class="card-title" id="topProductsHeading">Top Selling Products</h2>
-      <button class="view-all" aria-label="View all products">View All</button>
+      <div>
+        <h2 class="card-title" id="topProductsHeading">Top Selling Products</h2>
+        <p class="card-subtitle">Top 10 by units sold — all time</p>
+      </div>
     </div>
     <div class="tbl-wrap">
       <table aria-label="Top selling products">
         <thead>
           <tr>
-            <th scope="col">Medicine Name</th>
+            <th scope="col">#</th>
+            <th scope="col">Product Name</th>
             <th scope="col">Category</th>
             <th scope="col">Units Sold</th>
-            <th scope="col">Growth</th>
+            <th scope="col">Revenue</th>
+            <th scope="col">Contribution</th>
           </tr>
         </thead>
-        <tbody id="topProductsBody"></tbody>
+        <tbody id="topProductsBody">
+          <tr><td colspan="6" class="tbl-loading">
+            <i class="fa-solid fa-spinner fa-spin"></i> Loading…
+          </td></tr>
+        </tbody>
       </table>
     </div>
   </section>
 
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="PharmSalesInsights.js"></script>
 </body>
 </html>
