@@ -88,23 +88,41 @@
     <button class="filter-btn"        data-days="30">Last 30 Days</button>
   </div>
 
-  <!-- Stat Cards -->
-  <div class="stat-grid-3" role="list" aria-label="Forecast metrics">
+  <!-- ═══════════════════════════════════════════════════════════
+       STAT CARDS — 4 cards: Unique Users / Top Demand /
+                              Not In Stock / Top Category
+       (v4.1 had 3 cards; v5.0 adds the Top Category card)
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="stat-grid-4" role="list" aria-label="Forecast metrics">
+
+    <!-- Card 1: Total Unique Users -->
     <article class="stat-card" role="listitem">
-      <p class="stat-label" id="statTotalLabel">Total Searches (7d)</p>
+      <p class="stat-label" id="statTotalLabel">Unique Users (7d)</p>
       <p class="stat-val stat-val--green stat-val--xl" id="statTotalSearches">—</p>
-      <p class="stat-sub">Platform-wide patient demand</p>
+      <p class="stat-sub">Platform-wide unique patient demand</p>
     </article>
+
+    <!-- Card 2: Top Medicine Demand -->
     <article class="stat-card" role="listitem">
       <p class="stat-label">Top Medicine Demand</p>
       <p class="stat-val stat-val--green stat-val--xl" id="statTopShare">—</p>
       <p class="stat-sub stat-sub--top-name" id="statTopName">Loading…</p>
     </article>
+
+    <!-- Card 3: Not In Your Stock -->
     <article class="stat-card" role="listitem">
       <p class="stat-label">Not in Your Stock</p>
       <p class="stat-val stat-val--red stat-val--xl" id="statMissingStock">—</p>
       <p class="stat-sub">Popular searches you don't carry</p>
     </article>
+
+    <!-- Card 4: Top Category (NEW in v5.0) -->
+    <article class="stat-card" role="listitem">
+      <p class="stat-label">Top Category</p>
+      <p class="stat-val stat-val--green stat-val--xl" id="statTopCategoryShare">—</p>
+      <p class="stat-sub stat-sub--top-name" id="statTopCategory">Loading…</p>
+    </article>
+
   </div>
 
   <!-- Main Layout -->
@@ -112,11 +130,12 @@
 
     <div class="forecast-main">
 
+      <!-- Bar Chart -->
       <section class="chart-card" aria-labelledby="forecastChartHeading">
         <div class="chart-head">
           <div>
             <p class="card-title" id="forecastChartHeading">Top 10 Most Searched Products</p>
-            <p class="card-subtitle" id="chartSubtitle">Patient search demand on MediFinder (last 7 days)</p>
+            <p class="card-subtitle" id="chartSubtitle">Unique patient demand on MediFinder (last 7 days)</p>
           </div>
         </div>
         <div class="chart-wrap chart-wrap--lg">
@@ -124,6 +143,11 @@
         </div>
       </section>
 
+      <!-- ═══════════════════════════════════════════════════════════
+           TOP 10 TABLE — v5.0 adds "Score" column (7 columns total)
+           v4.1 had 6 columns: Rank / Product / Category / Searches / Share / Stock
+           v5.0 has 7 columns: Rank / Product / Category / Users   / Share / Score / Stock
+           ═══════════════════════════════════════════════════════════ -->
       <section class="card" aria-labelledby="top10Heading">
         <div class="card-header">
           <h2 class="card-title" id="top10Heading">Demand Forecast — Top 10 Searched Products</h2>
@@ -138,13 +162,14 @@
                 <th scope="col">Rank</th>
                 <th scope="col">Product</th>
                 <th scope="col">Category</th>
-                <th scope="col">Searches</th>
+                <th scope="col">Unique Users</th>
                 <th scope="col">Share</th>
+                <th scope="col">Score</th><!-- NEW in v5.0 -->
                 <th scope="col">Your Stock</th>
               </tr>
             </thead>
             <tbody id="top10Body">
-              <tr><td colspan="6" class="tbl-loading">Loading demand data…</td></tr>
+              <tr><td colspan="7" class="tbl-loading">Loading demand data…</td></tr>
             </tbody>
           </table>
         </div>
@@ -152,6 +177,7 @@
 
     </div>
 
+    <!-- Restock Suggestions sidebar -->
     <aside class="card" aria-labelledby="predictiveHeading">
       <h2 class="insights-section-title" id="predictiveHeading">
         <i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Restock Suggestions
@@ -161,6 +187,7 @@
         <p class="tbl-loading">Loading…</p>
       </div>
     </aside>
+
   </div>
 
   <!-- Demand Trend -->
@@ -174,12 +201,35 @@
           Demand Trend
         </h2>
         <p class="card-subtitle" id="trendSubtitle">
-          Comparing last 7 days vs previous 7 days
+          Comparing last 7 days vs previous 7 days (unique users)
         </p>
       </div>
     </div>
     <div id="trendList" class="trend-list">
       <p class="tbl-loading">Loading trends…</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CATEGORY DEMAND SECTION — NEW in v5.0 (OBJ 4)
+       Rendered by loadCategoryDemand() → categoryDemandList
+       ═══════════════════════════════════════════════════════════ -->
+  <section class="card" aria-labelledby="categoryHeading">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title" id="categoryHeading">
+          <i class="fa-solid fa-layer-group"
+             style="color:var(--clr-green);margin-right:8px"
+             aria-hidden="true"></i>
+          Category Demand
+        </h2>
+        <p class="card-subtitle" id="categorySubtitle">
+          Category demand breakdown (last 7 days)
+        </p>
+      </div>
+    </div>
+    <div id="categoryDemandList" class="category-demand-list">
+      <p class="tbl-loading">Loading category demand…</p>
     </div>
   </section>
 
