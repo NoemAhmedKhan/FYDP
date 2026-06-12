@@ -724,26 +724,58 @@
 
       if (error) throw error;
 
-      /* Generate and download PDF immediately */
-      generatePDF({
-        billNo:          billId,
-        custName, custPhone,
-        billedAt,
-        pharmacistName,
-        pharmacyInfo,
-        paymentMethod,
-        referenceNo,
-        calc,
-        items: cartItems,
-        cashReceived:    amountReceived,
-        cashChange:      changeReturned
+      showToast('Invoice generated and saved successfully!', 'success');
+
+      /* Build the items payload in receipt format so the receipt page
+         can render immediately without a second RPC round-trip.        */
+      const receiptItems = cartItems.map(({ invRow, qty }) => {
+        const discPct = calcDiscountPct(invRow.original_price, invRow.discounted_price);
+        return {
+          product_name:     invRow.product_name,
+          generic_name:     invRow.generic_name   || '',
+          strength:         invRow.strength        || '',
+          dosage_form:      invRow.dosage_form     || '',
+          quantity:         qty,
+          original_price:   Number(invRow.original_price),
+          discounted_price: invRow.discounted_price != null ? Number(invRow.discounted_price) : null,
+          discount_pct:     parseFloat(discPct.toFixed(4))
+        };
       });
 
-      showToast('Invoice generated and saved successfully!', 'success');
+      /* Store all data the receipt page needs */
+      const receiptPayload = {
+        /* Numeric DB row-id returned by save_bill — used for RPC fallback */
+        dbId: newBillId,
+        header: {
+          bill_no:        billId,
+          customer_name:  custName,
+          customer_phone: custPhone,
+          billed_at:      billedAt ? billedAt.toISOString() : new Date().toISOString(),
+          subtotal:       parseFloat(calc.subtotal.toFixed(2)),
+          total_discount: parseFloat(calc.totalDiscount.toFixed(2)),
+          gst_amount:     parseFloat(calc.gstAmount.toFixed(2)),
+          grand_total:    parseFloat(calc.grandTotal.toFixed(2))
+        },
+        items: receiptItems,
+        payment: {
+          method:       paymentMethod,
+          reference_no: referenceNo,
+          amount_paid:  parseFloat(amountReceived.toFixed(2)),
+          change_given: parseFloat(changeReturned.toFixed(2))
+        },
+        pharmacy: {
+          pharmacy_name: pharmacyInfo.pharmacy_name,
+          address:       pharmacyInfo.address,
+          phone_no:      pharmacyInfo.phone_no
+        },
+        pharmacistName
+      };
+
+      sessionStorage.setItem('mf_bill_id',   String(newBillId));
+      sessionStorage.setItem('mf_bill_data', JSON.stringify(receiptPayload));
 
       /* Navigate to receipt after short delay */
       setTimeout(() => {
-        sessionStorage.setItem('mf_bill_id', newBillId);
         window.location.href = 'PharmBillingReceipt.html';
       }, 1200);
 
