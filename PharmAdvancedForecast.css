@@ -424,6 +424,7 @@ tbody td {
 .progress-fill--red   { background: var(--clr-red);   }
 .progress-fill--amber { background: var(--clr-amber); }
 .progress-fill--blue  { background: var(--clr-blue);  }
+.progress-fill--green { background: var(--clr-green); }
 
 /* ─── 11. PAGE: ADVANCED FORECAST ─── */
 .forecast-layout {
@@ -623,6 +624,17 @@ tbody td {
 .stock-oos,
 .stock-missing { background: var(--clr-red-bg); color: var(--clr-red); }
 .stock-unknown { background: var(--clr-gray-xlt); color: var(--clr-gray); }
+
+.demand-score-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--clr-green-bg);
+  color: var(--clr-green);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 
 .insights-intro {
   font-size: 13px;
@@ -851,4 +863,134 @@ tbody td {
 .s-logout-btn:hover {
   background: var(--clr-red-bg);
   color: var(--clr-red);
+}
+
+/* ── Category Demand (OBJ 4) ───────────────────────────────── */
+.category-demand-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.cat-card {
+  border: 1px solid var(--clr-gray-lt);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: var(--transition);
+}
+
+.cat-card:hover { box-shadow: var(--shadow-sm); }
+
+.cat-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cat-card__rank-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cat-card__rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.cat-card__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--clr-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cat-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cat-card__share {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--clr-green);
+}
+
+.cat-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cat-card__users { font-size: 13px; font-weight: 600; color: var(--clr-dark); }
+.cat-card__raw   { font-size: 12px; color: var(--clr-gray-md); }
+.cat-prev        { font-size: 12px; color: var(--clr-gray-md); }
+
+.cat-card__bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cat-card__bar {
+  flex: 1;
+  height: 6px;
+  background: var(--clr-gray-xlt);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.cat-card__bar-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width .4s ease;
+}
+
+.cat-card__bar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--clr-gray-md);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* Trend pills */
+.cat-trend {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cat-trend--up   { background: var(--clr-green-bg); color: var(--clr-green); }
+.cat-trend--down { background: var(--clr-red-bg);   color: var(--clr-red);   }
+.cat-trend--flat { background: var(--clr-gray-xlt); color: var(--clr-gray);  }
+.cat-trend--new  { background: var(--clr-blue-bg);  color: var(--clr-blue);  }
+
+@media (max-width: 1100px) {
+  .category-demand-list { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .category-demand-list { grid-template-columns: 1fr; }
 }
