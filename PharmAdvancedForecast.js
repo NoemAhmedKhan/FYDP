@@ -1,19 +1,39 @@
 // ============================================================
-//  PharmAdvancedForecast.js  v4.1
-//  BUG FIXES FROM v4.0:
-//  [FIX #1] Total Searches shows correct platform-wide count
-//           — fallback now sums all rows, not just top-10 rows.
-//             Real fix is in SQL (get_top_searched_medicines v2).
-//  [FIX #2] Demand Trend now shows "New" items (prev=0, curr>0)
-//           — removed the over-aggressive JS filter that dropped
-//             all rows when test/early data fills only the current
-//             period window; "New 🆕" badge shown for new products.
-//  [FIX #3] Stock maps de-duplicate multi-batch inventory rows
-//           — box_quantity is now SUMMED per product_id before
-//             building maps, so an expired zero-qty batch can't
-//             shadow a live batch.
-//  [FIX #4] Restock Suggestions correctly populate
-//           — depends on Fix #3; no other JS change needed here.
+//  PharmAdvancedForecast.js  v5.0
+//
+//  UPGRADE: Demand Forecasting Overhaul
+//  ─────────────────────────────────────────────────────────
+//  OBJ 1 — Unique User Counting
+//           search_count now = unique users (not raw rows).
+//           platform_total  = total unique users in period.
+//           All stat cards, table, chart, and restock labels
+//           updated to say "users" instead of "searches".
+//
+//  OBJ 2 — 24-Hour Deduplication (server-side, migration 01)
+//           log_search RPC silently skips duplicate searches
+//           from the same user within 24 hours. No JS change
+//           needed in UserPharmacySearch.js; logSearch() call
+//           is identical.
+//
+//  OBJ 3 — Weighted Demand Score
+//           get_top_searched_medicines now returns demand_score.
+//           Ranking is by demand_score DESC (server-side).
+//           Table adds a "Score" column. Chart tooltip shows it.
+//
+//  OBJ 4 — Category-Level Forecasting (NEW section)
+//           loadCategoryDemand() calls get_category_demand RPC.
+//           Rendered below Demand Trend as a category grid +
+//           mini donut-style bar chart with trend arrows.
+//
+//  PRESERVED (unchanged from v4.1):
+//    · Sidebar init, auth guard, logout
+//    · Filter bar (7 / 15 / 30 days)
+//    · loadPharmacyStock() with 4-tier aggregation (FIX #3)
+//    · getStockStatus() 4-tier resolution (FIX #3)
+//    · renderRestockSuggestions()
+//    · renderDemandChart() — extended with demand_score tooltip
+//    · loadDemandTrend() — now shows unique-user counts (RPC change)
+//    · renderEmptyState()
 // ============================================================
 
 (function () {
@@ -28,7 +48,6 @@
   let forecastChart = null;
 
   // Stock lookup maps (populated by loadPharmacyStock)
-  // Values: { qty: number, reorder: number, low: boolean }
   let stockByProductId   = new Map();
   let stockByNormName    = new Map();
   let stockByNormGeneric = new Map();
@@ -46,7 +65,6 @@
       .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Normalize for stock matching: uppercase · collapse whitespace · strip hyphens
   function norm(s) {
     return String(s ?? '')
       .toUpperCase()
@@ -175,12 +193,14 @@
     await Promise.all([
       loadDemandForecast(),
       loadDemandTrend(),
+      loadCategoryDemand(),   // OBJ 4 — new
     ]);
   }
 
   function updatePeriodLabels() {
+    // OBJ 1: label now says "Unique Users" not "Total Searches"
     const totalLabel = $('statTotalLabel');
-    if (totalLabel) totalLabel.textContent = 'Total Searches (' + activeDays + 'd)';
+    if (totalLabel) totalLabel.textContent = 'Unique Users (' + activeDays + 'd)';
 
     const periodBadge = $('forecastPeriodBadge');
     if (periodBadge) periodBadge.innerHTML =
@@ -188,22 +208,18 @@
 
     const trendSub = $('trendSubtitle');
     if (trendSub) trendSub.textContent =
-      'Comparing last ' + activeDays + ' days vs previous ' + activeDays + ' days';
+      'Comparing last ' + activeDays + ' days vs previous ' + activeDays + ' days (unique users)';
 
     const chartSub = $('chartSubtitle');
     if (chartSub) chartSub.textContent =
-      'Patient search demand on MediFinder (last ' + activeDays + ' days)';
+      'Unique patient demand on MediFinder (last ' + activeDays + ' days)';
+
+    const catSub = $('categorySubtitle');
+    if (catSub) catSub.textContent =
+      'Category demand breakdown (last ' + activeDays + ' days)';
   }
 
-  // ── FIX #3: Pharmacy stock with per-product aggregation ──
-  //
-  // Problem (v4.0): pharmacy_inventory_view returns one row per
-  // batch. Using set() means the last-processed batch wins. An
-  // expired/zero-qty batch processed after a healthy batch would
-  // zero-out the map entry and falsely flag the product as OOS.
-  //
-  // Fix: aggregate box_quantity SUM per product_id first, then
-  // build maps from the aggregated values.
+  // ── FIX #3 (v4.1): Pharmacy stock with per-product aggregation ──
   async function loadPharmacyStock() {
     stockByProductId.clear();
     stockByNormName.clear();
@@ -225,8 +241,7 @@
     }
 
     // Step 1: aggregate box_quantity per product_id (sum all batches)
-    // Also track the highest reorder_level seen for the product.
-    const aggregated = new Map(); // product_id → { qty, reorder, product_name, generic_name, strength, brand }
+    const aggregated = new Map();
 
     (data || []).forEach(row => {
       const pid = row.product_id;
@@ -258,43 +273,33 @@
         low:    agg.reorder > 0 && agg.qty <= agg.reorder,
       };
 
-      // Tier 1 — UUID (most reliable)
       stockByProductId.set(pid, entry);
-      
 
-
-      // Tier 2 — normalized product_name
       const normName = norm(agg.product_name);
       if (normName) stockByNormName.set(normName, entry);
 
-      // Tier 3 — normalized generic_name + strength
       const normGen = norm((agg.generic_name || '') + ' ' + (agg.strength || ''));
       if (normGen) stockByNormGeneric.set(normGen, entry);
 
-      // Tier 4 — brand name
       const normBrand = norm(agg.brand || '');
       if (normBrand) stockByNormBrand.set(normBrand, entry);
     });
   }
 
-  // 4-tier stock resolution — eliminates false "Not In Stock" badges
+  // 4-tier stock resolution
   function getStockStatus(item) {
     if (!pharmacyId) return { label: '—', cls: 'stock-unknown' };
 
-    // Tier 1: UUID
     const byId = item.product_id
       ? stockByProductId.get(item.product_id)
       : null;
 
-    // Tier 2a: normalized product_name
     const byName = stockByNormName.get(norm(item.product_name));
 
-    // Tier 2b: brand name match
     const byBrand = item.product_name
       ? stockByNormBrand.get(norm(item.product_name))
       : null;
 
-    // Tier 2c: partial name match (handles "Calpol 500" vs "Calpol")
     let byPartial = null;
     if (!byName && !byBrand) {
       const searchedNorm = norm(item.product_name);
@@ -309,7 +314,6 @@
       }
     }
 
-    // Tier 3: generic_name + strength
     const byGeneric = (item.generic_name || item.strength)
       ? stockByNormGeneric.get(norm(
           (item.generic_name || '') + ' ' + (item.strength || '')
@@ -328,19 +332,19 @@
   async function loadDemandForecast() {
     const tbody = $('top10Body');
     if (tbody) tbody.innerHTML =
-      '<tr><td colspan="6" class="tbl-loading">Loading…</td></tr>';
+      '<tr><td colspan="7" class="tbl-loading">Loading…</td></tr>';
 
     // Run both fetches in parallel: filtered period + fixed 7d for restock
     const [mainResult, restock7dResult] = await Promise.all([
       sb.rpc('get_top_searched_medicines', { p_limit: TOP_LIMIT, p_days: activeDays }),
       activeDays === 7
-        ? Promise.resolve(null)   // same data, no extra call needed
+        ? Promise.resolve(null)
         : sb.rpc('get_top_searched_medicines', { p_limit: TOP_LIMIT, p_days: 7 }),
     ]);
 
     if (mainResult.error) {
       const hint = /function|not found|schema cache/i.test(mainResult.error.message)
-        ? 'Deploy the demand forecast SQL migration in Supabase.'
+        ? 'Deploy the demand forecast SQL migrations in Supabase.'
         : 'Could not load forecast: ' + mainResult.error.message;
       renderEmptyState(hint);
       const restockEl = $('restockList');
@@ -358,24 +362,16 @@
       return;
     }
 
-    // ── FIX #1: Total Searches ──────────────────────────────
-    // v4.0 bug: platform_total in the RPC was computed as SUM of
-    // the period CTE (which itself was already grouped + limited),
-    // so it returned only the sum of top-10 rows, not all searches.
-    //
-    // With the fixed SQL (get_top_searched_medicines v2), platform_total
-    // is a true full-table count. For safety, if it still looks too low
-    // (i.e. ≤ sum of the rows we got back), fall back to summing rows.
-    const rowSum = rows.reduce((s, r) => s + Number(r.search_count || 0), 0);
+    // OBJ 1: platform_total is now unique-user count from RPC
+    const rowSum   = rows.reduce((s, r) => s + Number(r.search_count || 0), 0);
     const rpcTotal = rows[0]?.platform_total ? Number(rows[0].platform_total) : 0;
-    const totalSearches = rpcTotal > rowSum ? rpcTotal : rowSum;
+    const totalUsers = rpcTotal > rowSum ? rpcTotal : rowSum;
 
     const top = rows[0];
 
     if ($('statTotalSearches'))
-      $('statTotalSearches').textContent = totalSearches.toLocaleString();
+      $('statTotalSearches').textContent = totalUsers.toLocaleString();
 
-    // Top Demand card: bold green name + % share below
     if ($('statTopShare'))
       $('statTopShare').textContent = (top.share_pct ?? 0) + '%';
     if ($('statTopName')) {
@@ -384,7 +380,6 @@
         esc(top.product_name || '—') + '</strong>';
     }
 
-    // Not In Stock count
     let missing = 0;
     rows.forEach(item => {
       const st = getStockStatus(item);
@@ -400,30 +395,23 @@
     const restockRows = activeDays === 7
       ? rows
       : (restock7dResult?.data || []);
-      renderRestockSuggestions(restockRows);
+    renderRestockSuggestions(restockRows);
   }
 
   function renderEmptyState(message) {
-    // ── Clear stat cards ──────────────────────────────────────
     const tbody = $('top10Body');
     if (tbody) tbody.innerHTML =
-      '<tr><td colspan="6" class="tbl-empty">' + esc(message) + '</td></tr>';
+      '<tr><td colspan="7" class="tbl-empty">' + esc(message) + '</td></tr>';
     if ($('statTotalSearches')) $('statTotalSearches').textContent = '0';
     if ($('statTopShare'))      $('statTopShare').textContent      = '—';
     if ($('statTopName'))       $('statTopName').textContent       = 'No data';
     if ($('statMissingStock'))  $('statMissingStock').textContent  = '0';
 
-    // ── Clear chart — destroy any live Chart.js instance ─────
-    // Without this, switching from a filter with data to a filter with
-    // no data leaves the previous chart rendered (renderDemandChart is
-    // never called when rows is empty, so its destroy() never runs).
     if (forecastChart) {
       forecastChart.destroy();
       forecastChart = null;
     }
 
-    // Replace the canvas with an inline empty-state message so the
-    // chart-wrap area does not appear as a blank white box.
     const chartWrap = $('forecastChart')?.parentElement;
     if (chartWrap) {
       chartWrap.innerHTML =
@@ -434,6 +422,7 @@
     }
   }
 
+  // ── OBJ 3: Table now shows demand_score column ────────────
   function renderTop10Table(rows) {
     const tbody = $('top10Body');
     if (!tbody) return;
@@ -442,6 +431,7 @@
     rows.forEach((item, i) => {
       const rank  = item.rank ?? i + 1;
       const stock = getStockStatus(item);
+      const score = Number(item.demand_score || 0).toFixed(1);
       const tr    = document.createElement('tr');
       tr.innerHTML =
         `<td><span class="rank-badge">#${esc(rank)}</span></td>` +
@@ -449,6 +439,7 @@
         `<td><span class="med-category">${esc(item.category || '—')}</span></td>` +
         `<td><strong>${Number(item.search_count || 0).toLocaleString()}</strong></td>` +
         `<td>${item.share_pct ?? 0}%</td>` +
+        `<td><span class="demand-score-pill">${esc(score)}</span></td>` +
         `<td><span class="stock-pill ${stock.cls}">${esc(stock.label)}</span></td>`;
       frag.appendChild(tr);
     });
@@ -484,7 +475,7 @@
             <span class="risk-badge risk-badge--high">Add to inventory</span>
           </div>
           <p class="risk-sub">
-            ${Number(item.search_count || 0).toLocaleString()} searches
+            ${Number(item.search_count || 0).toLocaleString()} unique users
             (${pct}% of demand)
           </p>
           <div class="risk-progress">
@@ -497,7 +488,7 @@
     }).join('');
   }
 
-  // ── Professional Chart ────────────────────────────────────
+  // ── OBJ 3: Chart with demand_score tooltip ────────────────
   function renderDemandChart(rows) {
     const canvas = $('forecastChart');
     if (!canvas || typeof Chart === 'undefined') return;
@@ -511,7 +502,6 @@
     const counts  = rows.map(r => Number(r.search_count || 0));
     const maxVal  = Math.max(...counts, 1);
 
-    // Build per-bar colors: darker green for top ranks, fading slightly
     const bgColors = counts.map((_, i) => {
       const opacity = 1 - (i * 0.055);
       return `rgba(32,139,58,${opacity.toFixed(2)})`;
@@ -522,7 +512,7 @@
       data: {
         labels,
         datasets: [{
-          label: 'Searches',
+          label: 'Unique Users',
           data: counts,
           backgroundColor: bgColors,
           borderColor: 'transparent',
@@ -547,10 +537,15 @@
             cornerRadius: 8,
             callbacks: {
               title: ctx => rows[ctx[0].dataIndex]?.product_name || '',
-              label: ctx => ' ' + ctx.parsed.x.toLocaleString() + ' searches',
+              label: ctx => ' ' + ctx.parsed.x.toLocaleString() + ' unique users',
               afterLabel: ctx => {
-                const pct = rows[ctx.dataIndex]?.share_pct ?? 0;
-                return ' ' + pct + '% of total demand';
+                const row = rows[ctx.dataIndex];
+                const pct   = row?.share_pct ?? 0;
+                const score = Number(row?.demand_score || 0).toFixed(1);
+                return [
+                  ' ' + pct + '% of total demand',
+                  ' Demand score: ' + score,
+                ];
               },
             },
           },
@@ -578,7 +573,6 @@
         layout: { padding: { right: 12 } },
       },
       plugins: [{
-        // Draw search-count labels at end of each bar
         id: 'barLabels',
         afterDatasetsDraw(chart) {
           const { ctx } = chart;
@@ -598,109 +592,192 @@
     });
   }
 
-  // ── FIX #2: Demand Trend ──────────────────────────────────
-  //
-  // v4.0 bug: the JS filtered out ALL rows where previous_count = 0.
-  // During early/testing phases all records fall in the current window
-  // and the prior window is empty → every row has previous_count = 0
-  // → nothing rendered → "No comparable trend data".
-  //
-  // Fix: Show items with previous_count = 0 as "New 🆕" (rising demand).
-  // Only skip items that appear in neither period (shouldn't happen since
-  // the RPC only returns rows from the current CTE, but guard anyway).
+  // ── Demand Trend (preserved from v4.1) ───────────────────
+  // RPC now returns unique-user counts; JS is unchanged.
   async function loadDemandTrend() {
-  const el = $('trendList');
-  if (!el) return;
-  el.innerHTML = '<p class="tbl-loading">Loading trends…</p>';
+    const el = $('trendList');
+    if (!el) return;
+    el.innerHTML = '<p class="tbl-loading">Loading trends…</p>';
 
-  const { data, error } = await sb.rpc('get_demand_trend', {
-    p_days: activeDays,
-  });
+    const { data, error } = await sb.rpc('get_demand_trend', {
+      p_days: activeDays,
+    });
 
-  if (error) {
-    el.innerHTML =
-      '<p class="tbl-empty">Could not load trend data: ' + esc(error.message) + '</p>';
-    return;
-  }
-
-  const trendRows = (data || []).slice(0, 10);
-
-  if (!trendRows.length) {
-    el.innerHTML =
-      '<p class="tbl-empty">No search data for the last ' + activeDays + ' days.</p>';
-    return;
-  }
-
-  el.innerHTML = trendRows.map(function (row) {
-    const prev       = Number(row.previous_count  || 0);
-    const curr       = Number(row.current_count   || 0);
-    const changePct  = row.change_pct  != null ? Number(row.change_pct)  : null;
-    const shareChg   = row.share_change != null ? Number(row.share_change) : null;
-    const currShare  = row.current_share  != null ? Number(row.current_share)  : 0;
-    const prevShare  = row.previous_share != null ? Number(row.previous_share) : 0;
-
-    // ── Primary badge: raw count % change ──
-    let badgeCls, badgeText;
-    if (prev === 0) {
-      badgeCls  = 'trend-badge--up';
-      badgeText = 'New · ' + curr.toLocaleString() + ' searches';
-    } else if (changePct > 0) {
-      badgeCls  = 'trend-badge--up';
-      badgeText = '+' + changePct + '%';
-    } else if (changePct < 0) {
-      badgeCls  = 'trend-badge--down';
-      badgeText = changePct + '%';
-    } else {
-      badgeCls  = 'trend-badge--flat';
-      badgeText = '→ 0%';
+    if (error) {
+      el.innerHTML =
+        '<p class="tbl-empty">Could not load trend data: ' + esc(error.message) + '</p>';
+      return;
     }
 
-    // ── Secondary line: share % side by side ──
-    let shareLine = '';
-    if (prev === 0) {
-      // New product: just show current share
-      shareLine =
-        '<span class="trend-share">' +
-          'Share: <strong>' + currShare + '%</strong> of demand' +
-        '</span>';
-    } else {
-      // Show previous share → current share + change
-      const shareSign  = shareChg >= 0 ? '+' : '';
-      const shareColor = shareChg > 0
-        ? 'var(--clr-green)'
-        : shareChg < 0 ? '#ef4444' : '#6b7280';
-      shareLine =
-        '<span class="trend-share">' +
-          'Share: ' + prevShare + '% → <strong>' + currShare + '%</strong>' +
-          ' <span style="color:' + shareColor + ';font-weight:600;">' +
-            '(' + shareSign + shareChg + ' pp)' +
-          '</span>' +
-        '</span>';
+    const trendRows = (data || []).slice(0, 10);
+
+    if (!trendRows.length) {
+      el.innerHTML =
+        '<p class="tbl-empty">No search data for the last ' + activeDays + ' days.</p>';
+      return;
     }
 
-    // ── Raw counts sub-line ──
-    const countsLine = prev === 0
-      ? ''
-      : '<span class="trend-counts">' +
-          prev.toLocaleString() + ' → ' + curr.toLocaleString() + ' searches' +
-        '</span>';
+    el.innerHTML = trendRows.map(function (row) {
+      const prev       = Number(row.previous_count  || 0);
+      const curr       = Number(row.current_count   || 0);
+      const changePct  = row.change_pct  != null ? Number(row.change_pct)  : null;
+      const shareChg   = row.share_change != null ? Number(row.share_change) : null;
+      const currShare  = row.current_share  != null ? Number(row.current_share)  : 0;
+      const prevShare  = row.previous_share != null ? Number(row.previous_share) : 0;
 
-    return (
-      '<div class="trend-item trend-item--rich">' +
-        '<div class="trend-main">' +
-          '<span class="trend-name" title="' + esc(row.product_name) + '">' +
-            esc(row.product_name) +
-          '</span>' +
-          '<span class="trend-badge ' + badgeCls + '">' + badgeText + '</span>' +
-        '</div>' +
-        '<div class="trend-meta">' +
-          shareLine +
-          countsLine +
-        '</div>' +
-      '</div>'
-    );
-  }).join('');
-}
+      let badgeCls, badgeText;
+      if (prev === 0) {
+        badgeCls  = 'trend-badge--up';
+        badgeText = 'New · ' + curr.toLocaleString() + ' users';
+      } else if (changePct > 0) {
+        badgeCls  = 'trend-badge--up';
+        badgeText = '+' + changePct + '%';
+      } else if (changePct < 0) {
+        badgeCls  = 'trend-badge--down';
+        badgeText = changePct + '%';
+      } else {
+        badgeCls  = 'trend-badge--flat';
+        badgeText = '→ 0%';
+      }
+
+      let shareLine = '';
+      if (prev === 0) {
+        shareLine =
+          '<span class="trend-share">' +
+            'Share: <strong>' + currShare + '%</strong> of demand' +
+          '</span>';
+      } else {
+        const shareSign  = shareChg >= 0 ? '+' : '';
+        const shareColor = shareChg > 0
+          ? 'var(--clr-green)'
+          : shareChg < 0 ? '#ef4444' : '#6b7280';
+        shareLine =
+          '<span class="trend-share">' +
+            'Share: ' + prevShare + '% → <strong>' + currShare + '%</strong>' +
+            ' <span style="color:' + shareColor + ';font-weight:600;">' +
+              '(' + shareSign + shareChg + ' pp)' +
+            '</span>' +
+          '</span>';
+      }
+
+      const countsLine = prev === 0
+        ? ''
+        : '<span class="trend-counts">' +
+            prev.toLocaleString() + ' → ' + curr.toLocaleString() + ' users' +
+          '</span>';
+
+      return (
+        '<div class="trend-item trend-item--rich">' +
+          '<div class="trend-main">' +
+            '<span class="trend-name" title="' + esc(row.product_name) + '">' +
+              esc(row.product_name) +
+            '</span>' +
+            '<span class="trend-badge ' + badgeCls + '">' + badgeText + '</span>' +
+          '</div>' +
+          '<div class="trend-meta">' +
+            shareLine +
+            countsLine +
+          '</div>' +
+        '</div>'
+      );
+    }).join('');
+  }
+
+  // ── OBJ 4: Category-Level Demand Forecasting ──────────────
+  async function loadCategoryDemand() {
+    const el = $('categoryDemandList');
+    if (!el) return;
+    el.innerHTML = '<p class="tbl-loading">Loading category demand…</p>';
+
+    const { data, error } = await sb.rpc('get_category_demand', {
+      p_days: activeDays,
+    });
+
+    if (error) {
+      el.innerHTML =
+        '<p class="tbl-empty">Could not load category data: ' + esc(error.message) + '</p>';
+      return;
+    }
+
+    const rows = (data || []);
+
+    if (!rows.length) {
+      el.innerHTML =
+        '<p class="tbl-empty">No category data for the last ' + activeDays + ' days.</p>';
+      return;
+    }
+
+    // Top category badge in stat card
+    const topCat = rows[0];
+    const statCatEl    = $('statTopCategory');
+    const statCatShare = $('statTopCategoryShare');
+    if (statCatEl)    statCatEl.textContent    = topCat.category || '—';
+    if (statCatShare) statCatShare.textContent = (topCat.share_pct ?? 0) + '%';
+
+    // Build category cards
+    const maxUsers = Math.max(...rows.map(r => Number(r.unique_users || 0)), 1);
+
+    // Palette: cycle through accent colors
+    const COLORS = [
+      { bg: 'var(--clr-green-bg)',  fg: 'var(--clr-green)'  },
+      { bg: 'var(--clr-blue-bg)',   fg: 'var(--clr-blue)'   },
+      { bg: 'var(--clr-amber-bg)',  fg: 'var(--clr-amber)'  },
+      { bg: 'var(--clr-purple-bg)', fg: 'var(--clr-purple)' },
+      { bg: 'var(--clr-orange-bg)', fg: 'var(--clr-orange)' },
+      { bg: 'var(--clr-red-bg)',    fg: 'var(--clr-red)'    },
+    ];
+
+    el.innerHTML = rows.map((row, i) => {
+      const users      = Number(row.unique_users || 0);
+      const rawS       = Number(row.raw_searches || 0);
+      const share      = row.share_pct ?? 0;
+      const widthPct   = Math.round((users / maxUsers) * 100);
+      const col        = COLORS[i % COLORS.length];
+      const changePct  = row.change_pct != null ? Number(row.change_pct) : null;
+      const prevUsers  = Number(row.prev_users || 0);
+
+      // Trend arrow
+      let trendHtml = '';
+      if (changePct === null) {
+        trendHtml = '<span class="cat-trend cat-trend--new">New</span>';
+      } else if (changePct > 0) {
+        trendHtml = `<span class="cat-trend cat-trend--up">▲ +${changePct}%</span>`;
+      } else if (changePct < 0) {
+        trendHtml = `<span class="cat-trend cat-trend--down">▼ ${changePct}%</span>`;
+      } else {
+        trendHtml = '<span class="cat-trend cat-trend--flat">→ 0%</span>';
+      }
+
+      const prevLine = prevUsers > 0
+        ? `<span class="cat-prev">Prev: ${prevUsers.toLocaleString()} users</span>`
+        : '';
+
+      return `
+        <div class="cat-card">
+          <div class="cat-card__header">
+            <div class="cat-card__rank-wrap">
+              <span class="cat-card__rank" style="background:${col.bg};color:${col.fg}">#${i + 1}</span>
+              <span class="cat-card__name">${esc(row.category)}</span>
+            </div>
+            <div class="cat-card__badges">
+              ${trendHtml}
+              <span class="cat-card__share">${share}%</span>
+            </div>
+          </div>
+          <div class="cat-card__meta">
+            <span class="cat-card__users">${users.toLocaleString()} unique users</span>
+            <span class="cat-card__raw">${rawS.toLocaleString()} searches</span>
+            ${prevLine}
+          </div>
+          <div class="cat-card__bar-wrap">
+            <div class="cat-card__bar">
+              <div class="cat-card__bar-fill" style="width:${widthPct}%;background:${col.fg}"></div>
+            </div>
+            <span class="cat-card__bar-label">${widthPct}%</span>
+          </div>
+        </div>`;
+    }).join('');
+  }
 
   // ── Boot ──────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', init);
