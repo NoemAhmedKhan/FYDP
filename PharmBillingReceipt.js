@@ -116,7 +116,38 @@
     if (nameEl) nameEl.textContent = displayName;
     renderSidebarAvatar(profile?.profile_img || null, initials(displayName));
 
-    // Get bill ID from sessionStorage (set by PharmBillingHistory)
+    // ── Try inline data first (set by PharmBilling.js after save) ──
+    const inlineRaw = sessionStorage.getItem('mf_bill_data');
+    if (inlineRaw) {
+      try {
+        const payload = JSON.parse(inlineRaw);
+        // Clear so refreshing falls back to RPC instead of stale data
+        sessionStorage.removeItem('mf_bill_data');
+
+        // Normalize into the same shape populateReceipt() expects
+        const rpcShape = {
+          header:  payload.header,
+          items:   payload.items,
+          payment: payload.payment,
+          pharmacy: payload.pharmacy
+        };
+
+        // Use the pharmacistName embedded in the payload (more accurate
+        // than the currently-logged-in user's display name in edge cases)
+        const pharmacistForReceipt = payload.pharmacistName || displayName;
+
+        showReceipt();
+        $('receiptLoading').style.display = 'none';
+        populateReceipt(rpcShape, pharmacistForReceipt);
+        showReceipt();
+        initDownloadPdf();
+        return;
+      } catch (parseErr) {
+        console.warn('Failed to parse mf_bill_data, falling back to RPC:', parseErr);
+      }
+    }
+
+    // ── Fallback: load from DB via RPC (e.g. when opening from history) ──
     const billId = sessionStorage.getItem('mf_bill_id');
     if (!billId) {
       showError('No bill selected. Please go back and click on a transaction.');
