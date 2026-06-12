@@ -880,6 +880,8 @@ tbody td {
   flex-direction: column;
   gap: 10px;
   transition: var(--transition);
+  min-width: 0; 
+  overflow: hidden;
 }
 
 .cat-card:hover { box-shadow: var(--shadow-sm); }
